@@ -1,2 +1,14 @@
-# python
-__pycache__
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+
+# IDE
+.vscode/*
+
+# misc
+log*.txt
+scratch/
+scratch*.py

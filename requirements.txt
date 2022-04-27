@@ -1,5 +1,6 @@
 # Users
 python>=3.9.4, <4
+dotmap
 graphviz
 jupyter
 jupyterlab

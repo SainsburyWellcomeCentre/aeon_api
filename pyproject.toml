@@ -5,19 +5,19 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aeon_mecha"
 version = "0.0.0"
-description = "Code for managing acquired data. Includes preprocessing, querying, and analysis modules."
+description = "Code for managing acquired data. Includes preprocessing, querying, and data qc modules."
 authors = ["Jai Bhagat jkbhagatio@gmail.com", "Goncalo Lopes <goncaloclopes@gmail.com>"]
 license = ""
 readme = "readme.md"
-python = ">=3.9.4"
-homepage = "https://github.com/projectAeon/data-management"
-repository = "https://github.com/projectAeon/data-management"
-documentation = "https://github.com/projectAeon/data-management"
+python = "3.9.*"
+homepage = "https://github.com/sainsburywellcomecentre/aeon_mecha"
+repository = "https://github.com/sainsburywellcomecentre/aeon_mecha"
+documentation = "https://github.com/sainsburywellcomecentre/aeon_mecha"
 
 [tool.poetry]
 name = "aeon_mecha"
 version = "0.0.0"
-description = "Code for managing acquired data. Includes preprocessing, querying, and analysis modules."
+description = "Code for managing acquired data. Includes preprocessing, querying, and data qc modules."
 authors = ["Jai Bhagat <jkbhagatio@gmail.com>", "Goncalo Lopes <goncaloclopes@gmail.com>"]
 keywords = []
 classifiers = [  #! Update me
@@ -31,31 +31,33 @@ classifiers = [  #! Update me
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9.4"
+python = "=3.9.*"
 dotmap = "*"
+fastparquet = "*"
 graphviz = "*"
+isort = "*"
 jupyter = "*"
 jupyterlab = "*"
 matplotlib = "*"
-numpy = "*"
+numpy = "^1.21"
 opencv-python = "*"
-pandas = "*"
+pandas = "^1.3"
 scikit-learn = "*"
 scipy = "*"
 seaborn = "*"
+setuptools_scm = "*"
 
 [tool.poetry.dev-dependencies]
 bandit = "*"
 black = "*"
 flake8 = "*"
-pytest = "*"
-setuptools = "*"
-tox = "*"
 pre-commit = "*"
+pytest = "*"
+pytest-cov = "*"
+setuptools = "*"
 
 [tool.black]
 line-length = 88
-target-version = ["py39"]
 color = false
 exclude = '''
 /(

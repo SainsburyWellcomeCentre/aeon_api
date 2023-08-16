@@ -1,0 +1,10 @@
+# Run with `pip install -r requirements_dev.txt`
+
+-r requirements.txt
+bandit
+black
+isort
+pre-commit
+pydantic
+pytest
+pytest-cov

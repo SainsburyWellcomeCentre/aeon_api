@@ -40,6 +40,10 @@ dev = [
   "pytest-cov",
   "setuptools",
 ]
+gpu = [
+  "cupy",
+  "dask"
+]
 
 [project.urls]
 Homepage = "https://sainsburywellcomecentre.github.io/aeon_docs/"

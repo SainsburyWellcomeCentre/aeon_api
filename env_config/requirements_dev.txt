@@ -1,9 +1,10 @@
-# Run with `pip install -r requirements_dev.txt`
+# Install packages `pip install -r requirements_dev.txt`
 
 -r requirements.txt
 bandit
 black
 isort
+mypy
 pre-commit
 pydantic
 pytest

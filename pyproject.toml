@@ -50,7 +50,7 @@ Documentation = "https://sainsburywellcomecentre.github.io/aeon_docs/"
 packages = ["aeon"]
 
 [tool.black]
-line-length = 88
+line-length = 108
 color = false
 exclude = '''
 /(

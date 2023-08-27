@@ -7,10 +7,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bandit
   - black
-  - isort
   - pre-commit
   - pydantic
+  - pyright
   - pytest
   - pytest-cov
+  - ruff

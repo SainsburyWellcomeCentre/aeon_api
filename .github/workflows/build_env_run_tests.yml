@@ -7,8 +7,7 @@ on:
     branches: [ main ]
     types: [opened, reopened, synchronize]
   workflow_dispatch:  # allows running manually from Github's 'Actions' tab
-env:
-  PY_VER: 3.11  
+
 jobs:
   build_env_pip_pyproject:  # checks only for building env using pip and pyproject.toml
     name: Build env using pip and pyproject.toml
@@ -16,10 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [$PY_VER]
-        #include:  # test other python versions only on ubuntu
-          #- os: ubuntu-latest
-          #  python-version: [3.9, 3.10]
+        python-version: [3.11]
       fail-fast: false
     defaults:
       run:
@@ -45,7 +41,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [$PY_VER]
+        python-version: [3.11]
       fail-fast: false
     defaults:
       run:
@@ -66,22 +62,22 @@ jobs:
 
       # Only run codebase checks and tests for ubuntu.
       - name: ruff
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        if: matrix.os == 'ubuntu-latest'
         run: python -m ruff check --config ./pyproject.toml .
       - name: pyright
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        if: matrix.os == 'ubuntu-latest'
         run: python -m pyright --level error --project ./pyproject.toml . 
       - name: pytest
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        if: matrix.os == 'ubuntu-latest'
         run: python -m pytest tests/
 
       - name: generate test coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           python -m pytest --cov=aeon ./tests/ --cov-report=xml:./tests/test_coverage/test_coverage_report.xml
           #python -m pytest --cov=aeon ./tests/ --cov-report=html:./tests/test_coverage/test_coverage_report_html
       - name: upload test coverage report to codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

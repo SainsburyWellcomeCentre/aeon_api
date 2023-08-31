@@ -37,11 +37,11 @@ dependencies = [
 dev = [
   "bandit",
   "black",
-  "isort",
-  "pre",
+  "pre-commit",
+  "pydantic",
   "pytest",
   "pytest-cov",
-  "setuptools",
+  "ruff",
 ]
 gpu = [
   "cupy",

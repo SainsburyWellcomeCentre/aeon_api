@@ -39,6 +39,7 @@ dev = [
   "black",
   "pre-commit",
   "pydantic",
+  "pyright",
   "pytest",
   "pytest-cov",
   "ruff",

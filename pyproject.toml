@@ -44,10 +44,7 @@ dev = [
   "pytest-cov",
   "ruff",
 ]
-gpu = [
-  "cupy",
-  "dask"
-]
+gpu = ["cupy", "dask"]
 
 [project.urls]
 Homepage = "https://sainsburywellcomecentre.github.io/aeon_docs/"
@@ -75,13 +72,36 @@ exclude = '''
 '''
 
 [tool.ruff]
-select = ["E", "W", "F", "I", "D", "UP", "S", "B", "A", "C4", "ICN", "PIE", "PT", "SIM", "PL"]
+select = [
+  "E",
+  "W",
+  "F",
+  "I",
+  "D",
+  "UP",
+  "S",
+  "B",
+  "A",
+  "C4",
+  "ICN",
+  "PIE",
+  "PT",
+  "SIM",
+  "PL",
+]
 line-length = 108
 ignore = [
-    "E201", "E202", "E203", "E231", "E731", "E702",
-    "S101",
-    "PT013",
-    "PLR0912", "PLR0913", "PLR0915"
+  "E201",
+  "E202",
+  "E203",
+  "E231",
+  "E731",
+  "E702",
+  "S101",
+  "PT013",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
 ]
 extend-exclude = [".git", ".github", ".idea", ".vscode"]
 
@@ -113,6 +133,4 @@ venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-markers = [
-    "api",
-]
+markers = ["api"]

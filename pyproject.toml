@@ -72,7 +72,7 @@ exclude = '''
 '''
 
 [tool.ruff]
-select = [
+lint.select = [
   "E",
   "W",
   "F",
@@ -90,7 +90,7 @@ select = [
   "PL",
 ]
 line-length = 108
-ignore = [
+lint.ignore = [
   "E201",
   "E202",
   "E203",
@@ -105,7 +105,7 @@ ignore = [
 ]
 extend-exclude = [".git", ".github", ".idea", ".vscode"]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.pyright]

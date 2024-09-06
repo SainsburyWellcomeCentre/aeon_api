@@ -22,9 +22,8 @@ def compositeStream(pattern, *args):
 class Device:
     """Groups multiple data streams into a logical device.
 
-    If a device contains a single stream with the same pattern as the device
-    `name`, it will be considered a singleton, and the stream reader will be
-    paired directly with the device without nesting.
+    If a device contains a single stream reader with the same pattern as the device `name`, it will be
+    considered a singleton, and the stream reader will be paired directly with the device without nesting.
 
     Attributes:
         name (str): Name of the device.

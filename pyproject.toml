@@ -91,6 +91,8 @@ lint.select = [
 ]
 line-length = 108
 lint.ignore = [
+  "D100",    # skip adding docstrings for module
+  "D104",    # ignore missing docstring in public package
   "D105",    # skip adding docstrings for magic methods
   "D107",    # skip adding docstrings for __init__
   "E201",
@@ -106,6 +108,10 @@ lint.ignore = [
   "PLR0915",
 ]
 extend-exclude = [".git", ".github", ".idea", ".vscode"]
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "D103",    # skip adding docstrings for public functions
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

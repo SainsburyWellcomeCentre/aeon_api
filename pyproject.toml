@@ -112,6 +112,10 @@ extend-exclude = [".git", ".github", ".idea", ".vscode"]
 "tests/*" = [
   "D103",    # skip adding docstrings for public functions
 ]
+"aeon/schema/*" = [
+  "D101",    # skip adding docstrings for schema classes
+  "D106",    # skip adding docstrings for nested streams
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

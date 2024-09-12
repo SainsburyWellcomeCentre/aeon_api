@@ -90,7 +90,13 @@ lint.ignore = [
   "PLR0913",
   "PLR0915",
 ]
-extend-exclude = [".git", ".github", ".idea", ".vscode"]
+extend-exclude = [
+  ".git",
+  ".github",
+  ".idea",
+  "*.ipynb",
+  ".vscode",
+]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
   "D103",    # skip adding docstrings for public functions

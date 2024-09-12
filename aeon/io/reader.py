@@ -431,6 +431,7 @@ class Pose(Harp):
 
 
 def from_dict(data, pattern=None):
+    """Converts a dictionary to a DotMap object."""
     reader_type = data.get("type", None)
     if reader_type is not None:
         kwargs = {k: v for k, v in data.items() if k != "type"}
@@ -442,6 +443,7 @@ def from_dict(data, pattern=None):
 
 
 def to_dict(dotmap):
+    """Converts a DotMap object to a dictionary."""
     if isinstance(dotmap, Reader):
         kwargs = {k: v for k, v in vars(dotmap).items() if k not in ["pattern"] and not k.startswith("_")}
         kwargs["type"] = type(dotmap).__name__

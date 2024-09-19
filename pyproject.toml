@@ -132,6 +132,7 @@ reportShadowedImports = "error"
 # *Note*: we may want to set all 'ReportOptional*' rules to "none", but leaving 'em default for now
 venvPath = "."
 venv = ".venv"
+exclude = [".venv/*"]
 
 [tool.pytest.ini_options]
 markers = ["api"]

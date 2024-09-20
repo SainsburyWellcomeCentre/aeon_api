@@ -23,9 +23,9 @@ jobs:
         shell: ${{ matrix.os == 'windows-latest' && 'cmd' || 'bash' }} -l {0} # Adjust shell based on OS
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Create venv and install dependencies
@@ -50,19 +50,18 @@ jobs:
         shell: ${{ matrix.os == 'windows-latest' && 'cmd' || 'bash' }} -l {0}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up conda env
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           use-mamba: true
           miniforge-variant: Mambaforge
           python-version: ${{ matrix.python-version }}
-          environment-file: ./env_config/env.yml
           activate-environment: aeon
 
-      - name: Update conda env with dev reqs
-        run: mamba env update -f ./env_config/env_dev.yml
+      - name: Install pyproject.toml dependencies
+        run: pip install -e .[dev]
 
       # Only run codebase checks and tests for Linux (ubuntu).
       - name: ruff
@@ -80,13 +79,13 @@ jobs:
       - name: generate test coverage report
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          python -m pytest --cov=aeon ./tests/ --cov-report=xml:./tests/test_coverage/test_coverage_report.xml
+          python -m pytest --cov=aeon tests/ --cov-report=xml:tests/test_coverage/test_coverage_report.xml
       - name: upload test coverage report to codecov
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./tests/test_coverage/
+          directory: tests/test_coverage/
           files: test_coverage_report.xml
           fail_ci_if_error: true
           verbose: true

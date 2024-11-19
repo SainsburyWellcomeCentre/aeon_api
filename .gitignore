@@ -12,3 +12,6 @@ __pycache__/
 log*.txt
 scratch/
 scratch*.py
+
+# Test
+.coverage

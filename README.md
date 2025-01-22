@@ -1,8 +1,9 @@
-# aeon_mecha
-![aeon_mecha_env_build_and_tests](https://github.com/SainsburyWellcomeCentre/aeon_mecha/actions/workflows/build_env_run_tests.yml/badge.svg?branch=main)
-[![aeon_mecha_tests_code_coverage](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_mecha/branch/main/graph/badge.svg?token=973EC1CG03)](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_mecha)
+# aeon_api
 
-Project Aeon's main repository for manipulating acquired data. Includes modules for loading and processing raw data.
+![aeon_api_env_build_and_tests](https://github.com/SainsburyWellcomeCentre/aeon_api/actions/workflows/build_env_run_tests.yml/badge.svg?branch=main)
+[![aeon_api_tests_code_coverage](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_api/branch/main/graph/badge.svg?token=973EC1CG03)](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_api)
+
+Project Aeon low-level library for interfacing with acquired data. Contains modules for loading and processing raw data.
 
 ## Set-up Instructions
 
@@ -18,13 +19,13 @@ The various set-up tools mentioned below do some combination of python version, 
 ssh <your_SWC_username>@ssh.swc.ucl.ac.uk
 mkdir ~/ProjectAeon
 cd ~/ProjectAeon
-git clone https://github.com/SainsburyWellcomeCentre/aeon_mecha
-cd aeon_mecha
+git clone https://github.com/SainsburyWellcomeCentre/aeon_api
+cd aeon_api
 ```
 
 #### Set-up
 
-Ensure you stay in the `~/ProjectAeon/aeon_mecha` directory for the rest of the set-up instructions, regardless of which set-up procedure you follow below.
+Ensure you stay in the `~/ProjectAeon/aeon_api` directory for the rest of the set-up instructions, regardless of which set-up procedure you follow below.
 
 [Option 1](./docs/env_setup/remote/miniconda_conda_remote_setup.md): **miniconda** (python distribution) and **conda** (python version manager, environment manager, package manager, and package dependency manager)
 
@@ -42,13 +43,13 @@ All commands below should be run in a bash shell (Windows users can use the 'min
 ```
 mkdir ~/ProjectAeon
 cd ~/ProjectAeon
-git clone https://github.com/SainsburyWellcomeCentre/aeon_mecha
-cd aeon_mecha
+git clone https://github.com/SainsburyWellcomeCentre/aeon_api
+cd aeon_api
 ```
 
 #### Set-up
 
-Ensure you stay in the `~/ProjectAeon/aeon_mecha` directory for the rest of the set-up instructions, regardless of which set-up procedure you follow below.
+Ensure you stay in the `~/ProjectAeon/aeon_api` directory for the rest of the set-up instructions, regardless of which set-up procedure you follow below.
 
 [Option 1](./docs/env_setup/local/miniconda_conda_local_setup.md): **miniconda** (python distribution) and **conda** (python version manager, environment manager, package manager, and package dependency manager)
 

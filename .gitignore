@@ -15,3 +15,6 @@ scratch*.py
 
 # Test
 .coverage
+
+# Environment
+.venv/

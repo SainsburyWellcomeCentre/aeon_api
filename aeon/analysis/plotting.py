@@ -10,6 +10,7 @@ from matplotlib.collections import LineCollection
 
 from aeon.analysis.utils import rate, sessiontime
 
+
 def heatmap(position, frequency, ax=None, **kwargs):
     """Draw a heatmap of time spent in each location from specified position data and sampling frequency.
 

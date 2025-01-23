@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 import aeon
-from aeon.schema.schemas import social02, social03
+from tests.schema import social02, social03
 
 pose_path = Path(__file__).parent.parent / "data" / "pose"
 

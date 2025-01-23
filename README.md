@@ -61,12 +61,13 @@ Ensure you stay in the `~/ProjectAeon/aeon_api` directory for the rest of the se
 
 - `.github/workflows/` : GitHub actions workflows for building the environment and running tests 
 - `aeon/` : Source code for the Aeon Python package 
+    - `aeon/analysis`: Source code for processing and plotting the raw data
     - `aeon/io`: Source code for loading raw data
-    - `aeon/processing`: Source code for processing raw data
-    - `aeon/schema`: Examples of 'experiment schemas': variables that can be used to load raw data from particular experiments
-- `env_config/` : Configuration files for the Aeon Python environment
-- `tests/` : Unit and integration tests
+    - `aeon/schema`: Core modules to define 'data schemas' which can be used to load raw data from particular experiments
+- `tests/` : API unit tests
     - `tests/data` : Data used by tests
+    - `tests/io` : Unit tests for the low-level raw data access API.
+    - `tests/schema` : Schemas used to load sample data in test functions.
 
 ## Citation Policy
 

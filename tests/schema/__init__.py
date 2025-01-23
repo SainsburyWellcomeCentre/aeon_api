@@ -1,4 +1,4 @@
-"""Contains schemas used to load sample data in I/O test fixtures."""
+"""Contains schemas used to load sample data in test functions."""
 
 from dotmap import DotMap
 

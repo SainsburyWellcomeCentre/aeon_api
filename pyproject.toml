@@ -16,6 +16,7 @@ authors = [
   { name = "Chang Huan Lo", email = "changhuan.lo@ucl.ac.uk" },
   { name = "Joseph Burling", email = "joseph@datajoint.com" },
   { name = "Jaerong Ahn", email = "jaerong.ahn@datajoint.com" },
+  { name = "Milagros Marin", email = "milagros@datajoint.com" },
 ]
 license = { file = "license.md" }
 readme = "README.md"

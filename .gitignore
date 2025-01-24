@@ -2,6 +2,7 @@
 __pycache__/
 
 # Distribution / packaging
+dist/
 *.egg-info/
 *.egg
 
@@ -18,3 +19,4 @@ scratch*.py
 
 # Environment
 .venv/
+uv.lock

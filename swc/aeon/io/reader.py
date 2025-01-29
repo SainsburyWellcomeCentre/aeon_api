@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 from dotmap import DotMap
 
-from aeon import util
-from aeon.io.api import chunk_key
+from swc.aeon import util
+from swc.aeon.io.api import chunk_key
 
 _SECONDS_PER_TICK = 32e-6
 _payloadtypes = {

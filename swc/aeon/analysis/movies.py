@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from aeon.io import video
+from swc.aeon.io import video
 
 
 def gridframes(frames, width, height, shape: None | int | tuple[int, int] = None):

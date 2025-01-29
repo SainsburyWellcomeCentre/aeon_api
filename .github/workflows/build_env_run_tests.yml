@@ -36,7 +36,7 @@ jobs:
           .venv/Scripts/activate || source .venv/bin/activate
           pip install -e .[dev]
           pip list
-          python -c "import aeon"
+          python -c "import swc.aeon"
       - name: Activate venv for later steps
         run: |
           echo "VIRTUAL_ENV=$(pwd)/.venv" >> $GITHUB_ENV

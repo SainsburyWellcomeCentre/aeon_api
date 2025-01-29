@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-import aeon
+import swc.aeon as aeon
 from tests.schema import exp02
 
 monotonic_path = Path(__file__).parent.parent / "data" / "monotonic"

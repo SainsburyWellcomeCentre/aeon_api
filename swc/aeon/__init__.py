@@ -12,6 +12,6 @@ finally:
     del version, PackageNotFoundError
 
 # Set functions available directly under the 'aeon' top-level namespace
-from aeon.io.api import load
+from swc.aeon.io.api import load
 
 __all__ = ["load"]

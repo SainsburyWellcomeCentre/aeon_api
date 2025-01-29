@@ -8,7 +8,7 @@ import pandas as pd
 from matplotlib import colors
 from matplotlib.collections import LineCollection
 
-from aeon.analysis.utils import rate, sessiontime
+from swc.aeon.analysis.utils import rate, sessiontime
 
 
 def heatmap(position, frequency, ax=None, **kwargs):

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import swc.aeon as aeon
+from swc import aeon
 from tests.schema import social02, social03
 
 pose_path = Path(__file__).parent.parent / "data" / "pose"

@@ -1,7 +1,7 @@
 """Stream classes for the legacy pose API."""
 
 import swc.aeon.io.reader as _reader
-from swc.aeon.schema.streams import Stream
+from swc.aeon.schema import Stream
 
 
 class Pose(Stream):

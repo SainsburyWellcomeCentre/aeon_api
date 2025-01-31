@@ -36,7 +36,7 @@ jobs:
           .venv/Scripts/activate || source .venv/bin/activate
           pip install -e .[dev]
           pip list
-          python -c "import aeon"
+          python -c "import swc.aeon"
       - name: Activate venv for later steps
         run: |
           echo "VIRTUAL_ENV=$(pwd)/.venv" >> $GITHUB_ENV
@@ -52,7 +52,7 @@ jobs:
       - name: generate test coverage report
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          python -m pytest --cov=aeon tests/ --cov-report=xml:tests/test_coverage/test_coverage_report.xml
+          python -m pytest --cov=swc tests/ --cov-report=xml:tests/test_coverage/test_coverage_report.xml
       - name: upload test coverage report to codecov
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: codecov/codecov-action@v4

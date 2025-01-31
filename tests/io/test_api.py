@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-import aeon
+from swc import aeon
 from tests.schema import exp02
 
 monotonic_path = Path(__file__).parent.parent / "data" / "monotonic"
@@ -14,17 +14,13 @@ nonmonotonic_path = Path(__file__).parent.parent / "data" / "nonmonotonic"
 
 @pytest.mark.api
 def test_load_start_only():
-    data = aeon.load(
-        nonmonotonic_path, exp02.Patch2.Encoder, start=pd.Timestamp("2022-06-06T13:00:49")
-    )
+    data = aeon.load(nonmonotonic_path, exp02.Patch2.Encoder, start=pd.Timestamp("2022-06-06T13:00:49"))
     assert len(data) > 0
 
 
 @pytest.mark.api
 def test_load_end_only():
-    data = aeon.load(
-        nonmonotonic_path, exp02.Patch2.Encoder, end=pd.Timestamp("2022-06-06T13:00:49")
-    )
+    data = aeon.load(nonmonotonic_path, exp02.Patch2.Encoder, end=pd.Timestamp("2022-06-06T13:00:49"))
     assert len(data) > 0
 
 

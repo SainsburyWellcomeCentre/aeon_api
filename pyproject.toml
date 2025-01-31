@@ -43,7 +43,7 @@ Repository = "https://github.com/sainsburyWellcomeCentre/aeon_api"
 Documentation = "https://sainsburywellcomecentre.github.io/aeon_docs/"
 
 [tool.setuptools.packages.find]
-include = ["aeon*"]
+include = ["swc*"]
 
 [tool.ruff]
 lint.select = [

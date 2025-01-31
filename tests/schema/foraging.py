@@ -17,12 +17,14 @@ class _PatchState(_reader.Csv):
     def __init__(self, pattern):
         super().__init__(pattern, columns=["threshold", "d1", "delta"])
 
+
 class DepletionFunction(Stream):
     """State of the linear depletion function for foraging patches."""
 
     def __init__(self, pattern):
         """Initializes the DepletionFunction stream."""
         super().__init__(_PatchState(f"{pattern}_State_*"))
+
 
 class Feeder(StreamGroup):
     """Feeder commands and events."""
@@ -46,6 +48,7 @@ class DeliverPellet(Stream):
     def __init__(self, pattern):
         """Initializes the DeliverPellet stream."""
         super().__init__(_reader.BitmaskEvent(f"{pattern}_35_*", 0x01, "TriggerPellet"))
+
 
 class Patch(StreamGroup):
     """Data streams for a patch."""

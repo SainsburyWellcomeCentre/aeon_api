@@ -21,13 +21,11 @@ def heatmap(position, frequency, ax=None, **kwargs):
     if ax is None:
         ax = plt.gca()
     _, _, _, mesh = ax.hist2d(
-        position.x, position.y,
-        weights = np.ones(len(position)) / frequency,
-        norm=colors.LogNorm(),
-        **kwargs)
+        position.x, position.y, weights=np.ones(len(position)) / frequency, norm=colors.LogNorm(), **kwargs
+    )
     ax.invert_yaxis()
     cbar = plt.colorbar(mesh, ax=ax)
-    cbar.set_label('time (s)')
+    cbar.set_label("time (s)")
     return mesh, cbar
 
 

@@ -1,17 +1,4 @@
 """Top-level package for aeon."""
-
-from importlib.metadata import PackageNotFoundError, version
-
-try:
-    # Change here if project is renamed and does not equal the package name
-    dist_name = "aeon"
-    __version__ = version(dist_name)
-except PackageNotFoundError:
-    __version__ = "unknown"
-finally:
-    del version, PackageNotFoundError
-
-# Set functions available directly under the 'aeon' top-level namespace
 from swc.aeon.io.api import load
 
 __all__ = ["load"]

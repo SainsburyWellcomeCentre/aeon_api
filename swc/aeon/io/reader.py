@@ -4,29 +4,16 @@ from __future__ import annotations
 
 import datetime
 import json
-import math
 import os
 from pathlib import Path
 
+import harp
 import numpy as np
 import pandas as pd
 from dotmap import DotMap
 
 from swc.aeon import util
 from swc.aeon.io.api import chunk_key
-
-_SECONDS_PER_TICK = 32e-6
-_payloadtypes = {
-    1: np.dtype(np.uint8),
-    2: np.dtype(np.uint16),
-    4: np.dtype(np.uint32),
-    8: np.dtype(np.uint64),
-    129: np.dtype(np.int8),
-    130: np.dtype(np.int16),
-    132: np.dtype(np.int32),
-    136: np.dtype(np.int64),
-    68: np.dtype(np.float32),
-}
 
 
 class Reader:
@@ -59,29 +46,7 @@ class Harp(Reader):
 
     def read(self, file):
         """Reads data from the specified Harp binary file."""
-        data = np.fromfile(file, dtype=np.uint8)
-        if len(data) == 0:
-            return pd.DataFrame(columns=self.columns, index=pd.DatetimeIndex([]))
-
-        stride = data[1] + 2
-        length = len(data) // stride
-        payloadsize = stride - 12
-        payloadtype = _payloadtypes[data[4] & ~0x10]
-        elementsize = payloadtype.itemsize
-        payloadshape = (length, payloadsize // elementsize)
-        seconds = np.ndarray(length, dtype=np.uint32, buffer=data, offset=5, strides=stride)
-        ticks = np.ndarray(length, dtype=np.uint16, buffer=data, offset=9, strides=stride)
-        seconds = ticks * _SECONDS_PER_TICK + seconds
-        payload = np.ndarray(
-            payloadshape, dtype=payloadtype, buffer=data, offset=11, strides=(stride, elementsize)
-        )
-
-        if self.columns is not None and payloadshape[1] < len(self.columns):
-            data = pd.DataFrame(payload, index=seconds, columns=self.columns[: payloadshape[1]])
-            data[self.columns[payloadshape[1] :]] = math.nan
-            return data
-        else:
-            return pd.DataFrame(payload, index=seconds, columns=self.columns)
+        return harp.read(file, columns=self.columns)
 
 
 class Chunk(Reader):

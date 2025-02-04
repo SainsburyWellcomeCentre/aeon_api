@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=62.0", "wheel>=0.37"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "swc-aeon"
-version = "0.1.0"
+dynamic = ["version"]
 requires-python = ">=3.11"
 description = '''
     A package for interfacing with acquired data from Project Aeon experiments.
@@ -41,6 +41,9 @@ dev = [
 Homepage = "https://sainsburywellcomecentre.github.io/aeon_docs/"
 Repository = "https://github.com/sainsburyWellcomeCentre/aeon_api"
 Documentation = "https://sainsburywellcomecentre.github.io/aeon_docs/"
+
+[tool.setuptools_scm]
+version_file = "swc/aeon/_version.py"
 
 [tool.setuptools.packages.find]
 include = ["swc*"]

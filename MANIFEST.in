@@ -1,3 +1,2 @@
-# We'll use a manifest.in once we're in the stages of building and releasing
-# source distributions:
-# https://packaging.python.org/en/latest/guides/using-manifest-in/
+# setuptools-scm manages all source distribution files for us.
+# This file can be used to override decisions when needed.

@@ -2,8 +2,8 @@
 
 from dotmap import DotMap
 
-import swc.aeon.schema.core as stream
-from swc.aeon.schema.streams import Device
+from swc.aeon.schema import Device
+from swc.aeon.schema import core as stream
 from tests.schema import foraging, legacypose, pose
 
 exp02 = DotMap(

@@ -1,7 +1,7 @@
 """Schema definition for core Harp data streams."""
 
 import swc.aeon.io.reader as _reader
-from swc.aeon.schema.streams import Stream, StreamGroup
+from swc.aeon.schema import Stream, StreamGroup
 
 
 class Heartbeat(Stream):

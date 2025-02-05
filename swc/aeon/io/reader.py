@@ -7,12 +7,12 @@ import json
 import math
 import os
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from dotmap import DotMap
 
-from swc.aeon import util
 from swc.aeon.io.api import chunk_key
 
 _SECONDS_PER_TICK = 32e-6
@@ -382,43 +382,31 @@ class Pose(Harp):
             self.columns = columns
             data = super().read(file)
 
-        # Drop any repeat parts.
-        unique_parts, unique_idxs = np.unique(parts, return_index=True)
-        repeat_idxs = np.setdiff1d(np.arange(len(parts)), unique_idxs)
-        if repeat_idxs:  # drop x, y, and likelihood cols for repeat parts (skip first 5 cols)
-            init_rep_part_col_idx = (repeat_idxs - 1) * 3 + 5
-            rep_part_col_idxs = np.concatenate([np.arange(i, i + 3) for i in init_rep_part_col_idx])
-            keep_part_col_idxs = np.setdiff1d(np.arange(len(data.columns)), rep_part_col_idxs)
-            data = data.iloc[:, keep_part_col_idxs]
-            parts = unique_parts
+        # combine all identity_likelihood cols into a single column
+        if bonsai_sleap_v == BONSAI_SLEAP_V3:
+            identity_likelihood = data.apply(
+                lambda row: {identity: row[f"{identity}_likelihood"] for identity in identities},
+                axis=1,
+            )
+            data.drop(columns=columns[1 : (len(identities) + 1)], inplace=True)
+            data.insert(1, "identity_likelihood", identity_likelihood)
+
+        # Replace identity indices with identity labels
+        data = self.class_int2str(data, identities)
 
         # Set new columns, and reformat `data`.
-        data = self.class_int2str(data, identities)
         n_parts = len(parts)
-        part_data_list = [pd.DataFrame()] * n_parts
-        new_columns = pd.Series(["identity", "identity_likelihood", "part", "x", "y", "part_likelihood"])
-        new_data = pd.DataFrame(columns=new_columns)
+        new_columns = ["identity", "identity_likelihood", "part", "x", "y", "part_likelihood"]
+        new_data = np.empty((len(data) * n_parts, len(new_columns)), dtype="O")
+        new_index = np.empty(len(data) * n_parts, dtype=data.index.values.dtype)
         for i, part in enumerate(parts):
-            part_columns = (
-                columns[0 : (len(identities) + 1)] if bonsai_sleap_v == BONSAI_SLEAP_V3 else columns[0:2]
-            )
-            part_columns.extend([f"{part}_x", f"{part}_y", f"{part}_likelihood"])
-            part_data = pd.DataFrame(data[part_columns])
-            if bonsai_sleap_v == BONSAI_SLEAP_V3:
-                # combine all identity_likelihood cols into a single col as dict
-                part_data["identity_likelihood"] = part_data.apply(
-                    lambda row: {identity: row[f"{identity}_likelihood"] for identity in identities},
-                    axis=1,
-                )
-                part_data.drop(columns=columns[1 : (len(identities) + 1)], inplace=True)
-                part_data = part_data[  # reorder columns
-                    ["identity", "identity_likelihood", f"{part}_x", f"{part}_y", f"{part}_likelihood"]
-                ]
-            part_data.insert(2, "part", part)
-            part_data.columns = new_columns
-            part_data_list[i] = part_data
-        new_data = pd.concat(part_data_list)
-        return new_data.sort_index()
+            min_col = 2 + i * 3
+            max_col = 2 + (i + 1) * 3
+            new_data[i::n_parts, 0:2] = data.values[:, 0:2]
+            new_data[i::n_parts, 2] = part
+            new_data[i::n_parts, 3:6] = data.values[:, min_col:max_col]
+            new_index[i::n_parts] = data.index.values
+        return pd.DataFrame(new_data, new_index, columns=new_columns)
 
     @staticmethod
     def get_class_names(config_file: Path) -> list[str]:
@@ -430,7 +418,7 @@ class Pose(Harp):
 
         try:
             heads = config["model"]["heads"]
-            return util.find_nested_key(heads, "class_vectors")["classes"]
+            return Pose._find_nested_key(heads, "class_vectors")["classes"]
         except KeyError as err:
             raise KeyError(f"Cannot find class_vectors in {config_file}.") from err
 
@@ -443,8 +431,8 @@ class Pose(Harp):
         if config_file.stem == "confmap_config":  # SLEAP
             try:
                 heads = config["model"]["heads"]
-                parts = [util.find_nested_key(heads, "anchor_part")]
-                parts += util.find_nested_key(heads, "part_names")
+                parts = [f"anchor_{Pose._find_nested_key(heads, 'anchor_part')}"]
+                parts += Pose._find_nested_key(heads, "part_names")
             except KeyError as err:
                 if not parts:
                     raise KeyError(f"Cannot find bodyparts in {config_file}.") from err
@@ -472,6 +460,24 @@ class Pose(Harp):
         if config_file is None:
             raise FileNotFoundError(f"Cannot find config file in {config_file_dir}")
         return config_file
+
+    @staticmethod
+    def _find_nested_key(obj: dict | list | None, key: str) -> Any:
+        """Returns the value of the first found nested key."""
+        if isinstance(obj, dict):
+            if v := obj.get(key):  # found it!
+                return v
+            for v in obj.values():
+                found = Pose._find_nested_key(v, key)
+                if found:
+                    return found
+        elif obj is not None:
+            for item in obj:
+                found = Pose._find_nested_key(item, key)
+                if found:
+                    return found
+        else:
+            return None
 
 
 def from_dict(data, pattern=None):

@@ -434,8 +434,7 @@ class Pose(Harp):
                 parts = [f"anchor_{Pose._find_nested_key(heads, 'anchor_part')}"]
                 parts += Pose._find_nested_key(heads, "part_names")
             except KeyError as err:
-                if not parts:
-                    raise KeyError(f"Cannot find bodyparts in {config_file}.") from err
+                raise KeyError(f"Cannot find anchor or bodyparts in {config_file}.") from err
         return parts
 
     @staticmethod
@@ -462,22 +461,26 @@ class Pose(Harp):
         return config_file
 
     @staticmethod
-    def _find_nested_key(obj: dict | list | None, key: str) -> Any:
+    def _find_nested_key(obj: dict, key: str) -> Any:
+        """Returns the value of the first found nested key."""
+        value = Pose._recursive_lookup(obj, key)
+        if value is None:
+            raise KeyError(key)
+        return value
+
+    @staticmethod
+    def _recursive_lookup(obj: Any, key: str) -> Any:
         """Returns the value of the first found nested key."""
         if isinstance(obj, dict):
-            if v := obj.get(key):  # found it!
-                return v
-            for v in obj.values():
-                found = Pose._find_nested_key(v, key)
-                if found:
+            if found := obj.get(key):  # found it!
+                return found
+            for item in obj.values():
+                if found := Pose._recursive_lookup(item, key):
                     return found
-        elif obj is not None:
+        elif isinstance(obj, list):
             for item in obj:
-                found = Pose._find_nested_key(item, key)
-                if found:
+                if found := Pose._recursive_lookup(item, key):
                     return found
-        else:
-            return None
 
 
 def from_dict(data, pattern=None):

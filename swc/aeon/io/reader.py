@@ -481,24 +481,3 @@ class Pose(Harp):
             for item in obj:
                 if found := Pose._recursive_lookup(item, key):
                     return found  # pragma: no cover
-
-
-def from_dict(data, pattern=None):
-    """Converts a dictionary to a DotMap object."""
-    reader_type = data.get("type", None)
-    if reader_type is not None:
-        kwargs = {k: v for k, v in data.items() if k != "type"}
-        return globals()[reader_type](pattern=pattern, **kwargs)
-
-    return DotMap(
-        {k: from_dict(v, f"{pattern}_{k}" if pattern is not None else k) for k, v in data.items()}
-    )
-
-
-def to_dict(dotmap):
-    """Converts a DotMap object to a dictionary."""
-    if isinstance(dotmap, Reader):
-        kwargs = {k: v for k, v in vars(dotmap).items() if k not in ["pattern"] and not k.startswith("_")}
-        kwargs["type"] = type(dotmap).__name__
-        return kwargs
-    return {k: to_dict(v) for k, v in dotmap.items()}

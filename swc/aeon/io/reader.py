@@ -480,7 +480,7 @@ class Pose(Harp):
         elif isinstance(obj, list):
             for item in obj:
                 if found := Pose._recursive_lookup(item, key):
-                    return found
+                    return found  # pragma: no cover
 
 
 def from_dict(data, pattern=None):

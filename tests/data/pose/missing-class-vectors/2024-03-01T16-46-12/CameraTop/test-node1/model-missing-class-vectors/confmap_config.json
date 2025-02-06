@@ -32,17 +32,6 @@
                     "output_stride": 2,
                     "loss_weight": 1.0,
                     "offset_refinement": false
-                },
-                "class_vectors": {
-                    "classes": [
-                        "BAA-1104568",
-                        "BAA-1104569"
-                    ],
-                    "num_fc_layers": 3,
-                    "num_fc_units": 256,
-                    "global_pool": true,
-                    "output_stride": 2,
-                    "loss_weight": 0.01
                 }
             }
         },

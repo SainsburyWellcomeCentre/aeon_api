@@ -35,8 +35,8 @@
                 },
                 "class_vectors": {
                     "classes": [
-                        "BAA-1104568",
-                        "BAA-1104569"
+                        "BAA-1104045",
+                        "BAA-1104047"
                     ],
                     "num_fc_layers": 3,
                     "num_fc_units": 256,

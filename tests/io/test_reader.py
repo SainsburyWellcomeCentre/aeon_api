@@ -26,6 +26,13 @@ def test_Pose_read_local_model_dir_with_register_prefix():
 
 
 @pytest.mark.api
+def test_Pose_read_local_model_dir_with_missing_config_file():
+    """Test that the Pose reader raises FileNotFoundError when config file is missing."""
+    with pytest.raises(FileNotFoundError):
+        aeon.load(pose_path / "missing-config-file", social03.CameraTop.Pose)
+
+
+@pytest.mark.api
 def test_Pose_read_local_model_dir_with_missing_class_vectors():
     """Test that the Pose reader raises KeyError when config file does not contain class vectors."""
     with pytest.raises(KeyError):

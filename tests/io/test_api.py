@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from swc import aeon
-from tests.schema import exp02
+from tests.schema import exp02, social03
 
 monotonic_path = Path(__file__).parent.parent / "data" / "monotonic"
 nonmonotonic_path = Path(__file__).parent.parent / "data" / "nonmonotonic"
@@ -41,6 +41,21 @@ def test_load_monotonic():
 def test_load_nonmonotonic():
     data = aeon.load(nonmonotonic_path, exp02.Patch2.Encoder)
     assert not data.index.is_monotonic_increasing
+
+
+@pytest.mark.api
+def test_pose_load_nonmonotonic_data():
+    data = aeon.load(nonmonotonic_path, social03.CameraTop.Pose)
+    assert not data.index.is_monotonic_increasing
+
+
+@pytest.mark.api
+def test_pose_load_nonmonotonic_data_time_start_only_sort_fallback():
+    with pytest.warns(UserWarning):
+        data = aeon.load(
+            nonmonotonic_path, social03.CameraTop.Pose, start=pd.Timestamp("2024-07-03T10:00:00")
+        )
+        assert data.index.is_monotonic_increasing
 
 
 if __name__ == "__main__":

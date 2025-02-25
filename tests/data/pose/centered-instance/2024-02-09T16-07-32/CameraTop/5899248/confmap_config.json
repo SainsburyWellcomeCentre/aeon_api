@@ -6,7 +6,7 @@
                 "stem_stride": null,
                 "max_stride": 16,
                 "output_stride": 2,
-                "filters": 16,
+                "filters": 32,
                 "filters_rate": 1.5,
                 "middle_block": true,
                 "up_interpolate": false,
@@ -19,21 +19,26 @@
         "heads": {
             "single_instance": null,
             "centroid": null,
-            "centered_instance": null,
+            "centered_instance": {
+                "anchor_part": "spine2",
+                "part_names": [
+                    "nose",
+                    "head",
+                    "right_ear",
+                    "left_ear",
+                    "spine1",
+                    "spine2",
+                    "spine3",
+                    "spine4"
+                ],
+                "sigma": 1.5,
+                "output_stride": 2,
+                "loss_weight": 1.0,
+                "offset_refinement": false
+            },
             "multi_instance": null,
             "multi_class_bottomup": null,
-            "multi_class_topdown": {
-                "confmaps": {
-                    "anchor_part": "centroid",
-                    "part_names": [
-                        "centroid"
-                    ],
-                    "sigma": 1.5,
-                    "output_stride": 2,
-                    "loss_weight": 1.0,
-                    "offset_refinement": false
-                }
-            }
+            "multi_class_topdown": null
         },
         "base_checkpoint": null
     },

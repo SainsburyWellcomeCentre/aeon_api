@@ -33,10 +33,10 @@ def test_Pose_read_local_model_dir_with_missing_config_file():
 
 
 @pytest.mark.api
-def test_Pose_read_local_model_dir_with_missing_class_vectors():
-    """Test that the Pose reader raises KeyError when config file does not contain class vectors."""
-    with pytest.raises(KeyError):
-        aeon.load(pose_path / "missing-class-vectors", social03.CameraTop.Pose)
+def test_Pose_read_local_model_dir_with_missing_class_labels():
+    """Test that the Pose reader can read data when config file does not contain class labels."""
+    data = aeon.load(pose_path / "centered-instance", social03.CameraTop.Pose)
+    assert len(data) > 0
 
 
 @pytest.mark.api

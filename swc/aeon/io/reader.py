@@ -383,7 +383,11 @@ class Pose(Harp):
 
         try:
             heads = config["model"]["heads"]
-            return Pose._find_nested_key(heads, "class_vectors")["classes"]
+            class_vectors = Pose._recursive_lookup(heads, "class_vectors")
+            if class_vectors is not None:
+                return class_vectors["classes"]
+            else:
+                return list[str]()
         except KeyError as err:
             raise KeyError(f"Cannot find class_vectors in {config_file}.") from err
 
@@ -405,10 +409,9 @@ class Pose(Harp):
     @staticmethod
     def class_int2str(data: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
         """Converts a class integer in a tracking data dataframe to its associated string (subject id)."""
-        if not classes:
-            raise ValueError("Classes list cannot be None or empty.")
-        identity_mapping = dict(enumerate(classes))
-        data["identity"] = data["identity"].replace(identity_mapping)
+        if classes:
+            identity_mapping = dict(enumerate(classes))
+            data["identity"] = data["identity"].replace(identity_mapping)
         return data
 
     @classmethod

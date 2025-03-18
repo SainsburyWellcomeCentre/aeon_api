@@ -305,7 +305,7 @@ class Pose(Harp):
         self._model_root = model_root
         self._pattern_offset = pattern.rfind("_") + 1
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, file: Path, include_model: bool = False) -> pd.DataFrame:
         """Reads data from the Harp-binarized tracking file."""
         # Get config file from `file`, then bodyparts from config file.
         model_dir = Path(file.stem[self._pattern_offset :].replace("_", "/")).parent
@@ -374,7 +374,8 @@ class Pose(Harp):
         data = pd.DataFrame(new_data, new_index, columns=new_columns)
 
         # Set model column using model_dir
-        data["model"] = model_dir
+        if include_model:
+            data["model"] = model_dir
         return data
 
     @staticmethod

@@ -46,5 +46,13 @@ def test_Pose_read_local_model_dir_with_missing_part_names():
         aeon.load(pose_path / "missing-part-names", social03.CameraTop.Pose)
 
 
+@pytest.mark.api
+def test_Pose_read_local_model_dir_with_model_provenance():
+    """Test that the Pose reader can read data while keeping track of model provenance."""
+    data = aeon.load(pose_path / "centered-instance", social03.CameraTop.Pose, include_model=True)
+    assert len(data) > 0
+    assert "model" in data.columns
+
+
 if __name__ == "__main__":
     pytest.main()

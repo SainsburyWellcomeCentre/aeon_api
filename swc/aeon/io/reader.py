@@ -371,7 +371,11 @@ class Pose(Harp):
             new_data[i::n_parts, 2] = part
             new_data[i::n_parts, 3:6] = data.values[:, min_col:max_col]
             new_index[i::n_parts] = data.index.values
-        return pd.DataFrame(new_data, new_index, columns=new_columns)
+        data = pd.DataFrame(new_data, new_index, columns=new_columns)
+
+        # Set model column using model_dir
+        data["model"] = model_dir
+        return data
 
     @staticmethod
     def get_class_names(config_file: Path) -> list[str]:

@@ -22,7 +22,7 @@ license = { file = "license.md" }
 readme = "README.md"
 dependencies = [
   "dotmap",
-  "harp-python>=0.3.0",
+  "harp-python>=0.4.0",
   "matplotlib",
   "numpy>=1.21.0, <2",
   "opencv-python",

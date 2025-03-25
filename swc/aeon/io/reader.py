@@ -308,22 +308,8 @@ class Pose(Harp):
     def read(self, file: Path, include_model: bool = False) -> pd.DataFrame:
         """Reads data from the Harp-binarized tracking file."""
         # Get config file from `file`, then bodyparts from config file.
-        model_dir = Path(file.stem[self._pattern_offset :].replace("_", "/")).parent
-
-        # Check if model directory exists in local or shared directories.
-        # Local directory is prioritized over shared directory.
-        local_config_file_dir = file.parent / model_dir
-        shared_config_file_dir = Path(self._model_root) / model_dir
-        if local_config_file_dir.exists():
-            config_file_dir = local_config_file_dir
-        elif shared_config_file_dir.exists():
-            config_file_dir = shared_config_file_dir
-        else:
-            raise FileNotFoundError(
-                f"""Cannot find model dir in either local ({local_config_file_dir}) \
-                    or shared ({shared_config_file_dir}) directories"""
-            )
-
+        model_dir = self._get_model_dir(file)
+        config_file_dir = self._get_config_file_dir(file, model_dir)
         config_file = self.get_config_file(config_file_dir)
         identities = self.get_class_names(config_file)
         parts = self.get_bodyparts(config_file)
@@ -378,6 +364,77 @@ class Pose(Harp):
             data["model"] = model_dir
         return data
 
+    def write(self, file: Path, data: pd.DataFrame):
+        """Writes data to a Harp-binarized tracking file."""
+        # Get config file from `file`, then bodyparts from config file.
+        address = self._get_address(file)
+        model_dir = self._get_model_dir(file)
+        config_file_dir = self._get_config_file_dir(file, model_dir)
+        config_file = self.get_config_file(config_file_dir)
+        identities = self.get_class_names(config_file)
+        parts = self.get_bodyparts(config_file)
+
+        # Using bodyparts, assign column names to Harp register values
+        identity_likelihood = data["identity_likelihood"]
+        sleap_v2 = identity_likelihood.dtype != "object"
+        if sleap_v2:
+            columns = ["identity", "identity_likelihood"]
+            part_col_offset = 2
+        else:
+            columns = ["identity"]
+            columns.extend([f"{identity}_likelihood" for identity in identities])
+            part_col_offset = 1 + len(identities)
+        for part in parts:
+            columns.extend([f"{part}_x", f"{part}_y", f"{part}_likelihood"])
+        self.columns = columns
+
+        # Reconstruct native Harp register structure
+        n_parts = len(parts)
+        new_index = data.index.values[0::n_parts]
+        new_data = np.empty((len(data) // n_parts, len(columns)), dtype=np.float32)
+        if sleap_v2:
+            new_data[:, 1] = data.values[0::n_parts, 1]
+        else:
+            likelihood_data = pd.DataFrame.from_records(data.values[0::n_parts, 1])
+            new_data[:, 1:part_col_offset] = likelihood_data.values
+
+        for i in range(n_parts):
+            min_col = part_col_offset + i * 3
+            max_col = part_col_offset + (i + 1) * 3
+            new_data[:, min_col:max_col] = data.values[i::n_parts, 3:6]
+
+        # Replace identity labels with identity indices
+        new_data[:, 0] = self.class_str2int(data.iloc[0::n_parts, 0], identities)
+        new_data = pd.DataFrame(new_data, new_index, columns=columns)
+        harp.to_file(new_data, file, address, message_type=harp.MessageType.EVENT)
+
+    def _get_address(self, file: Path) -> int | None:
+        if self._pattern_offset >= 0:
+            address_onset = file.stem.rfind("_", 0, self._pattern_offset - 1) + 1
+            address_pattern = self.pattern[address_onset : self._pattern_offset - 1]
+            if address_pattern.isdecimal():
+                return int(address_pattern)
+        return None
+
+    def _get_model_dir(self, file: Path) -> Path:
+        # Get relative model dir from file path
+        return Path(file.stem[self._pattern_offset :].replace("_", "/")).parent
+
+    def _get_config_file_dir(self, file: Path, model_dir: Path) -> Path:
+        # Check if model directory exists in local or shared directories.
+        # Local directory is prioritized over shared directory.
+        local_config_file_dir = file.parent / model_dir
+        shared_config_file_dir = Path(self._model_root) / model_dir
+        if local_config_file_dir.exists():
+            return local_config_file_dir
+        elif shared_config_file_dir.exists():
+            return shared_config_file_dir
+        else:
+            raise FileNotFoundError(
+                f"""Cannot find model dir in either local ({local_config_file_dir}) \
+                    or shared ({shared_config_file_dir}) directories"""
+            )
+
     @staticmethod
     def get_class_names(config_file: Path) -> list[str]:
         """Returns a list of classes from a model's config file."""
@@ -417,6 +474,14 @@ class Pose(Harp):
         if classes:
             identity_mapping = dict(enumerate(classes))
             data["identity"] = data["identity"].replace(identity_mapping)
+        return data
+
+    @staticmethod
+    def class_str2int(data: pd.Series, classes: list[str]) -> pd.Series:
+        """Converts a class integer in a tracking data dataframe to its associated string (subject id)."""
+        if classes:
+            identity_mapping = {v: np.float32(i) for i, v in enumerate(classes)}
+            return data.replace(identity_mapping)
         return data
 
     @classmethod

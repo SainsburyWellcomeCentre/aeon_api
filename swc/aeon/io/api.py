@@ -6,14 +6,29 @@ from os import PathLike
 from pathlib import Path
 
 import pandas as pd
+from typing_extensions import deprecated
 
-"""The duration of each acquisition chunk, in whole hours."""
 CHUNK_DURATION = 1
+"""The duration of each acquisition chunk, in whole hours."""
+
+REFERENCE_EPOCH = datetime.datetime(1904, 1, 1)
+"""The reference epoch for UTC harp time."""
 
 
+@deprecated("Please use the from_seconds function instead.")
 def aeon(seconds):
     """Converts a Harp timestamp, in seconds, to a datetime object."""
-    return datetime.datetime(1904, 1, 1) + pd.to_timedelta(seconds, "s")
+    return REFERENCE_EPOCH + pd.to_timedelta(seconds, "s")
+
+
+def to_datetime(seconds):
+    """Converts a Harp timestamp, in seconds, to a datetime object."""
+    return REFERENCE_EPOCH + pd.to_timedelta(seconds, "s")
+
+
+def to_seconds(time):
+    """Converts a datetime object to a Harp timestamp, in seconds."""
+    return (time - REFERENCE_EPOCH).total_seconds()
 
 
 def chunk(time):
@@ -58,7 +73,7 @@ def chunk_key(file):
 
 def _set_index(data):
     if not isinstance(data.index, pd.DatetimeIndex):
-        data.index = aeon(data.index)
+        data.index = to_datetime(data.index)
     data.index.name = "time"
 
 

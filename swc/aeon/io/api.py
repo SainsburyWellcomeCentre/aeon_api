@@ -19,12 +19,16 @@ def aeon(seconds):
 def chunk(time):
     """Returns the whole hour acquisition chunk for a measurement timestamp.
 
-    :param datetime or Series time: An object or series specifying the measurement timestamps.
+    :param datetime, DatetimeIndex or Series time:
+        A datetime object, index or series specifying the measurement timestamps.
     :return: A datetime object or series specifying the acquisition chunk for the measurement timestamp.
     """
     if isinstance(time, pd.Series):
         hour = CHUNK_DURATION * (time.dt.hour // CHUNK_DURATION)
         return pd.to_datetime(time.dt.date) + pd.to_timedelta(hour, "h")
+    elif isinstance(time, pd.DatetimeIndex):
+        hour = CHUNK_DURATION * (time.hour // CHUNK_DURATION)
+        return pd.to_datetime(time.date) + pd.to_timedelta(hour, "h")
     else:
         hour = CHUNK_DURATION * (time.hour // CHUNK_DURATION)
         return pd.to_datetime(datetime.datetime.combine(time.date(), datetime.time(hour=hour)))

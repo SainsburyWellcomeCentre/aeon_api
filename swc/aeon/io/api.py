@@ -15,10 +15,15 @@ REFERENCE_EPOCH = datetime.datetime(1904, 1, 1)
 """The reference epoch for UTC harp time."""
 
 
-@deprecated("Please use the from_seconds function instead.")
+@deprecated("Please use the to_datetime function instead.")
 def aeon(seconds):
-    """Converts a Harp timestamp, in seconds, to a datetime object."""
-    return REFERENCE_EPOCH + pd.to_timedelta(seconds, "s")
+    """Converts a Harp timestamp, in seconds, to a datetime object.
+
+    .. deprecated:: 0.2.0
+       This function is deprecated and will be removed in a future release.
+       Use :func:`to_datetime` instead.
+    """
+    return to_datetime(seconds)
 
 
 def to_datetime(seconds):

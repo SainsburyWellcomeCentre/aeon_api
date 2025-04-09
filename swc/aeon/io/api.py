@@ -23,7 +23,7 @@ def aeon(seconds):
        This function is deprecated and will be removed in a future release.
        Use :func:`to_datetime` instead.
     """
-    return to_datetime(seconds)
+    return to_datetime(seconds)  # pragma: no cover
 
 
 def to_datetime(seconds):

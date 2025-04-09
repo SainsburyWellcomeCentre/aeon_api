@@ -1,13 +1,14 @@
 """Tests for the aeon API."""
 
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 import pytest
 from pandas import testing as tm
 
 from swc import aeon
-from swc.aeon.io.api import to_datetime, to_seconds
+from swc.aeon.io.api import chunk, to_datetime, to_seconds
 from tests.schema import exp02, social03
 
 monotonic_path = Path(__file__).parent.parent / "data" / "monotonic"
@@ -76,6 +77,26 @@ def test_datetime_seconds_conversion(seconds):
         tm.assert_series_equal(converted_seconds, seconds)
     else:
         assert converted_seconds == seconds
+
+
+@pytest.mark.parametrize(
+    "time",
+    [
+        pd.Timestamp(0),  # Datetime value
+        pd.Series([pd.to_datetime(0)]),  # Series value
+        pd.DatetimeIndex([pd.to_datetime(0)]),  # Datetime index value
+    ],
+)
+def test_chunk_identity_conversion(time):
+    if isinstance(time, pd.Series):
+        time_chunk = cast(pd.Series, chunk(time))
+        tm.assert_series_equal(time_chunk, time)
+    elif isinstance(time, pd.DatetimeIndex):
+        time_chunk = cast(pd.DatetimeIndex, chunk(time))
+        tm.assert_index_equal(time_chunk, time)
+    else:
+        time_chunk = chunk(time)
+        assert time_chunk == time
 
 
 if __name__ == "__main__":

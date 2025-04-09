@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from pandas import testing as tm
 
 from swc import aeon
 from swc.aeon.io.api import to_datetime, to_seconds
@@ -64,13 +65,17 @@ def test_pose_load_nonmonotonic_data_time_start_only_sort_fallback():
     [
         0,  # Edge case: REFERENCE_EPOCH
         123456789,  # Arbitrary value
+        pd.Series([0.0, 123456789.0]),  # Series value
     ],
 )
 def test_datetime_seconds_conversion(seconds):
     # test round-trip conversion
     converted_datetime = to_datetime(seconds)
     converted_seconds = to_seconds(converted_datetime)
-    assert converted_seconds == seconds
+    if isinstance(seconds, pd.Series):
+        tm.assert_series_equal(converted_seconds, seconds)
+    else:
+        assert converted_seconds == seconds
 
 
 if __name__ == "__main__":

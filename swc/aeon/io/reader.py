@@ -414,6 +414,11 @@ class Pose(Harp):
             address_pattern = self.pattern[address_onset : self._pattern_offset - 1]
             if address_pattern.isdecimal():
                 return int(address_pattern)
+        last_underscore = self.pattern.rfind("_")
+        if last_underscore >= 0:
+            address_pattern = self.pattern[last_underscore + 1:].rstrip("*")
+            if address_pattern.isdecimal():
+                return int(address_pattern)
         return None
 
     def _get_model_dir(self, file: Path) -> Path:

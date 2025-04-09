@@ -33,7 +33,10 @@ def to_datetime(seconds):
 
 def to_seconds(time):
     """Converts a datetime object to a Harp timestamp, in seconds."""
-    return (time - REFERENCE_EPOCH).total_seconds()
+    if isinstance(time, pd.Series):
+        return (time - REFERENCE_EPOCH).dt.total_seconds()
+    else:
+        return (time - REFERENCE_EPOCH).total_seconds()
 
 
 def chunk(time):

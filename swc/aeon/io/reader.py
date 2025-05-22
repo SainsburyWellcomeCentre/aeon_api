@@ -292,7 +292,7 @@ class Pose(Harp):
     - y (float): Y-coordinate of the bodypart.
     """
 
-    def __init__(self, pattern: str, model_root: str = "/ceph/aeon/aeon/data/processed"):
+    def __init__(self, pattern: str, model_root: str):
         """Pose reader constructor.
 
         The pattern for this reader should typically be `<device>_<hpcnode>_<jobid>*`.

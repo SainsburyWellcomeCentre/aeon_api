@@ -89,7 +89,7 @@ def _empty(columns):
     return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="time"))
 
 
-def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=None, **kwargs):
+def load(root, reader, start=None, end=None, include_end: bool = True, time=None, tolerance=None, epoch=None, **kwargs):
     """Extracts chunk data from the root path of an Aeon dataset.
 
     Reads all chunk data using the specified data stream reader. A subset of the data can be loaded
@@ -100,6 +100,7 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
     :param Reader reader: A data stream reader object used to read chunk data from the dataset.
     :param datetime, optional start: The left bound of the time range to extract.
     :param datetime, optional end: The right bound of the time range to extract.
+    :param bool, optional include_end: Whether to include the `end` timestamp in the slice (default True).
     :param datetime, optional time: An object or series specifying the timestamps to extract.
     :param datetime, optional tolerance:
         The maximum distance between original and new timestamps for inexact matches.
@@ -168,8 +169,9 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
     data = pd.concat([reader.read(file, **kwargs) for _, file in files])
     _set_index(data)
     if start is not None or end is not None:
+        mask = (data.index >= start) & (data.index < end) if not include_end else (data.index >= start) & (data.index <= end)
         try:
-            return data.loc[start:end]
+            return data.loc[mask]
         except KeyError:
             import warnings
 
@@ -178,6 +180,7 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
                     f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2
                 )
                 data = data.sort_index()
+                data = data.loc[mask]
             else:  # pragma: no cover
                 raise
     return data

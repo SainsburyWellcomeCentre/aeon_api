@@ -58,7 +58,7 @@ def test_pose_load_nonmonotonic_data_time_start_only_sort_fallback():
         data = aeon.load(
             nonmonotonic_path, social03.CameraTop.Pose, start=pd.Timestamp("2024-07-03T10:00:00")
         )
-        assert data.index.is_monotonic_increasing
+    assert data.index.is_monotonic_increasing
 
 
 @pytest.mark.parametrize(

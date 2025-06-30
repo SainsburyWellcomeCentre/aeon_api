@@ -54,7 +54,7 @@ def test_pose_load_nonmonotonic_data():
 
 @pytest.mark.api
 def test_pose_load_nonmonotonic_data_time_start_only_sort_fallback():
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="data index for .* contains out-of-order timestamps!"):
         data = aeon.load(
             nonmonotonic_path, social03.CameraTop.Pose, start=pd.Timestamp("2024-07-03T10:00:00")
         )

@@ -1,7 +1,6 @@
 """Tests for the aeon API."""
 
 from contextlib import nullcontext
-from pathlib import Path
 from typing import cast
 
 import pandas as pd
@@ -12,52 +11,44 @@ from swc import aeon
 from swc.aeon.io.api import chunk, to_datetime, to_seconds
 from tests.schema import exp02, social03
 
-monotonic_path = Path(__file__).parent.parent / "data" / "monotonic"
-nonmonotonic_path = Path(__file__).parent.parent / "data" / "nonmonotonic"
+pytestmark = pytest.mark.api
 
 
-@pytest.mark.api
-def test_load_start_only():
-    data = aeon.load(nonmonotonic_path, exp02.Patch2.Encoder, start=pd.Timestamp("2022-06-06T13:00:49"))
+def test_load_start_only(nonmonotonic_dir):
+    data = aeon.load(nonmonotonic_dir, exp02.Patch2.Encoder, start=pd.Timestamp("2022-06-06T13:00:49"))
     assert len(data) > 0
 
 
-@pytest.mark.api
-def test_load_end_only():
-    data = aeon.load(nonmonotonic_path, exp02.Patch2.Encoder, end=pd.Timestamp("2022-06-06T13:00:49"))
+def test_load_end_only(nonmonotonic_dir):
+    data = aeon.load(nonmonotonic_dir, exp02.Patch2.Encoder, end=pd.Timestamp("2022-06-06T13:00:49"))
     assert len(data) > 0
 
 
-@pytest.mark.api
-def test_load_filter_nonchunked():
-    data = aeon.load(nonmonotonic_path, exp02.Metadata, start=pd.Timestamp("2022-06-06T09:00:00"))
+def test_load_filter_nonchunked(nonmonotonic_dir):
+    data = aeon.load(nonmonotonic_dir, exp02.Metadata, start=pd.Timestamp("2022-06-06T09:00:00"))
     assert len(data) > 0
 
 
-@pytest.mark.api
-def test_load_monotonic():
-    data = aeon.load(monotonic_path, exp02.Patch2.Encoder)
+def test_load_monotonic(monotonic_dir):
+    data = aeon.load(monotonic_dir, exp02.Patch2.Encoder)
     assert len(data) > 0
     assert data.index.is_monotonic_increasing
 
 
-@pytest.mark.api
-def test_load_nonmonotonic():
-    data = aeon.load(nonmonotonic_path, exp02.Patch2.Encoder)
+def test_load_nonmonotonic(nonmonotonic_dir):
+    data = aeon.load(nonmonotonic_dir, exp02.Patch2.Encoder)
     assert not data.index.is_monotonic_increasing
 
 
-@pytest.mark.api
-def test_pose_load_nonmonotonic_data():
-    data = aeon.load(nonmonotonic_path, social03.CameraTop.Pose)
+def test_pose_load_nonmonotonic_data(nonmonotonic_dir):
+    data = aeon.load(nonmonotonic_dir, social03.CameraTop.Pose)
     assert not data.index.is_monotonic_increasing
 
 
-@pytest.mark.api
-def test_pose_load_nonmonotonic_data_time_start_only_sort_fallback():
+def test_pose_load_nonmonotonic_data_time_start_only_sort_fallback(nonmonotonic_dir):
     with pytest.warns(UserWarning, match="data index for .* contains out-of-order timestamps!"):
         data = aeon.load(
-            nonmonotonic_path, social03.CameraTop.Pose, start=pd.Timestamp("2024-07-03T10:00:00")
+            nonmonotonic_dir, social03.CameraTop.Pose, start=pd.Timestamp("2024-07-03T10:00:00")
         )
     assert data.index.is_monotonic_increasing
 
@@ -133,10 +124,10 @@ def test_chunk_identity_conversion(time):
         "Empty list",
     ],
 )
-def test_load_time_arg(time, expected):
+def test_load_time_arg(time, expected, monotonic_dir):
     """Test that `load` handles different kinds of `time` input."""
     with expected as expected_df_length:
-        result = aeon.load(monotonic_path, exp02.Patch2.Encoder, time=time)
+        result = aeon.load(monotonic_dir, exp02.Patch2.Encoder, time=time)
         assert len(result) == expected_df_length
 
 

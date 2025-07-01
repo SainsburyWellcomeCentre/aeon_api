@@ -123,3 +123,6 @@ exclude = [".venv/*"]
 
 [tool.pytest.ini_options]
 markers = ["api"]
+addopts = [
+  "--cov=swc/aeon",    # Enable pytest-cov for the aeon package
+]

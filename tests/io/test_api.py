@@ -40,12 +40,12 @@ def test_load_nonmonotonic(nonmonotonic_dir):
     assert not data.index.is_monotonic_increasing
 
 
-def test_pose_load_nonmonotonic_data(nonmonotonic_dir):
+def test_pose_load_nonmonotonic_file(nonmonotonic_dir):
     data = aeon.load(nonmonotonic_dir, social03.CameraTop.Pose)
     assert not data.index.is_monotonic_increasing
 
 
-def test_pose_load_nonmonotonic_data_time_start_only_sort_fallback(nonmonotonic_dir):
+def test_pose_load_nonmonotonic_file_time_start_only_sort_fallback(nonmonotonic_dir):
     with pytest.warns(UserWarning, match="data index for .* contains out-of-order timestamps!"):
         data = aeon.load(
             nonmonotonic_dir, social03.CameraTop.Pose, start=pd.Timestamp("2024-07-03T10:00:00")

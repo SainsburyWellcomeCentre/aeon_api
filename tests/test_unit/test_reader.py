@@ -6,7 +6,20 @@ import pandas as pd
 import pytest
 from dotmap import DotMap
 
-from swc.aeon.io.reader import Chunk, Csv, Harp, JsonList, Metadata, Reader
+from swc.aeon.io.reader import (
+    BitmaskEvent,
+    Chunk,
+    Csv,
+    DigitalBitmask,
+    Encoder,
+    Harp,
+    Heartbeat,
+    JsonList,
+    Metadata,
+    Pose,
+    Position,
+    Reader,
+)
 
 
 @pytest.mark.parametrize("columns", [pd.Index([1, 2, 3]), ["col1", "col2"]], ids=["Index", "Array-like"])
@@ -18,6 +31,33 @@ def test_base_reader_read(columns):
     assert df.empty
     assert isinstance(df.index, pd.DatetimeIndex)
     assert set(df.columns) == set(columns)
+
+
+@pytest.mark.parametrize(
+    ("reader_class", "init_args", "expected_columns"),
+    [
+        (Harp, {"columns": ["col1", "col2"]}, ["col1", "col2"]),
+        (Heartbeat, None, ["second"]),
+        (Encoder, None, ["angle", "intensity"]),
+        (Position, None, ["x", "y", "angle", "major", "minor", "area", "id"]),
+        (BitmaskEvent, {"value": 0x22, "tag": "PelletDetected"}, ["event"]),
+        (DigitalBitmask, {"mask": 0x1, "columns": ["state"]}, ["state"]),
+        (Pose, {"model_root": "test_root"}, None),
+    ],
+)
+def test_harp_init(reader_class, init_args, expected_columns):
+    """Test that Harp readers initialise with the expected columns."""
+    reader = reader_class("pattern", **(init_args or {}))
+    assert reader.pattern == "pattern"
+    if expected_columns is not None:
+        assert set(reader.columns) == set(expected_columns)
+    else:
+        assert reader.columns is None
+    # Also assert the reader attributes are correctly set
+    if init_args and "columns" in init_args:
+        init_args.pop("columns")
+        for key, value in init_args.items():
+            assert getattr(reader, key) == value
 
 
 def test_harp_read(monotonic_file):

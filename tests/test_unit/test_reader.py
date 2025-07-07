@@ -6,10 +6,10 @@ import pandas as pd
 import pytest
 from dotmap import DotMap
 
-from swc.aeon.io.reader import Chunk, Harp, Metadata, Reader
+from swc.aeon.io.reader import Chunk, Csv, Harp, JsonList, Metadata, Reader
 
 
-@pytest.mark.parametrize("columns", [pd.Index([1, 2, 3]), ["col1", "col2"]], ids=["string", "array-like"])
+@pytest.mark.parametrize("columns", [pd.Index([1, 2, 3]), ["col1", "col2"]], ids=["Index", "Array-like"])
 def test_base_reader_read(columns):
     """Test that the base Reader `read` returns an empty DataFrame with the expected index and columns."""
     reader = Reader("pattern", columns, "ext")
@@ -84,3 +84,32 @@ def test_metadata_read(metadata_file):
         columns=["workflow", "commit", "metadata"],
     )
     assert df.equals(expected)
+
+
+@pytest.mark.parametrize("file", ["empty_csv_file", "video_csv_file"], ids=["Empty", "Non-empty"])
+def test_csv_read(file, request):
+    """Test that CSV reader returns a DataFrame with the expected structure."""
+    reader = Csv("pattern", ["col1", "col2", "col3"])
+    df = reader.read(request.getfixturevalue(file))
+    if file == "empty_csv_file":
+        assert df.empty
+        assert set(df.columns) == {"col1", "col2", "col3"}
+        assert isinstance(df.index, pd.RangeIndex)
+    else:
+        assert not df.empty
+        assert set(df.columns) == {"col2", "col3"}  # col1 becomes index
+        assert pd.api.types.is_float_dtype(df.index)
+
+
+@pytest.mark.parametrize(
+    ("init_columns", "expected_columns"),
+    [([], {"value"}), (["name"], {"value", "name"})],
+    ids=["Default", "Extract `name` column"],
+)
+def test_jsonl_read(jsonl_file, init_columns, expected_columns):
+    """Test that JSONL reader returns a DataFrame with the expected structure."""
+    reader = JsonList("pattern", init_columns)
+    df = reader.read(jsonl_file)
+    assert not df.empty
+    assert set(df.columns) == expected_columns
+    assert pd.api.types.is_float_dtype(df.index)

@@ -51,3 +51,28 @@ def nonmonotonic_file(nonmonotonic_dir, nonmonotonic_epoch):
 def metadata_file(nonmonotonic_dir, nonmonotonic_epoch):
     """Returns path to metadata file."""
     return nonmonotonic_dir / nonmonotonic_epoch / "Metadata.yml"
+
+
+@pytest.fixture
+def video_csv_file(monotonic_dir, monotonic_epoch):
+    """Returns path to a CSV file containing video metadata."""
+    return monotonic_dir / monotonic_epoch / "CameraTop" / "CameraTop_2022-06-13T12-00-00.csv"
+
+
+@pytest.fixture
+def empty_csv_file(tmp_path):
+    """Returns path to an empty CSV file."""
+    empty_csv_path = tmp_path / "empty.csv"
+    empty_csv_path.touch()
+    return empty_csv_path
+
+
+@pytest.fixture
+def jsonl_file(monotonic_dir):
+    """Returns path to a JSONL file."""
+    return (
+        monotonic_dir
+        / "2024-06-19T10-55-14"
+        / "Environment"
+        / "Environment_ActiveConfiguration_2024-06-20T00-00-00.jsonl"
+    )

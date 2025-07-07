@@ -22,7 +22,7 @@ class Reader:
     Attributes:
         pattern (str): Pattern used to find raw files,
             usually in the format `<Device>_<DataStream>`.
-        columns (str or array-like): Column labels to use for the data.
+        columns (pandas.Index or array-like): Column labels to use for the data.
         extension (str): Extension of data file pathnames.
     """
 
@@ -60,7 +60,7 @@ class Chunk(Reader):
         super().__init__(pattern, columns=["path", "epoch"], extension=extension)
 
     def read(self, file):
-        """Returns path and epoch information for the specified chunk."""
+        """Returns path and epoch information for the chunk associated with the specified file."""
         epoch, chunk = chunk_key(file)
         data = {"path": file, "epoch": epoch}
         return pd.DataFrame(data, index=pd.Series(chunk), columns=self.columns)
@@ -74,7 +74,7 @@ class Metadata(Reader):
         super().__init__(pattern, columns=["workflow", "commit", "metadata"], extension="yml")
 
     def read(self, file):
-        """Returns metadata for the specified epoch."""
+        """Returns metadata for the epoch associated with the specified file."""
         epoch_str = file.parts[-2]
         date_str, time_str = epoch_str.split("T")
         time = datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
@@ -98,7 +98,12 @@ class Csv(Reader):
         self.dtype = dtype
 
     def read(self, file):
-        """Reads data from the specified CSV text file."""
+        """Reads data from the specified CSV text file.
+
+        If the file is non-empty, the first column is assumed to contain the Aeon timestamp
+        and is set as the index of the DataFrame. If the file is empty, pandas defaults to
+        using pandas.RangeIndex as the index.
+        """
         return pd.read_csv(
             file,
             header=0,
@@ -109,7 +114,18 @@ class Csv(Reader):
 
 
 class JsonList(Reader):
-    """Extracts data from .jsonl files, where the key "seconds" stores the Aeon timestamp."""
+    """Extracts data from .jsonl files, where the key "seconds" stores the Aeon timestamp.
+
+    Attributes:
+        pattern (str): Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
+        columns (pandas.Index or array-like): Column labels to extract from the dictionary stored in
+            the `root_key` of the JSON object. Each column name must correspond to a key in the
+            dictionary stored in the `root_key`. Defaults to an empty tuple, i.e. the JSON objects
+            are read as-is.
+        root_key (str): The key in the JSON object that contains the data. Defaults to "value".
+        extension (str): Extension of data file pathnames. Defaults to "jsonl".
+
+    """
 
     def __init__(self, pattern, columns=(), root_key="value", extension="jsonl"):
         """Initialize the object with the specified pattern, columns, and root key."""
@@ -118,7 +134,17 @@ class JsonList(Reader):
         self.root_key = root_key
 
     def read(self, file):
-        """Reads data from the specified jsonl file."""
+        """Reads data from the specified jsonl file.
+
+        Args:
+            file (str or Path): Path to the jsonl file to read. The file must contain a
+                "seconds" key that stores the Aeon timestamp, and the `root_key` must
+                contain a dictionary with keys corresponding to the specified `columns`.
+
+        Returns:
+            pd.DataFrame: A DataFrame with "seconds" as the index, other keys as columns,
+                and the specified columns extracted from the `root_key` dictionary (if any).
+        """
         with open(file) as f:
             df = pd.read_json(f, lines=True)
         df.set_index("seconds", inplace=True)

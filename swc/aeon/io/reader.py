@@ -239,6 +239,12 @@ class BitmaskEvent(Harp):
     Columns:
 
     - event (str): Unique identifier for the event code.
+
+    Attributes:
+        pattern (str): Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
+        value (int): The unique event code to match against the digital I/O data.
+        tag (str): A tag/label to assign to the event code for identification.
+
     """
 
     def __init__(self, pattern, value, tag):
@@ -288,6 +294,9 @@ class Video(Csv):
 
     - hw_counter (int): Hardware frame counter value for the current frame.
     - hw_timestamp (int): Internal camera timestamp for the current frame.
+    - _frame (int): Frame index in the video file.
+    - _path (str): Path to the video file.
+    - _epoch (str): Epoch name associated with the video file.
     """
 
     def __init__(self, pattern):
@@ -296,7 +305,14 @@ class Video(Csv):
         self._rawcolumns = ["time"] + self.columns[0:2]
 
     def read(self, file):
-        """Reads video metadata from the specified file."""
+        """Reads video metadata from the specified file.
+
+        Arguments:
+            file (Path): Path to the video metadata CSV file.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the video metadata.
+        """
         data = pd.read_csv(file, header=0, names=self._rawcolumns)
         data["_frame"] = data.index
         data["_path"] = os.path.splitext(file)[0] + ".avi"

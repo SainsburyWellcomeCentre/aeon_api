@@ -50,7 +50,6 @@ version_file = "swc/aeon/_version.py"
 include = ["swc*"]
 
 [tool.ruff]
-lint.flake8-builtins.strict-checking = false
 lint.select = [
   "E",
   "W",

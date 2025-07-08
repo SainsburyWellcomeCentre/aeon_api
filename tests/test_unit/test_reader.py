@@ -15,10 +15,13 @@ from swc.aeon.io.reader import (
     Harp,
     Heartbeat,
     JsonList,
+    Log,
     Metadata,
     Pose,
     Position,
     Reader,
+    Subject,
+    Video,
 )
 
 
@@ -36,17 +39,18 @@ def test_base_reader_read(columns):
 @pytest.mark.parametrize(
     ("reader_class", "init_args", "expected_columns"),
     [
-        (Harp, {"columns": ["col1", "col2"]}, ["col1", "col2"]),
+        (Subject, None, ["id", "weight", "event"]),
+        (Log, None, ["priority", "type", "message"]),
         (Heartbeat, None, ["second"]),
         (Encoder, None, ["angle", "intensity"]),
         (Position, None, ["x", "y", "angle", "major", "minor", "area", "id"]),
-        (BitmaskEvent, {"value": 0x22, "tag": "PelletDetected"}, ["event"]),
-        (DigitalBitmask, {"mask": 0x1, "columns": ["state"]}, ["state"]),
-        (Pose, {"model_root": "test_root"}, None),
+        (BitmaskEvent, {"value": 0x22, "tag": "PelletDetected"}, ["event"]),  # remove
+        (DigitalBitmask, {"mask": 0x1, "columns": ["state"]}, ["state"]),  # remove
+        (Pose, {"model_root": "test_root"}, None),  # remove
     ],
 )
-def test_harp_init(reader_class, init_args, expected_columns):
-    """Test that Harp readers initialise with the expected columns."""
+def test_init_only_readers(reader_class, init_args, expected_columns):
+    """Test readers with only an `__init__` method."""
     reader = reader_class("pattern", **(init_args or {}))
     assert reader.pattern == "pattern"
     if expected_columns is not None:
@@ -153,3 +157,32 @@ def test_jsonl_read(jsonl_file, init_columns, expected_columns):
     assert not df.empty
     assert set(df.columns) == expected_columns
     assert pd.api.types.is_float_dtype(df.index)
+
+
+@pytest.mark.parametrize(
+    ("reader", "expected_columns"),
+    [
+        (BitmaskEvent("pattern", value=0x22, tag="PelletDetected"), {"event"}),
+        (DigitalBitmask("pattern", mask=0x22, columns=["state"]), {"state"}),
+    ],
+    ids=["BitmaskEvent", "DigitalBitmask"],
+)
+def test_bitmask_read(reader, expected_columns, bitmaskevent_file):
+    """Test that BitmaskEvent reader returns a DataFrame with the expected structure."""
+    df = reader.read(bitmaskevent_file)
+    assert set(df.columns) == expected_columns
+    assert pd.api.types.is_float_dtype(df.index)
+    if isinstance(reader, BitmaskEvent):
+        assert df["event"].unique() == "PelletDetected"
+    else:  # expect all "state" as True for DigitalBitmask read
+        assert df["state"].all()
+
+
+def test_video_read(video_csv_file, monotonic_epoch):
+    """Test that Video reader returns a DataFrame with the expected structure."""
+    reader = Video("pattern")
+    df = reader.read(video_csv_file)
+    assert set(df.columns) == {"hw_counter", "hw_timestamp", "_frame", "_path", "_epoch"}
+    assert pd.api.types.is_float_dtype(df.index)
+    assert Path(df["_path"].iloc[0]) == video_csv_file.with_suffix(".avi")
+    assert df["_epoch"].iloc[0] == monotonic_epoch

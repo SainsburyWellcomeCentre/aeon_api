@@ -76,3 +76,9 @@ def jsonl_file(monotonic_dir):
         / "Environment"
         / "Environment_ActiveConfiguration_2024-06-20T00-00-00.jsonl"
     )
+
+
+@pytest.fixture
+def bitmaskevent_file(monotonic_dir, monotonic_epoch):
+    """Returns path to monotonic data file."""
+    return monotonic_dir / monotonic_epoch / "Patch2" / "Patch2_32_2022-06-13T12-00-00.bin"

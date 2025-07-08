@@ -82,3 +82,18 @@ def jsonl_file(monotonic_dir):
 def bitmaskevent_file(monotonic_dir, monotonic_epoch):
     """Returns path to monotonic data file."""
     return monotonic_dir / monotonic_epoch / "Patch2" / "Patch2_32_2022-06-13T12-00-00.bin"
+
+
+@pytest.fixture
+def sleap_topdown_config_file(test_data_dir):
+    """Returns path to a SLEAP config file."""
+    return (
+        test_data_dir
+        / "pose"
+        / "topdown"
+        / "2024-03-01T16-46-12"
+        / "CameraTop"
+        / "test-node1"
+        / "topdown-multianimal-id-133"
+        / "confmap_config.json"
+    )

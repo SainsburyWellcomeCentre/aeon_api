@@ -186,3 +186,18 @@ def test_video_read(video_csv_file, monotonic_epoch):
     assert pd.api.types.is_float_dtype(df.index)
     assert Path(df["_path"].iloc[0]) == video_csv_file.with_suffix(".avi")
     assert df["_epoch"].iloc[0] == monotonic_epoch
+
+
+class TestPose:
+    """Tests for the Pose reader."""
+
+    def test_init(self):
+        """Test that Pose reader initialises with the correct model root."""
+        reader = Pose("pattern_202", model_root="test_root")
+        assert reader._model_root == "test_root"  # type: ignore
+        assert reader._pattern_offset == 8  # type: ignore
+
+    def test_get_class_names(self, sleap_topdown_config_file):
+        """Test that the correct class names are extracted from a given config file."""
+        class_names = Pose.get_class_names(sleap_topdown_config_file)
+        assert class_names == ["BAA-1104045", "BAA-1104047"]

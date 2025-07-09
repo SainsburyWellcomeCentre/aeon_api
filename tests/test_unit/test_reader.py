@@ -1,5 +1,6 @@
 """Tests for the Reader classes."""
 
+from contextlib import nullcontext
 from pathlib import Path
 
 import pandas as pd
@@ -132,7 +133,7 @@ def test_metadata_read(metadata_file):
 
 @pytest.mark.parametrize("file", ["empty_csv_file", "video_csv_file"], ids=["Empty", "Non-empty"])
 def test_csv_read(file, request):
-    """Test that CSV reader returns a DataFrame with the expected structure."""
+    """Test that CSV `read` returns a DataFrame with the expected structure."""
     reader = Csv("pattern", ["col1", "col2", "col3"])
     df = reader.read(request.getfixturevalue(file))
     if file == "empty_csv_file":
@@ -151,7 +152,7 @@ def test_csv_read(file, request):
     ids=["Default", "Extract `name` column"],
 )
 def test_jsonl_read(jsonl_file, init_columns, expected_columns):
-    """Test that JSONL reader returns a DataFrame with the expected structure."""
+    """Test that JsonList `read` returns a DataFrame with the expected structure."""
     reader = JsonList("pattern", init_columns)
     df = reader.read(jsonl_file)
     assert not df.empty
@@ -168,7 +169,7 @@ def test_jsonl_read(jsonl_file, init_columns, expected_columns):
     ids=["BitmaskEvent", "DigitalBitmask"],
 )
 def test_bitmask_read(reader, expected_columns, bitmaskevent_file):
-    """Test that BitmaskEvent reader returns a DataFrame with the expected structure."""
+    """Test that BitmaskEvent `read` returns a DataFrame with the expected structure."""
     df = reader.read(bitmaskevent_file)
     assert set(df.columns) == expected_columns
     assert pd.api.types.is_float_dtype(df.index)
@@ -179,7 +180,7 @@ def test_bitmask_read(reader, expected_columns, bitmaskevent_file):
 
 
 def test_video_read(video_csv_file, monotonic_epoch):
-    """Test that Video reader returns a DataFrame with the expected structure."""
+    """Test that Video `read` returns a DataFrame with the expected structure."""
     reader = Video("pattern")
     df = reader.read(video_csv_file)
     assert set(df.columns) == {"hw_counter", "hw_timestamp", "_frame", "_path", "_epoch"}
@@ -191,13 +192,137 @@ def test_video_read(video_csv_file, monotonic_epoch):
 class TestPose:
     """Tests for the Pose reader."""
 
-    def test_init(self):
-        """Test that Pose reader initialises with the correct model root."""
-        reader = Pose("pattern_202", model_root="test_root")
-        assert reader._model_root == "test_root"  # type: ignore
-        assert reader._pattern_offset == 8  # type: ignore
+    EXPECTED_POSE_COLUMNS = {
+        "identity",
+        "identity_likelihood",
+        "part",
+        "x",
+        "y",
+        "part_likelihood",
+        "model",
+    }
 
-    def test_get_class_names(self, sleap_topdown_config_file):
-        """Test that the correct class names are extracted from a given config file."""
-        class_names = Pose.get_class_names(sleap_topdown_config_file)
-        assert class_names == ["BAA-1104045", "BAA-1104047"]
+    @pytest.mark.parametrize(
+        ("init_args", "file", "expected"),
+        [
+            (
+                {"pattern": "CameraTop_test-node1*"},
+                "pose_topdown_legacy_data_file",
+                nullcontext(EXPECTED_POSE_COLUMNS),
+            ),
+            (
+                {"pattern": "CameraTop_202_*"},
+                "pose_topdown_data_file",
+                nullcontext(EXPECTED_POSE_COLUMNS),
+            ),
+            (
+                {"pattern": "CameraTop_202_*"},
+                "pose_missing_config_topdown_data_file",
+                pytest.raises(FileNotFoundError, match="Cannot find model dir"),
+            ),
+            (
+                {"pattern": "CameraTop_202_*", "model_root": "pose_shared_sleap_topdown_config_dir"},
+                "pose_missing_config_topdown_data_file",
+                nullcontext(EXPECTED_POSE_COLUMNS),
+            ),
+        ],
+        ids=[
+            "Config dir in same dir as pose data: Bonsai.SLEAP0.2 legacy data",
+            "Config dir in same dir as pose data: Bonsai.SLEAP0.3 data",
+            "Config dir not found",
+            "Config dir in `model_root`",
+        ],
+    )
+    def test_pose_read(self, init_args, file, expected, request):
+        """Test that Pose `read` correctly locates the model config file associated with
+        the pose data file and returns a DataFrame with the correct structure.
+        If the config file is not found, an error is raised.
+        """
+        if "model_root" in init_args:
+            init_args["model_root"] = request.getfixturevalue(init_args["model_root"])
+        reader = Pose(**init_args)
+        with expected as expected_columns:
+            df = reader.read(request.getfixturevalue(file), include_model=True)
+            assert set(df.columns) == expected_columns
+
+    @pytest.mark.parametrize(
+        ("file", "expected"),
+        [
+            ("pose_topdown_config_file", nullcontext(["BAA-1104045", "BAA-1104047"])),
+            (
+                "pose_unsupported_config_file",
+                pytest.raises(ValueError, match="model config file .* not supported"),
+            ),
+            (
+                "pose_supported_config_file_missing_required_key",
+                pytest.raises(KeyError, match="Cannot find class_vectors in .*"),
+            ),
+        ],
+        ids=["Supported config", "Unsupported config", "Config missing required key"],
+    )
+    def test_get_class_names(self, file, expected, request):
+        """Test that the correct class names are extracted from a valid config file
+        or that an error is raised for unsupported config files.
+        """
+        config_file = request.getfixturevalue(file)
+        with expected as expected_values:
+            class_names = Pose.get_class_names(config_file)
+            assert class_names == expected_values
+
+    @pytest.mark.parametrize(
+        ("file", "expected"),
+        [
+            ("pose_topdown_config_file", nullcontext(["anchor_centroid", "centroid"])),
+            (
+                "pose_topdown_config_file_missing_part_names",
+                pytest.raises(KeyError, match="Cannot find anchor or bodyparts"),
+            ),
+        ],
+        ids=["Valid config", "Config missing part_names"],
+    )
+    def test_get_bodyparts(self, file, expected, request):
+        """Test that the correct body parts are extracted from a valid config file
+        or that an error is raised for missing part names.
+        """
+        config_file = request.getfixturevalue(file)
+        with expected as expected_values:
+            bodyparts = Pose.get_bodyparts(config_file)
+            assert bodyparts == expected_values
+
+    def test_class_int2str(self):
+        """Test that integer class (subject) IDs are converted to string class names."""
+        result = Pose.class_int2str(pd.DataFrame({"identity": [0, 1, 0, 1]}), ["A", "B"])
+        expected = pd.DataFrame({"identity": ["A", "B", "A", "B"]})
+        pd.testing.assert_frame_equal(result, expected)
+
+    @pytest.mark.parametrize(
+        ("config_dir", "config_name", "expected"),
+        [
+            (
+                "pose_sleap_topdown_config_dir",
+                None,  # Use default config file name
+                nullcontext("confmap_config.json"),
+            ),
+            (
+                "pose_missing_config_file_dir",
+                None,  # Use default config file name
+                pytest.raises(FileNotFoundError, match="Cannot find config file"),
+            ),
+            (
+                "pose_sleap_topdown_config_dir",
+                ["custom_config.json"],
+                pytest.raises(FileNotFoundError, match="Cannot find config file"),
+            ),
+        ],
+        ids=[
+            "Config file exists in config dir",
+            "Default config file not found",
+            "Specified config file not found",
+        ],
+    )
+    def test_get_config_file(self, config_dir, config_name, expected, test_data_dir, request):
+        """Test that the correct config file is returned based on the model root."""
+        config_dir = request.getfixturevalue(config_dir)
+        with expected as expected_file_name:
+            config_file = Pose.get_config_file(config_dir, config_name)
+            assert config_file == config_dir / expected_file_name

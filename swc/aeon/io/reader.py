@@ -455,7 +455,17 @@ class Pose(Harp):
 
     @staticmethod
     def class_int2str(data: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
-        """Converts a class integer in a tracking data dataframe to its associated string (subject id)."""
+        """Converts a class integer in a tracking data dataframe to its associated string (subject id).
+
+        Arguments:
+            data (pd.DataFrame): DataFrame containing a column named "identity" with integer class
+                identifiers.
+            classes (list[str]): List of class names corresponding to the integer identifiers in the
+                "identity" column.
+
+        Returns:
+            pd.DataFrame: DataFrame with the "identity" column converted to string class names.
+        """
         if classes:
             identity_mapping = dict(enumerate(classes))
             data["identity"] = data["identity"].replace(identity_mapping)

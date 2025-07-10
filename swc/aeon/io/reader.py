@@ -307,7 +307,7 @@ class Video(Csv):
     def read(self, file):
         """Reads video metadata from the specified file.
 
-        Arguments:
+        Args:
             file (Path): Path to the video metadata CSV file.
 
         Returns:
@@ -457,7 +457,7 @@ class Pose(Harp):
     def class_int2str(data: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
         """Converts a class integer in a tracking data dataframe to its associated string (subject id).
 
-        Arguments:
+        Args:
             data (pd.DataFrame): DataFrame containing a column named "identity" with integer class
                 identifiers.
             classes (list[str]): List of class names corresponding to the integer identifiers in the

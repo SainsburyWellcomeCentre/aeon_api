@@ -43,9 +43,14 @@ def to_seconds(time):
 def chunk(time):
     """Returns the whole hour acquisition chunk for a measurement timestamp.
 
-    :param datetime, DatetimeIndex or Series time:
-        A datetime object, index or series specifying the measurement timestamps.
-    :return: A datetime object or series specifying the acquisition chunk for the measurement timestamp.
+    Args:
+        time (datetime.datetime, pandas.DatetimeIndex or pandas.Series):
+            A datetime object, index or series specifying the measurement timestamp(s).
+
+    Returns:
+        pandas.Timestamp or pandas.DatetimeIndex or pandas.Series: A Timestamp (if `time` is a scalar),
+            DatetimeIndex, or Series specifying the acquisition chunk for the measurement timestamp(s).
+
     """
     if isinstance(time, pd.Series):
         hour = CHUNK_DURATION * (time.dt.hour // CHUNK_DURATION)

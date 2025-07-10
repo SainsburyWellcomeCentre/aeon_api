@@ -1,6 +1,6 @@
 """Tests for the `swc.aeon.io.api` module."""
 
-from typing import cast
+import datetime
 
 import pandas as pd
 import pytest
@@ -27,8 +27,8 @@ def test_chunk_key(data, expected, request):
     "seconds",
     [
         0,  # Edge case: REFERENCE_EPOCH
-        123456789,  # Arbitrary value
-        pd.Series([0.0, 123456789.0]),  # Series value
+        123456789.999999,  # Arbitrary value
+        pd.Series([0.0, 123456789.999999]),  # Series value
     ],
 )
 def test_datetime_seconds_conversion(seconds):
@@ -43,19 +43,26 @@ def test_datetime_seconds_conversion(seconds):
 
 @pytest.mark.parametrize(
     "time",
-    [
-        pd.Timestamp(0),  # Datetime value
-        pd.Series([pd.to_datetime(0)]),  # Series value
-        pd.DatetimeIndex([pd.to_datetime(0)]),  # Datetime index value
-    ],
+    [datetime.datetime(1907, 11, 29, 21, 33, 9, 999999), pd.Timestamp("1907-11-29 21:33:09.999999")],
+    ids=["datetime.datetime", "pandas.Timestamp"],
 )
-def test_chunk_identity_conversion(time):
-    if isinstance(time, pd.Series):
-        time_chunk = cast(pd.Series, chunk(time))
-        tm.assert_series_equal(time_chunk, time)
-    elif isinstance(time, pd.DatetimeIndex):
-        time_chunk = cast(pd.DatetimeIndex, chunk(time))
-        tm.assert_index_equal(time_chunk, time)
+@pytest.mark.parametrize(
+    "input_format",
+    ["scalar", pd.Series, pd.DatetimeIndex],
+    ids=["Scalar", "pandas.Series", "pandas.DatetimeIndex"],
+)
+def test_chunk(time, input_format):
+    """Test that `chunk` can handle different time formats as input and correctly returns the
+    acquisition chunk hour.
+    """
+    expected = pd.Timestamp("1907-11-29 21:00:00")
+    time = time if input_format == "scalar" else input_format([time])
+    result = chunk(time)
+    if isinstance(result, pd.Series):
+        tm.assert_series_equal(result, pd.Series([expected]))
+    elif isinstance(result, pd.DatetimeIndex):
+        tm.assert_index_equal(result, pd.DatetimeIndex([expected]))
     else:
-        time_chunk = chunk(time)
-        assert time_chunk == time
+        assert isinstance(result, pd.Timestamp)
+        assert isinstance(result, datetime.datetime)
+        assert result == expected

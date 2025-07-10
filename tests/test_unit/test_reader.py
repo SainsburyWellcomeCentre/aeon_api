@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from dotmap import DotMap
+from pandas import testing as tm
 
 from swc.aeon.io.reader import (
     BitmaskEvent,
@@ -293,7 +294,7 @@ class TestPose:
         """Test that integer class (subject) IDs are converted to string class names."""
         result = Pose.class_int2str(pd.DataFrame({"identity": [0, 1, 0, 1]}), ["A", "B"])
         expected = pd.DataFrame({"identity": ["A", "B", "A", "B"]})
-        pd.testing.assert_frame_equal(result, expected)
+        tm.assert_frame_equal(result, expected)
 
     @pytest.mark.parametrize(
         ("config_dir", "config_name", "expected"),

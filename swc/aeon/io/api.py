@@ -28,12 +28,27 @@ def aeon(seconds):
 
 
 def to_datetime(seconds):
-    """Converts a Harp timestamp, in seconds, to a datetime object."""
+    """Converts a Harp timestamp, in seconds, to a datetime object.
+
+    Args:
+        seconds (float, int, pandas.Series): The Harp timestamp in seconds.
+
+    Returns:
+        datetime.datetime, pandas.Series: The Harp timestamp(s) in datetime format.
+    """
     return REFERENCE_EPOCH + pd.to_timedelta(seconds, "s")
 
 
 def to_seconds(time):
-    """Converts a datetime object to a Harp timestamp, in seconds."""
+    """Converts a datetime object to a Harp timestamp, in seconds.
+
+    Args:
+        time (datetime.datetime, pandas.DatetimeIndex or pandas.Series):
+            A datetime object, index or series specifying the measurement timestamp(s).
+
+    Returns:
+        float, pandas.Series: The Harp timestamp in seconds.
+    """
     if isinstance(time, pd.Series):
         return (time - REFERENCE_EPOCH).dt.total_seconds()
     else:
@@ -48,8 +63,11 @@ def chunk(time):
             A datetime object, index or series specifying the measurement timestamp(s).
 
     Returns:
-        pandas.Timestamp or pandas.DatetimeIndex or pandas.Series: A Timestamp (if `time` is a scalar),
-            DatetimeIndex, or Series specifying the acquisition chunk for the measurement timestamp(s).
+        pandas.Timestamp, pandas.Series or pandas.DatetimeIndex:
+            If `time` is a scalar, a Timestamp representing the acquisition chunk for
+            the measurement timestamp. If `time` is a Series or DatetimeIndex, an object of
+            the same type is returned, with each element specifying the acquisition chunk for
+            the corresponding measurement timestamp.
 
     """
     if isinstance(time, pd.Series):
@@ -66,15 +84,26 @@ def chunk(time):
 def chunk_range(start, end):
     """Returns a range of whole hour acquisition chunks.
 
-    :param datetime start: The left bound of the time range.
-    :param datetime end: The right bound of the time range.
-    :return: A DatetimeIndex representing the acquisition chunk range.
+    Args:
+        start (datetime.datetime): The left bound of the time range.
+        end (datetime.datetime): The right bound of the time range.
+
+    Returns:
+        pandas.DatetimeIndex: A DatetimeIndex representing the acquisition chunk range.
     """
     return pd.date_range(chunk(start), chunk(end), freq=pd.DateOffset(hours=CHUNK_DURATION))
 
 
 def chunk_key(file):
-    """Returns the acquisition chunk key for the specified file name."""
+    """Returns the acquisition chunk key for the specified file.
+
+    Args:
+        file (pathlib.Path): The path to the file.
+
+    Returns:
+        tuple[str, datetime.datetime]: A tuple containing the epoch string
+            and the acquisition chunk datetime.
+    """
     epoch = file.parts[-3]
     chunk_str = file.stem.split("_")[-1]
     try:

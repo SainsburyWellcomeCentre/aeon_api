@@ -6,21 +6,7 @@ import pandas as pd
 import pytest
 from pandas import testing as tm
 
-from swc.aeon.io.api import chunk, chunk_key, to_datetime, to_seconds
-
-
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    [
-        ("monotonic_file", ("2022-06-13T13_14_25", pd.Timestamp("2022-06-13 12:00:00"))),
-        ("nonmonotonic_file", ("2022-06-06T09-24-28", pd.Timestamp("2022-06-06 13:00:00"))),
-    ],
-    ids=["Monotonic data file", "Nonmonotonic data file"],
-)
-def test_chunk_key(data, expected, request):
-    """Test `chunk_key` correctly extracts the epoch and chunk time for a given data file."""
-    result = chunk_key(request.getfixturevalue(data))
-    assert result == expected
+from swc.aeon.io.api import CHUNK_DURATION, chunk, chunk_key, chunk_range, to_datetime, to_seconds
 
 
 @pytest.mark.parametrize(
@@ -66,3 +52,35 @@ def test_chunk(time, input_format):
         assert isinstance(result, pd.Timestamp)
         assert isinstance(result, datetime.datetime)
         assert result == expected
+
+
+@pytest.mark.parametrize(
+    "start",
+    [datetime.datetime(1907, 11, 29, 21, 33, 9, 999999), pd.Timestamp("1907-11-29 21:33:09.999999")],
+    ids=["datetime.datetime", "pandas.Timestamp"],
+)
+def test_chunk_range(start):
+    """Test that `chunk_range` returns the correct range of acquisition chunks for different input types."""
+    end = start + pd.Timedelta(hours=24)
+    result = chunk_range(start, end)
+    expected = pd.date_range("1907-11-29 21:00", "1907-11-30 21:00", freq=f"{CHUNK_DURATION}h")
+    tm.assert_index_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ("monotonic_file", ("2022-06-13T13_14_25", pd.Timestamp("2022-06-13 12:00:00"))),
+        ("nonmonotonic_file", ("2022-06-06T09-24-28", pd.Timestamp("2022-06-06 13:00:00"))),
+        ("metadata_file", ("2022-06-06T09-24-28", pd.Timestamp("2022-06-06 09:24:28"))),
+    ],
+    ids=[
+        "Monotonic data file",
+        "Nonmonotonic data file",
+        "Metadata file (not chunked)",
+    ],
+)
+def test_chunk_key(data, expected, request):
+    """Test `chunk_key` correctly extracts the epoch and chunk time for a given data file."""
+    result = chunk_key(request.getfixturevalue(data))
+    assert result == expected

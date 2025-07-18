@@ -6,7 +6,8 @@ import pandas as pd
 import pytest
 from pandas import testing as tm
 
-from swc.aeon.io.api import CHUNK_DURATION, chunk, chunk_key, chunk_range, to_datetime, to_seconds
+from swc.aeon.io.api import CHUNK_DURATION, chunk, chunk_key, chunk_range, load, to_datetime, to_seconds
+from swc.aeon.io.reader import Encoder
 
 
 @pytest.mark.parametrize(
@@ -84,3 +85,57 @@ def test_chunk_key(data, expected, request):
     """Test `chunk_key` correctly extracts the epoch and chunk time for a given data file."""
     result = chunk_key(request.getfixturevalue(data))
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("root", "to_str", "expect_monotonic"),
+    [
+        ("monotonic_dir", False, True),
+        ("nonmonotonic_dir", True, False),
+        (["nonmonotonic_dir", "monotonic_dir"], False, True),
+        (["monotonic_dir", "nonmonotonic_dir"], True, False),
+    ],
+    ids=[
+        "PathLike",
+        "str",
+        "List of PathLike: monotonic dir has priority",
+        "List of str: nonmonotonic dir has priority",
+    ],
+)
+def test_load_root_types_and_priority(root, to_str, expect_monotonic, request):
+    """Test that `load` handles different `root` types and
+    when a list is provided, the last dir in `root` takes precedence.
+    """
+    if isinstance(root, list):
+        root = [request.getfixturevalue(r) for r in root]
+    else:
+        root = request.getfixturevalue(root)
+    root = [str(r) for r in root] if to_str and isinstance(root, list) else str(root)
+    result = load(root, Encoder("Patch2_90_*"))
+    assert expect_monotonic == result.index.is_monotonic_increasing
+
+
+@pytest.mark.parametrize(
+    "time",
+    [
+        pd.Timestamp("2022-06-13 12:14:54"),
+        [pd.Timestamp("2022-06-13 12:14:54"), pd.Timestamp("2022-06-13 12:14:55")],
+        pd.date_range("2022-06-13 12:14:54", periods=2, freq="s"),
+        pd.DataFrame(
+            data={"value": [0, 0]}, index=pd.date_range("2022-06-13 12:14:54", periods=2, freq="s")
+        ),
+    ],
+    ids=[
+        "Single Timestamp",
+        "List of Timestamps",
+        "DatetimeIndex",
+        "DataFrame with DatetimeIndex",
+    ],
+)
+def test_load_with_time(monotonic_dir, time):
+    """Test that `load` handles different `time` types."""
+    result = load(monotonic_dir, Encoder("Patch2_90_*"), time=time)
+    if isinstance(time, pd.Timestamp):
+        assert len(result) == 1
+    else:
+        assert len(result) == len(time)

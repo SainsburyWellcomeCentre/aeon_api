@@ -131,16 +131,25 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
     by specifying an optional time range, or a list of timestamps used to index the data on file.
     Returned data will be sorted chronologically.
 
-    :param str or PathLike root: The root path, or prioritised sequence of paths, where data is stored.
-    :param Reader reader: A data stream reader object used to read chunk data from the dataset.
-    :param datetime, optional start: The left bound of the time range to extract.
-    :param datetime, optional end: The right bound of the time range to extract.
-    :param datetime, optional time: An object or series specifying the timestamps to extract.
-    :param datetime, optional tolerance:
-        The maximum distance between original and new timestamps for inexact matches.
-    :param str, optional epoch: A wildcard pattern to use when searching epoch data.
-    :param optional kwargs: Optional keyword arguments to forward to the reader when reading chunk data.
-    :return: A pandas data frame containing epoch event metadata, sorted by time.
+    Args:
+        root (str, PathLike, list[str], list[PathLike]):
+            The root path, or prioritised sequence of paths, where data is stored.
+        reader (swc.aeon.io.reader.Reader):
+            A data stream reader object used to read chunk data from the dataset.
+        start (datetime.datetime, optional): The left bound of the time range to extract.
+        end (datetime.datetime, optional): The right bound of the time range to extract.
+        time (datetime.datetime, list[datetime.datetime], pandas.DatetimeIndex, pandas.DataFrame, optional):
+            A single timestamp, list of timestamps, DatetimeIndex, or a DataFrame with
+            DatetimeIndex specifying the timestamps to extract.
+        tolerance (datetime.timedelta, optional):
+            The maximum distance between original and new timestamps for inexact matches.
+        epoch (str, optional):
+            A wildcard pattern to use when searching epoch data.
+        **kwargs: Optional keyword arguments to forward to ``reader`` when reading chunk data.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing epoch event metadata, sorted by time.
+
     """
     if isinstance(root, str):
         root = Path(root)

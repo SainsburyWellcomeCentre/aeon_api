@@ -1,6 +1,7 @@
 """Tests for the `swc.aeon.io.api` module."""
 
 import datetime
+from contextlib import nullcontext
 
 import pandas as pd
 import pytest
@@ -102,7 +103,7 @@ def test_chunk_key(data, expected, request):
         "List of str: nonmonotonic dir has priority",
     ],
 )
-def test_load_root_types_and_priority(root, to_str, expect_monotonic, request):
+def test_load_root_arg_types_and_priority(root, to_str, expect_monotonic, request):
     """Test that `load` handles different `root` types and
     when a list is provided, the last dir in `root` takes precedence.
     """
@@ -116,26 +117,39 @@ def test_load_root_types_and_priority(root, to_str, expect_monotonic, request):
 
 
 @pytest.mark.parametrize(
-    "time",
+    ("time", "expected"),
     [
-        pd.Timestamp("2022-06-13 12:14:54"),
-        [pd.Timestamp("2022-06-13 12:14:54"), pd.Timestamp("2022-06-13 12:14:55")],
-        pd.date_range("2022-06-13 12:14:54", periods=2, freq="s"),
-        pd.DataFrame(
-            data={"value": [0, 0]}, index=pd.date_range("2022-06-13 12:14:54", periods=2, freq="s")
+        (pd.Timestamp("2022-06-13 12:14:54"), nullcontext(1)),
+        ([pd.Timestamp("2022-06-13 12:14:54"), pd.Timestamp("2022-06-13 12:14:55")], nullcontext(2)),
+        (pd.date_range("2022-06-13 12:14:54", periods=2, freq="s"), nullcontext(2)),
+        (
+            pd.DataFrame(
+                data={"value": [0, 0]}, index=pd.date_range("2022-06-13 12:14:54", periods=2, freq="s")
+            ),
+            nullcontext(2),
         ),
+        (
+            pd.Timestamp("2022-06-13 13:00:00"),
+            pytest.raises(TypeError, match="Cannot compare dtypes float64 and datetime64"),
+        ),
+        (
+            pd.Timestamp("2022-06-13 12:00:00"),
+            nullcontext(1),  # df filled with NaN values
+        ),
+        ([], nullcontext(0)),  # Empty list
     ],
     ids=[
         "Single Timestamp",
         "List of Timestamps",
         "DatetimeIndex",
         "DataFrame with DatetimeIndex",
+        "Timestamp after available data",
+        "Timestamp before available data",
+        "Empty list",
     ],
 )
-def test_load_with_time(monotonic_dir, time):
+def test_load_time_arg(monotonic_dir, time, expected):
     """Test that `load` handles different `time` types."""
-    result = load(monotonic_dir, Encoder("Patch2_90_*"), time=time)
-    if isinstance(time, pd.Timestamp):
-        assert len(result) == 1
-    else:
-        assert len(result) == len(time)
+    with expected as expected_df_length:
+        result = load(monotonic_dir, Encoder("Patch2_90_*"), time=time)
+        assert len(result) == expected_df_length

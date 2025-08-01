@@ -130,21 +130,21 @@ def test_load_root_arg_types_and_priority(root, to_str, expect_monotonic, reques
         ),
         (
             pd.Timestamp("2022-06-13 13:00:00"),
-            pytest.raises(TypeError, match="Cannot compare dtypes float64 and datetime64"),
+            nullcontext(1),  # Single row df filled with NaNs
         ),
         (
-            pd.Timestamp("2022-06-13 12:00:00"),
-            nullcontext(1),  # df filled with NaN values
+            pd.Timestamp("2022-06-13 11:00:00"),
+            nullcontext(1),  # Single row df filled with NaNs
         ),
-        ([], nullcontext(0)),  # Empty list
+        ([], nullcontext(0)),  # Empty df
     ],
     ids=[
         "Single Timestamp",
         "List of Timestamps",
         "DatetimeIndex",
         "DataFrame with DatetimeIndex",
-        "Timestamp after available data",
         "Timestamp before available data",
+        "Timestamp after available data",
         "Empty list",
     ],
 )

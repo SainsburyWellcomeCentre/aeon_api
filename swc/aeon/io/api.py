@@ -147,6 +147,7 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
                 # expand reindex to allow adjacent chunks
                 # to fill missing values
                 previous = reader.read(files[i - 1], **kwargs)
+                _set_index(previous)
                 data = pd.concat([previous, frame])
                 data = data.reindex(values, method="pad", tolerance=tolerance)
             else:

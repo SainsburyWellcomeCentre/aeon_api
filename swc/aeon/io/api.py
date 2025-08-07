@@ -170,7 +170,8 @@ def load(
             A data stream reader object used to read chunk data from the dataset.
         start (datetime.datetime, optional): The left bound of the time range to extract.
         end (datetime.datetime, optional): The right bound of the time range to extract.
-        inclusive (str, optional): Specifies whether the start and end bounds are inclusive or exclusive.
+        inclusive (str, optional): Specifies whether the ``start`` and ``end`` bounds are inclusive or
+            exclusive. This is only applicable when ``start`` and/or ``end`` are provided.
             Options are "both", "left", "right", or "neither".
         time (datetime.datetime, list[datetime.datetime], pandas.DatetimeIndex, pandas.DataFrame, optional):
             A single timestamp, list of timestamps, DatetimeIndex, or a DataFrame with

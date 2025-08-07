@@ -7,7 +7,16 @@ import pandas as pd
 import pytest
 from pandas import testing as tm
 
-from swc.aeon.io.api import CHUNK_DURATION, chunk, chunk_key, chunk_range, load, to_datetime, to_seconds
+from swc.aeon.io.api import (
+    CHUNK_DURATION,
+    _filter_time_range,
+    chunk,
+    chunk_key,
+    chunk_range,
+    load,
+    to_datetime,
+    to_seconds,
+)
 from swc.aeon.io.reader import Encoder
 
 
@@ -86,6 +95,60 @@ def test_chunk_key(data, expected, request):
     """Test `chunk_key` correctly extracts the epoch and chunk time for a given data file."""
     result = chunk_key(request.getfixturevalue(data))
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("inclusive", "expected_length"),
+    [
+        ("both", 2),
+        ("left", 1),
+        ("right", 1),
+        ("neither", 0),
+    ],
+)
+@pytest.mark.parametrize(
+    ("start", "end", "expected_error"),
+    [
+        (pd.Timestamp("2022-01-01 00:02:00"), pd.Timestamp("2022-01-01 00:04:00"), nullcontext()),
+        (
+            pd.Timestamp("2022-01-01 00:02:30"),
+            pd.Timestamp("2022-01-01 00:04:00"),
+            pytest.raises(KeyError),
+        ),
+        (
+            pd.Timestamp("2022-01-01 00:02:00"),
+            pd.Timestamp("2022-01-01 00:04:30"),
+            pytest.raises(KeyError),
+        ),
+        (
+            pd.Timestamp("2022-01-01 00:02:30"),
+            pd.Timestamp("2022-01-01 00:04:30"),
+            pytest.raises(KeyError),
+        ),
+    ],
+    ids=[
+        "start and end keys present in df",
+        "start key not present in df",
+        "end key not present in df",
+        "both keys not present in df",
+    ],
+)
+def test_filter_time_range_with_out_of_order_input(start, end, inclusive, expected_error, expected_length):
+    """Test _filter_time_range with a DataFrame with out-of-order DatetimeIndex.
+
+    The DataFrame has timestamps in this order (positions 3 and 4 are out-of-order):
+    00:00:00, 00:01:00, 00:02:00, 00:04:00, 00:03:00, 00:05:00, ...
+    The function should throw a KeyError if any of the start or end keys are not
+    present in the DataFrame. Otherwise, it should return a DataFrame with the
+    expected length.
+    """
+    # Create a DataFrame with out-of-order DatetimeIndex
+    idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
+    idx_list[3], idx_list[4] = idx_list[4], idx_list[3]
+    df = pd.DataFrame({"value": range(10)}, index=idx_list)
+    with expected_error:
+        result = _filter_time_range(df, start, end, inclusive=inclusive)
+        assert len(result) == expected_length
 
 
 @pytest.mark.parametrize(
@@ -201,9 +264,9 @@ def test_load_start_end_args(data_dir, start, end, request):
     # Monotonic filtering assertions
     if is_monotonic:
         if start is not None:
-            assert (
-                result.index >= start
-            ).all(), f"Start filter failed: min index {result.index.min()} < {start}"
+            assert (result.index >= start).all(), (
+                f"Start filter failed: min index {result.index.min()} < {start}"
+            )
         if end is not None:
             assert (result.index <= end).all(), f"End filter failed: max index {result.index.max()} > {end}"
     assert result.index.is_monotonic_increasing

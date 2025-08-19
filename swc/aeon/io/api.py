@@ -2,6 +2,7 @@
 
 import bisect
 import datetime
+import warnings
 from os import PathLike
 from pathlib import Path
 
@@ -171,8 +172,6 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
         try:
             return data.loc[start:end]
         except KeyError:
-            import warnings
-
             if not data.index.is_monotonic_increasing:
                 warnings.warn(
                     f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2

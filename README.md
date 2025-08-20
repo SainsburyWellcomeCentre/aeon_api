@@ -25,8 +25,8 @@ uv sync --all-extras
 
 ## Repository Contents
 
-- `.github/workflows/` : GitHub actions workflows for building the environment and running tests 
-- `aeon/` : Source code for the Aeon Python package 
+- `.github/workflows/` : GitHub actions workflows for building the environment and running tests
+- `aeon/` : Source code for the Aeon Python package
     - `aeon/analysis`: Source code for processing and plotting the raw data
     - `aeon/io`: Source code for loading raw data
     - `aeon/schema`: Core modules for defining data schemas used to load raw data from particular experiments
@@ -39,6 +39,6 @@ uv sync --all-extras
 
 If you use this software, please cite it as below:
 
-Sainsbury Wellcome Centre Foraging Behaviour Working Group. (2023). Aeon: An open-source platform to study the neural basis of ethological behaviours over naturalistic timescales,  https://doi.org/10.5281/zenodo.8411157
+D. Campagner, J. Bhagat, G. Lopes, L. Calcaterra, A. G. Pouget, A. Almeida, T. T. Nguyen, C. H. Lo, T. Ryan, B. Cruz, F. J. Carvalho, Z. Li, A. Erskine, J. Rapela, O. Folsz, M. Marin, J. Ahn, S. Nierwetberg, S. C. Lenzi, J. D. S. Reggiani, SGEN group&mdash;SWC GCNU Experimental Neuroethology Group. _Aeon: an open-source platform to study the neural basis of ethological behaviours over naturalistic timescales._ Preprint at https://doi.org/10.1101/2025.07.31.664513 (2025)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8411157.svg)](https://zenodo.org/doi/10.5281/zenodo.8411157)
+[![DOI:10.1101/2025.07.31.664513](https://img.shields.io/badge/DOI-10.1101%2F2025.07.31.664513-AE363B.svg)](https://doi.org/10.1101/2025.07.31.664513)

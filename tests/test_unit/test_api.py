@@ -176,21 +176,31 @@ def test_load_start_end_args_monotonic(monotonic_dir, start, end, expected_lengt
 
 
 @pytest.mark.parametrize(
-    ("start", "end", "expected_length"),
+    ("start", "end", "expected_warning"),
     [
-        (pd.Timestamp("2022-06-06 13:00:48"), None, 10),
-        (None, pd.Timestamp("2022-06-06 13:00:49"), 5),
-        (None, None, 10),
-        (pd.Timestamp("2022-06-06 13:00:48"), pd.Timestamp("2022-06-06 13:00:50"), 5),
+        (
+            pd.Timestamp("2022-06-06 13:00:48"),
+            None,
+            pytest.warns(UserWarning, match="out-of-order timestamps"),
+        ),
+        (
+            None,
+            pd.Timestamp("2022-06-06 13:00:49.99"),
+            pytest.warns(UserWarning, match="out-of-order timestamps"),
+        ),
+        (None, None, nullcontext()),  # No warning when loading full dataframe
+        (
+            pd.Timestamp("2022-06-06 13:00:48"),
+            pd.Timestamp("2022-06-06 13:00:48.99"),
+            pytest.warns(UserWarning, match="out-of-order timestamps"),
+        ),
     ],
     ids=["End is None", "Start is None", "Both are None", "Both provided"],
 )
-def test_load_start_end_args_nonmonotonic(nonmonotonic_dir, start, end, expected_length):
+def test_load_start_end_args_nonmonotonic(nonmonotonic_dir, start, end, expected_warning):
     """Test that `load` handles `start` and `end` arguments."""
-    result = load(nonmonotonic_dir, Encoder("Patch2_90_*"), start=start, end=end)
-    if start is not None:
-        assert result.index[0] >= start
-    if end is not None:
-        assert result.index[-1] <= end
-    assert len(result) == expected_length
-    assert len(result) == expected_length
+    with expected_warning:
+        result = load(nonmonotonic_dir, Encoder("Patch2_90_*"), start=start, end=end)
+    # When a warning is raised, the full dataframe will be returned with indices sorted
+    assert result.index.is_monotonic_increasing != (isinstance(expected_warning, nullcontext))
+    assert len(result) == 10

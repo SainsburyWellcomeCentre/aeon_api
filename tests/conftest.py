@@ -110,7 +110,7 @@ def jsonl_file(monotonic_dir):
 
 @pytest.fixture
 def bitmaskevent_file(monotonic_dir, monotonic_epoch):
-    """Returns path to monotonic data file."""
+    """Returns path to monotonic bitmask event file."""
     return monotonic_dir / monotonic_epoch / "Patch2" / "Patch2_32_2022-06-13T12-00-00.bin"
 
 

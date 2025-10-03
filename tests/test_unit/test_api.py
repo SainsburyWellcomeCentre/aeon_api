@@ -153,3 +153,44 @@ def test_load_time_arg(monotonic_dir, time, expected):
     with expected as expected_df_length:
         result = load(monotonic_dir, Encoder("Patch2_90_*"), time=time)
         assert len(result) == expected_df_length
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "expected_length"),
+    [
+        (pd.Timestamp("2022-06-13 12:14:54"), None, 1900),
+        (None, pd.Timestamp("2022-06-13 12:14:55"), 601),
+        (None, None, 2000),
+        (pd.Timestamp("2022-06-13 12:14:54"), pd.Timestamp("2022-06-13 12:14:55"), 501),
+    ],
+    ids=["End is None", "Start is None", "Both are None", "Both provided"],
+)
+def test_load_start_end_args_monotonic(monotonic_dir, start, end, expected_length):
+    """Test that `load` handles `start` and `end` arguments."""
+    result = load(monotonic_dir, Encoder("Patch2_90_*"), start=start, end=end)
+    if start is not None:
+        assert result.index[0] >= start
+    if end is not None:
+        assert result.index[-1] <= end
+    assert len(result) == expected_length
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "expected_length"),
+    [
+        (pd.Timestamp("2022-06-06 13:00:48"), None, 10),
+        (None, pd.Timestamp("2022-06-06 13:00:49"), 5),
+        (None, None, 10),
+        (pd.Timestamp("2022-06-06 13:00:48"), pd.Timestamp("2022-06-06 13:00:50"), 5),
+    ],
+    ids=["End is None", "Start is None", "Both are None", "Both provided"],
+)
+def test_load_start_end_args_nonmonotonic(nonmonotonic_dir, start, end, expected_length):
+    """Test that `load` handles `start` and `end` arguments."""
+    result = load(nonmonotonic_dir, Encoder("Patch2_90_*"), start=start, end=end)
+    if start is not None:
+        assert result.index[0] >= start
+    if end is not None:
+        assert result.index[-1] <= end
+    assert len(result) == expected_length
+    assert len(result) == expected_length

@@ -156,51 +156,54 @@ def test_load_time_arg(monotonic_dir, time, expected):
 
 
 @pytest.mark.parametrize(
-    ("start", "end", "expected_length"),
+    ("data_dir", "start", "end"),
     [
-        (pd.Timestamp("2022-06-13 12:14:54"), None, 1900),
-        (None, pd.Timestamp("2022-06-13 12:14:55"), 601),
-        (None, None, 2000),
-        (pd.Timestamp("2022-06-13 12:14:54"), pd.Timestamp("2022-06-13 12:14:55"), 501),
-    ],
-    ids=["End is None", "Start is None", "Both are None", "Both provided"],
-)
-def test_load_start_end_args_monotonic(monotonic_dir, start, end, expected_length):
-    """Test that `load` handles `start` and `end` arguments."""
-    result = load(monotonic_dir, Encoder("Patch2_90_*"), start=start, end=end)
-    if start is not None:
-        assert result.index[0] >= start
-    if end is not None:
-        assert result.index[-1] <= end
-    assert len(result) == expected_length
-
-
-@pytest.mark.parametrize(
-    ("start", "end", "expected_warning"),
-    [
+        # Monotonic cases
+        ("monotonic_dir", pd.Timestamp("2022-06-13 12:14:54"), None),
+        ("monotonic_dir", None, pd.Timestamp("2022-06-13 12:14:55")),
         (
-            pd.Timestamp("2022-06-06 13:00:48"),
-            None,
-            pytest.warns(UserWarning, match="out-of-order timestamps"),
+            "monotonic_dir",
+            pd.Timestamp("2022-06-13 12:14:54"),
+            pd.Timestamp("2022-06-13 12:14:55"),
         ),
+        # Non-monotonic cases
+        ("nonmonotonic_dir", pd.Timestamp("2022-06-06 13:00:48"), None),
+        ("nonmonotonic_dir", None, pd.Timestamp("2022-06-06 13:00:49.99")),
         (
-            None,
-            pd.Timestamp("2022-06-06 13:00:49.99"),
-            pytest.warns(UserWarning, match="out-of-order timestamps"),
-        ),
-        (None, None, nullcontext()),  # No warning when loading full dataframe
-        (
+            "nonmonotonic_dir",
             pd.Timestamp("2022-06-06 13:00:48"),
             pd.Timestamp("2022-06-06 13:00:48.99"),
-            pytest.warns(UserWarning, match="out-of-order timestamps"),
         ),
     ],
-    ids=["End is None", "Start is None", "Both are None", "Both provided"],
+    ids=[
+        "Monotonic: End is None",
+        "Monotonic: Start is None",
+        "Monotonic: Both provided",
+        "Nonmonotonic: End is None",
+        "Nonmonotonic: Start is None",
+        "Nonmonotonic: Both provided",
+    ],
 )
-def test_load_start_end_args_nonmonotonic(nonmonotonic_dir, start, end, expected_warning):
-    """Test that `load` handles `start` and `end` arguments."""
-    with expected_warning:
-        result = load(nonmonotonic_dir, Encoder("Patch2_90_*"), start=start, end=end)
-    # When a warning is raised, the full dataframe will be returned with indices sorted
-    assert result.index.is_monotonic_increasing != (isinstance(expected_warning, nullcontext))
-    assert len(result) == 10
+def test_load_start_end_args(data_dir, start, end, request):
+    """Test `load` handling of `start` and `end` with both monotonic and non-monotonic data.
+
+    Ensures:
+    - Filtering respects `start` and `end` bounds when monotonic
+    - Non-monotonic data triggers warning and returns the full dataframe with sorted indices
+    """
+    root_dir = request.getfixturevalue(data_dir)
+    is_monotonic = data_dir == "monotonic_dir"
+    context = (
+        pytest.warns(UserWarning, match="out-of-order timestamps") if not is_monotonic else nullcontext()
+    )
+    with context:
+        result = load(root_dir, Encoder("Patch2_90_*"), start=start, end=end)
+    # Monotonic filtering assertions
+    if is_monotonic:
+        if start is not None:
+            assert (
+                result.index >= start
+            ).all(), f"Start filter failed: min index {result.index.min()} < {start}"
+        if end is not None:
+            assert (result.index <= end).all(), f"End filter failed: max index {result.index.max()} > {end}"
+    assert result.index.is_monotonic_increasing

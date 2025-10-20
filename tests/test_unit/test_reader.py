@@ -250,6 +250,7 @@ class TestPose:
         ("file", "expected"),
         [
             ("pose_topdown_config_file", nullcontext(["BAA-1104045", "BAA-1104047"])),
+            ("pose_centered_instance_config_file", nullcontext([])),
             (
                 "pose_unsupported_config_file",
                 pytest.raises(ValueError, match="model config file .* not supported"),
@@ -259,7 +260,12 @@ class TestPose:
                 pytest.raises(KeyError, match="Cannot find class_vectors in .*"),
             ),
         ],
-        ids=["Supported config", "Unsupported config", "Config missing required key"],
+        ids=[
+            "Supported config: topdown model (with class labels)",
+            "Supported config: centered-instance model (no class labels)",
+            "Unsupported config",
+            "Config missing required 'head' key",
+        ],
     )
     def test_get_class_names(self, file, expected, request):
         """Test that the correct class names are extracted from a valid config file

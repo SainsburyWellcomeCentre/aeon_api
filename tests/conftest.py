@@ -11,6 +11,7 @@ def test_data_dir():
     return Path(__file__).parent / "data"
 
 
+# ==================== Monotonic and Nonmonotonic Fixtures ====================
 @pytest.fixture
 def monotonic_dir(test_data_dir):
     """Returns path to monotonic data directory."""
@@ -21,36 +22,6 @@ def monotonic_dir(test_data_dir):
 def nonmonotonic_dir(test_data_dir):
     """Returns path to nonmonotonic data directory."""
     return test_data_dir / "nonmonotonic"
-
-
-@pytest.fixture
-def pose_dir(test_data_dir):
-    """Returns path to pose data directory."""
-    return test_data_dir / "pose"
-
-
-@pytest.fixture
-def pose_missing_config_file_dir(pose_dir):
-    """Returns path to pose model directory missing the required config file."""
-    return pose_dir / "missing-config-file"
-
-
-@pytest.fixture
-def pose_sleap_topdown_root_dir(pose_dir):
-    """Returns path to pose SLEAP topdown model directory."""
-    return pose_dir / "topdown" / "2024-03-01T16-46-12" / "CameraTop"
-
-
-@pytest.fixture
-def pose_sleap_topdown_config_dir(pose_sleap_topdown_root_dir):
-    """Returns path to pose SLEAP topdown model directory."""
-    return pose_sleap_topdown_root_dir / "test-node1" / "topdown-multianimal-id-133"
-
-
-@pytest.fixture
-def pose_shared_sleap_topdown_config_dir(pose_dir):
-    """Returns path to pose SLEAP topdown model directory with shared config."""
-    return pose_dir / "shared-config-file"
 
 
 @pytest.fixture
@@ -77,47 +48,53 @@ def nonmonotonic_file(nonmonotonic_dir, nonmonotonic_epoch):
     return nonmonotonic_dir / nonmonotonic_epoch / "Patch2" / "Patch2_90_2022-06-06T13-00-00.bin"
 
 
+# ========================= Pose Fixtures =========================
 @pytest.fixture
-def metadata_file(nonmonotonic_dir, nonmonotonic_epoch):
-    """Returns path to metadata file."""
-    return nonmonotonic_dir / nonmonotonic_epoch / "Metadata.yml"
-
-
-@pytest.fixture
-def video_csv_file(monotonic_dir, monotonic_epoch):
-    """Returns path to a CSV file containing video metadata."""
-    return monotonic_dir / monotonic_epoch / "CameraTop" / "CameraTop_2022-06-13T12-00-00.csv"
+def pose_dir(test_data_dir):
+    """Returns path to pose data directory."""
+    return test_data_dir / "pose"
 
 
 @pytest.fixture
-def empty_csv_file(tmp_path):
-    """Returns path to an empty CSV file."""
-    empty_csv_path = tmp_path / "empty.csv"
-    empty_csv_path.touch()
-    return empty_csv_path
+def pose_missing_config_file_dir(pose_dir):
+    """Returns path to pose model directory missing the required config file."""
+    return pose_dir / "missing-config-file"
 
 
 @pytest.fixture
-def jsonl_file(monotonic_dir):
-    """Returns path to a JSONL file."""
-    return (
-        monotonic_dir
-        / "2024-06-19T10-55-14"
-        / "Environment"
-        / "Environment_ActiveConfiguration_2024-06-20T00-00-00.jsonl"
-    )
+def pose_sleap_centered_instance_root_dir(pose_dir):
+    """Returns path to pose SLEAP centered instance model directory."""
+    return pose_dir / "centered-instance" / "2024-02-09T16-07-32" / "CameraTop"
 
 
 @pytest.fixture
-def bitmaskevent_file(monotonic_dir, monotonic_epoch):
-    """Returns path to monotonic bitmask event file."""
-    return monotonic_dir / monotonic_epoch / "Patch2" / "Patch2_32_2022-06-13T12-00-00.bin"
+def pose_sleap_topdown_root_dir(pose_dir):
+    """Returns path to pose SLEAP topdown model directory."""
+    return pose_dir / "topdown" / "2024-03-01T16-46-12" / "CameraTop"
+
+
+@pytest.fixture
+def pose_sleap_topdown_config_dir(pose_sleap_topdown_root_dir):
+    """Returns path to pose SLEAP topdown model directory."""
+    return pose_sleap_topdown_root_dir / "test-node1" / "topdown-multianimal-id-133"
+
+
+@pytest.fixture
+def pose_shared_sleap_topdown_config_dir(pose_dir):
+    """Returns path to pose SLEAP topdown model directory with shared config."""
+    return pose_dir / "shared-config-file"
 
 
 @pytest.fixture
 def pose_topdown_config_file(pose_sleap_topdown_config_dir):
     """Returns path to a SLEAP topdown model config file."""
     return pose_sleap_topdown_config_dir / "confmap_config.json"
+
+
+@pytest.fixture
+def pose_centered_instance_config_file(pose_sleap_centered_instance_root_dir):
+    """Returns path to a SLEAP centered instance model config file."""
+    return pose_sleap_centered_instance_root_dir / "5899248" / "confmap_config.json"
 
 
 @pytest.fixture
@@ -179,13 +156,39 @@ def pose_missing_config_topdown_data_file(pose_missing_config_file_dir):
     )
 
 
+# ========================= File Fixtures =========================
 @pytest.fixture
-def pose_centered_instance_data_file(pose_dir):
-    """Returns path to a SLEAP centered instance pose data file."""
+def metadata_file(nonmonotonic_dir, nonmonotonic_epoch):
+    """Returns path to metadata file."""
+    return nonmonotonic_dir / nonmonotonic_epoch / "Metadata.yml"
+
+
+@pytest.fixture
+def video_csv_file(monotonic_dir, monotonic_epoch):
+    """Returns path to a CSV file containing video metadata."""
+    return monotonic_dir / monotonic_epoch / "CameraTop" / "CameraTop_2022-06-13T12-00-00.csv"
+
+
+@pytest.fixture
+def empty_csv_file(tmp_path):
+    """Returns path to an empty CSV file."""
+    empty_csv_path = tmp_path / "empty.csv"
+    empty_csv_path.touch()
+    return empty_csv_path
+
+
+@pytest.fixture
+def jsonl_file(monotonic_dir):
+    """Returns path to a JSONL file."""
     return (
-        pose_dir
-        / "centered-instance"
-        / "2024-02-09T16-07-32"
-        / "CameraTop"
-        / "CameraTop_202_5899248_2024-02-09T17-00-00.bin"
+        monotonic_dir
+        / "2024-06-19T10-55-14"
+        / "Environment"
+        / "Environment_ActiveConfiguration_2024-06-20T00-00-00.jsonl"
     )
+
+
+@pytest.fixture
+def bitmaskevent_file(monotonic_dir, monotonic_epoch):
+    """Returns path to monotonic bitmask event file."""
+    return monotonic_dir / monotonic_epoch / "Patch2" / "Patch2_32_2022-06-13T12-00-00.bin"

@@ -1,0 +1,13 @@
+from pydantic import Field
+from swc.aeon_rigs.base import BaseSchema
+
+
+class SpinnakerCamera(BaseSchema):
+    serial_number: str | None = Field(default="00000", description="The serial number of the camera.")
+    exposure_time: float = Field(
+        default=1000,
+        ge=100,
+        description="The exposure time of the sensor, in microseconds.",
+    )
+    gain: float = Field(default=0, ge=0, description="The camera gain.")
+    binning: int = Field(default=1, ge=1, description="The camera binning configuration.")

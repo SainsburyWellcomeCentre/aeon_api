@@ -1,6 +1,5 @@
 from pydantic import Field
 from swc.aeon_rigs.base import BaseSchema
-from swc.aeon_rigs.rig import Rig
 
 
 class Experiment(BaseSchema):

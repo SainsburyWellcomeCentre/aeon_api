@@ -5,7 +5,7 @@ from swc.aeon_rigs.base import Device
 
 class HarpDevice(Device):
     who_am_i: int | None = Field(description="The unique identifier for the device type.")
-    port_name: str | None = Field(description="The name of the device serial port.")
+    port_name: str = Field(description="The name of the device serial port.")
 
 
 class HarpInputExpander(HarpDevice):

@@ -1,5 +1,6 @@
 """Tests for the aeon API."""
 
+from contextlib import nullcontext
 from pathlib import Path
 from typing import cast
 
@@ -97,6 +98,46 @@ def test_chunk_identity_conversion(time):
     else:
         time_chunk = chunk(time)
         assert time_chunk == time
+
+
+@pytest.mark.api
+@pytest.mark.parametrize(
+    ("time", "expected"),
+    [
+        (pd.Timestamp("2022-06-13 12:14:54"), nullcontext(1)),
+        ([pd.Timestamp("2022-06-13 12:14:54"), pd.Timestamp("2022-06-13 12:14:55")], nullcontext(2)),
+        (pd.date_range("2022-06-13 12:14:54", periods=2, freq="s"), nullcontext(2)),
+        (
+            pd.DataFrame(
+                data={"value": [0, 0]}, index=pd.date_range("2022-06-13 12:14:54", periods=2, freq="s")
+            ),
+            nullcontext(2),
+        ),
+        (
+            pd.Timestamp("2022-06-13 13:00:00"),
+            nullcontext(1),  # Single row df filled with NaNs
+        ),
+        (
+            pd.Timestamp("2022-06-13 11:00:00"),
+            nullcontext(1),  # Single row df filled with NaNs
+        ),
+        ([], nullcontext(0)),  # Empty df
+    ],
+    ids=[
+        "Single Timestamp",
+        "List of Timestamps",
+        "DatetimeIndex",
+        "DataFrame with DatetimeIndex",
+        "Timestamp before available data",
+        "Timestamp after available data",
+        "Empty list",
+    ],
+)
+def test_load_time_arg(time, expected):
+    """Test that `load` handles different `time` types."""
+    with expected as expected_df_length:
+        result = aeon.load(monotonic_path, exp02.Patch2.Encoder, time=time)
+        assert len(result) == expected_df_length
 
 
 if __name__ == "__main__":

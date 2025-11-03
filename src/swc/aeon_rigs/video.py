@@ -5,7 +5,7 @@ from swc.aeon_rigs.base import Device
 
 class SpinnakerCamera(Device):
     device_type: Literal["SpinnakerCamera"] = "SpinnakerCamera"
-    serial_number: str | None = Field(default="00000", description="The serial number of the camera.")
+    serial_number: str = Field(description="The serial number of the camera.")
     exposure_time: float = Field(
         default=1000,
         ge=100,

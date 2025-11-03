@@ -1,10 +1,9 @@
 from typing import Literal
 from pydantic import Field
-from swc.aeon_rigs.base import BaseSchema
+from swc.aeon_rigs.base import Device
 
 
-class HarpDevice(BaseSchema):
-    device_type: str
+class HarpDevice(Device):
     who_am_i: int | None = Field(description="The unique identifier for the device type.")
     port_name: str | None = Field(description="The name of the device serial port.")
 

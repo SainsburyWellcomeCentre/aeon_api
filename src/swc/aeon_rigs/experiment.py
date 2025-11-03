@@ -9,4 +9,3 @@ class Experiment(BaseSchema):
     repository_url: str = Field(
         description="The URL of the git repository used to version experiment source code."
     )
-    rig: Rig

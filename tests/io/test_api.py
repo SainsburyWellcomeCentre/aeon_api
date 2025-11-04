@@ -134,7 +134,7 @@ def test_chunk_identity_conversion(time):
     ],
 )
 def test_load_time_arg(time, expected):
-    """Test that `load` handles different `time` types."""
+    """Test that `load` handles different kinds of `time` input."""
     with expected as expected_df_length:
         result = aeon.load(monotonic_path, exp02.Patch2.Encoder, time=time)
         assert len(result) == expected_df_length

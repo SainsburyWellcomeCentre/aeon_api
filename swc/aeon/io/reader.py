@@ -6,7 +6,7 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import harp
 import numpy as np
@@ -292,7 +292,7 @@ class Pose(Harp):
     - y (float): Y-coordinate of the bodypart.
     """
 
-    def __init__(self, pattern: str, model_root: str):
+    def __init__(self, pattern: str, model_root: Optional[str] = None):
         """Pose reader constructor.
 
         The pattern for this reader should typically be `<device>_<hpcnode>_<jobid>*`.
@@ -313,9 +313,13 @@ class Pose(Harp):
         # Check if model directory exists in local or shared directories.
         # Local directory is prioritized over shared directory.
         local_config_file_dir = file.parent / model_dir
-        shared_config_file_dir = Path(self._model_root) / model_dir
+        shared_config_file_dir = (
+            Path(self._model_root) / model_dir if self._model_root is not None else None
+        )
         if local_config_file_dir.exists():
             config_file_dir = local_config_file_dir
+        elif shared_config_file_dir is None:
+            raise FileNotFoundError(f"Cannot find model dir in {local_config_file_dir}")
         elif shared_config_file_dir.exists():
             config_file_dir = shared_config_file_dir
         else:

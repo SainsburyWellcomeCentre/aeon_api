@@ -223,12 +223,18 @@ class TestPose:
                 "pose_missing_config_topdown_data_file",
                 nullcontext(EXPECTED_POSE_COLUMNS),
             ),
+            (
+                {"pattern": "CameraTop_202_*", "model_root": "pose_missing_config_file_dir"},
+                "pose_missing_config_topdown_data_file",
+                pytest.raises(FileNotFoundError, match="Cannot find model dir"),
+            ),
         ],
         ids=[
             "Config dir in same dir as pose data: Bonsai.SLEAP0.2 legacy data",
             "Config dir in same dir as pose data: Bonsai.SLEAP0.3 data",
-            "Config dir not found",
-            "Config dir in `model_root`",
+            "Config dir not found in local pose data dir",
+            "Config dir in shared `model_root`",
+            "Config dir not found in shared `model_root`",
         ],
     )
     def test_pose_read(self, init_args, file, expected, request):

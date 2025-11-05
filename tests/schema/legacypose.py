@@ -9,4 +9,4 @@ class Pose(Stream):
 
     def __init__(self, path):
         """Initializes the Pose stream."""
-        super().__init__(_reader.Pose(f"{path}_test-node1*", "/ceph/aeon/aeon/data/processed"))
+        super().__init__(_reader.Pose(f"{path}_test-node1*"))

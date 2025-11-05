@@ -63,20 +63,32 @@ def pose_missing_config_file_dir(pose_dir):
 
 @pytest.fixture
 def pose_sleap_centered_instance_root_dir(pose_dir):
-    """Returns path to pose SLEAP centered instance model directory."""
-    return pose_dir / "centered-instance" / "2024-02-09T16-07-32" / "CameraTop"
+    """Returns path to pose SLEAP centered instance model root directory."""
+    return pose_dir / "centered-instance"
+
+
+@pytest.fixture
+def pose_sleap_centered_instance_camera_dir(pose_sleap_centered_instance_root_dir):
+    """Returns path to pose SLEAP centered instance CameraTop directory."""
+    return pose_sleap_centered_instance_root_dir / "2024-02-09T16-07-32" / "CameraTop"
 
 
 @pytest.fixture
 def pose_sleap_topdown_root_dir(pose_dir):
-    """Returns path to pose SLEAP topdown model directory."""
-    return pose_dir / "topdown" / "2024-03-01T16-46-12" / "CameraTop"
+    """Returns path to pose SLEAP topdown model root directory."""
+    return pose_dir / "topdown"
 
 
 @pytest.fixture
-def pose_sleap_topdown_config_dir(pose_sleap_topdown_root_dir):
+def pose_sleap_topdown_camera_dir(pose_sleap_topdown_root_dir):
+    """Returns path to pose SLEAP topdown CameraTop directory."""
+    return pose_sleap_topdown_root_dir / "2024-03-01T16-46-12" / "CameraTop"
+
+
+@pytest.fixture
+def pose_sleap_topdown_config_dir(pose_sleap_topdown_camera_dir):
     """Returns path to pose SLEAP topdown model directory."""
-    return pose_sleap_topdown_root_dir / "test-node1" / "topdown-multianimal-id-133"
+    return pose_sleap_topdown_camera_dir / "test-node1" / "topdown-multianimal-id-133"
 
 
 @pytest.fixture
@@ -92,17 +104,22 @@ def pose_topdown_config_file(pose_sleap_topdown_config_dir):
 
 
 @pytest.fixture
-def pose_centered_instance_config_file(pose_sleap_centered_instance_root_dir):
+def pose_centered_instance_config_file(pose_sleap_centered_instance_camera_dir):
     """Returns path to a SLEAP centered instance model config file."""
-    return pose_sleap_centered_instance_root_dir / "5899248" / "confmap_config.json"
+    return pose_sleap_centered_instance_camera_dir / "5899248" / "confmap_config.json"
 
 
 @pytest.fixture
-def pose_topdown_config_file_missing_part_names(pose_dir):
+def pose_sleap_topdown_missing_part_names_root_dir(pose_dir):
+    """Returns path to root directory of pose SLEAP topdown model missing required 'part_names'."""
+    return pose_dir / "missing-part-names"
+
+
+@pytest.fixture
+def pose_topdown_config_file_missing_part_names(pose_sleap_topdown_missing_part_names_root_dir):
     """Returns path to a SLEAP topdown model config file that is missing the required 'part_names'."""
     return (
-        pose_dir
-        / "missing-part-names"
+        pose_sleap_topdown_missing_part_names_root_dir
         / "2024-03-01T16-46-12"
         / "CameraTop"
         / "test-node1"
@@ -130,19 +147,19 @@ def pose_supported_config_file_missing_required_key(tmp_path):
 
 
 @pytest.fixture
-def pose_topdown_legacy_data_file(pose_sleap_topdown_root_dir):
+def pose_topdown_legacy_data_file(pose_sleap_topdown_camera_dir):
     """Returns path to a legacy (Bonsai.SLEAP0.2) topdown pose data file."""
     return (
-        pose_sleap_topdown_root_dir
+        pose_sleap_topdown_camera_dir
         / "CameraTop_test-node1_topdown-multianimal-id-133_2024-03-02T12-00-00.bin"
     )
 
 
 @pytest.fixture
-def pose_topdown_data_file(pose_sleap_topdown_root_dir):
+def pose_topdown_data_file(pose_sleap_topdown_camera_dir):
     """Returns path to a SLEAP topdown pose data file."""
     return (
-        pose_sleap_topdown_root_dir
+        pose_sleap_topdown_camera_dir
         / "CameraTop_202_test-node1_topdown-multianimal-id-133_2024-03-02T12-00-00.bin"
     )
 

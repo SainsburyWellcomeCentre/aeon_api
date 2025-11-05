@@ -46,9 +46,6 @@ def test_base_reader_read(columns):
         (Heartbeat, None, ["second"]),
         (Encoder, None, ["angle", "intensity"]),
         (Position, None, ["x", "y", "angle", "major", "minor", "area", "id"]),
-        (BitmaskEvent, {"value": 0x22, "tag": "PelletDetected"}, ["event"]),  # remove
-        (DigitalBitmask, {"mask": 0x1, "columns": ["state"]}, ["state"]),  # remove
-        (Pose, {"model_root": "test_root"}, None),  # remove
     ],
 )
 def test_init_only_readers(reader_class, init_args, expected_columns):

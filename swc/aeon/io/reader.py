@@ -313,20 +313,16 @@ class Pose(Harp):
         # Check if model directory exists in local or shared directories.
         # Local directory is prioritized over shared directory.
         local_config_file_dir = file.parent / model_dir
-        shared_config_file_dir = (
-            Path(self._model_root) / model_dir if self._model_root is not None else None
-        )
+        shared_config_file_dir = Path(self._model_root) / model_dir if self._model_root else None
         if local_config_file_dir.exists():
             config_file_dir = local_config_file_dir
-        elif shared_config_file_dir is None:
-            raise FileNotFoundError(f"Cannot find model dir in {local_config_file_dir}")
-        elif shared_config_file_dir.exists():
+        elif shared_config_file_dir and shared_config_file_dir.exists():
             config_file_dir = shared_config_file_dir
         else:
-            raise FileNotFoundError(
-                f"""Cannot find model dir in either local ({local_config_file_dir}) \
-                    or shared ({shared_config_file_dir}) directories"""
-            )
+            msg = f"Cannot find model dir in local directory: {local_config_file_dir}"
+            if shared_config_file_dir:
+                msg += f" or shared directory: {shared_config_file_dir}"
+            raise FileNotFoundError(msg)
 
         config_file = self.get_config_file(config_file_dir)
         identities = self.get_class_names(config_file)

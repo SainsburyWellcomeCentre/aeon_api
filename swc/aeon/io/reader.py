@@ -6,7 +6,7 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import harp
 import numpy as np
@@ -292,7 +292,7 @@ class Pose(Harp):
     - y (float): Y-coordinate of the bodypart.
     """
 
-    def __init__(self, pattern: str, model_root: Optional[str] = None):
+    def __init__(self, pattern: str, model_root: str | None = None):
         """Pose reader constructor.
 
         The pattern for this reader should typically be `<device>_<hpcnode>_<jobid>*`.

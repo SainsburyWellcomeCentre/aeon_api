@@ -15,4 +15,3 @@ class BaseSchema(BaseModel):
 
 class Device(BaseSchema):
     device_type: ClassVar[str] = Field(..., description="The type of the device.")
-    name: str | None = Field(description="The name of the device instance.")

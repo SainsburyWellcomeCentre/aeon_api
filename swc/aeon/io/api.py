@@ -151,7 +151,7 @@ def _filter_time_range(df, start, end, inclusive="both"):
         result = result.iloc[:-1] if last_idx_equals_end else result
         return result
     else:
-        raise ValueError(f"Invalid inclusive: {inclusive!r}")
+        raise ValueError(f"Invalid value for 'inclusive': {inclusive!r}")
 
 
 def load(

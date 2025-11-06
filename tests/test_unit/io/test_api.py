@@ -9,7 +9,7 @@ from pandas import testing as tm
 
 from swc.aeon.io.api import (
     CHUNK_DURATION,
-    _filter_time_range,
+    _filter_time_range,  # pyright: ignore[reportPrivateUsage]
     chunk,
     chunk_key,
     chunk_range,
@@ -134,7 +134,7 @@ def test_chunk_key(data, expected, request):
     ],
 )
 def test_filter_time_range_with_out_of_order_input(start, end, inclusive, expected_error, expected_length):
-    """Test _filter_time_range with a DataFrame with out-of-order DatetimeIndex.
+    """Test `_filter_time_range` with a DataFrame with out-of-order DatetimeIndex.
 
     The DataFrame has timestamps in this order (positions 3 and 4 are out-of-order):
     00:00:00, 00:01:00, 00:02:00, 00:04:00, 00:03:00, 00:05:00, ...
@@ -149,6 +149,54 @@ def test_filter_time_range_with_out_of_order_input(start, end, inclusive, expect
     with expected_error:
         result = _filter_time_range(df, start, end, inclusive=inclusive)
         assert len(result) == expected_length
+
+
+@pytest.mark.parametrize(
+    "inclusive",
+    ["both", "left", "right", "neither"],
+    ids=["both", "left", "right", "neither"],
+)
+@pytest.mark.parametrize(
+    ("start", "end", "expected"),
+    [
+        (None, None, nullcontext({"both": 10, "left": 10, "right": 10, "neither": 10})),
+        (
+            pd.Timestamp("2022-01-01 00:02:00"),
+            None,
+            nullcontext({"both": 8, "left": 8, "right": 7, "neither": 7}),
+        ),
+        (
+            None,
+            pd.Timestamp("2022-01-01 00:04:00"),
+            nullcontext({"both": 5, "left": 4, "right": 5, "neither": 4}),
+        ),
+        (
+            pd.Timestamp("2022-01-01 00:02:00"),
+            pd.Timestamp("2022-01-01 00:04:00"),
+            nullcontext({"both": 3, "left": 2, "right": 2, "neither": 1}),
+        ),
+    ],
+    ids=[
+        "Both bounds None",
+        "Start bound only",
+        "End bound only",
+        "Both bounds provided",
+    ],
+)
+def test_filter_time_range_with_none_bounds(start, end, inclusive, expected):
+    """Test `_filter_time_range` when `start` and/or `end` are None."""
+    idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
+    df = pd.DataFrame({"value": range(10)}, index=idx_list)
+    with expected as expected_lengths:
+        result = _filter_time_range(df, start, end, inclusive=inclusive)
+        assert len(result) == expected_lengths[inclusive]
+
+
+def test_filter_time_range_with_invalid_inclusive():
+    """Test `_filter_time_range` raises ValueError for invalid `inclusive` values."""
+    df = pd.DataFrame({"value": range(10)})
+    with pytest.raises(ValueError, match="Invalid value for 'inclusive'"):
+        _filter_time_range(df, None, None, inclusive="invalid")
 
 
 @pytest.mark.parametrize(

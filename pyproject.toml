@@ -50,7 +50,6 @@ version_file = "swc/aeon/_version.py"
 include = ["swc*"]
 
 [tool.ruff]
-lint.flake8-builtins.strict-checking = false
 lint.select = [
   "E",
   "W",
@@ -85,7 +84,9 @@ extend-exclude = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
   "D103",    # skip adding docstrings for public functions
+  "D205",    # skip checking for blank line between summary and description
   "S101",    # skip using assert
+  "PLR2004", # skip checking for "magic" values
 ]
 "aeon/schema/*" = [
   "D101",    # skip adding docstrings for schema classes
@@ -123,3 +124,6 @@ exclude = [".venv/*"]
 
 [tool.pytest.ini_options]
 markers = ["api"]
+addopts = [
+  "--cov=swc/aeon",    # Enable pytest-cov for the aeon package
+]

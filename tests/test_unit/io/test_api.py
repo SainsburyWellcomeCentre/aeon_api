@@ -98,42 +98,48 @@ def test_chunk_key(data, expected, request):
 
 
 @pytest.mark.parametrize(
-    ("inclusive", "expected_length"),
-    [
-        ("both", 2),
-        ("left", 1),
-        ("right", 1),
-        ("neither", 0),
-    ],
+    "inclusive",
+    ["both", "left", "right", "neither"],
+    ids=["both", "left", "right", "neither"],
 )
 @pytest.mark.parametrize(
-    ("start", "end", "expected_error"),
+    ("start", "end", "expected"),
     [
-        (pd.Timestamp("2022-01-01 00:02:00"), pd.Timestamp("2022-01-01 00:04:00"), nullcontext()),
         (
-            pd.Timestamp("2022-01-01 00:02:30"),
+            pd.Timestamp("2022-01-01 00:02:00"),
+            None,
+            nullcontext({"both": 8, "left": 8, "right": 7, "neither": 7}),
+        ),
+        (
+            None,
             pd.Timestamp("2022-01-01 00:04:00"),
-            pytest.raises(KeyError),
+            nullcontext({"both": 4, "left": 3, "right": 4, "neither": 3}),
         ),
         (
             pd.Timestamp("2022-01-01 00:02:00"),
-            pd.Timestamp("2022-01-01 00:04:30"),
-            pytest.raises(KeyError),
+            pd.Timestamp("2022-01-01 00:04:00"),
+            nullcontext({"both": 2, "left": 1, "right": 1, "neither": 0}),
         ),
         (
             pd.Timestamp("2022-01-01 00:02:30"),
+            None,
+            pytest.raises(KeyError),
+        ),
+        (
+            None,
             pd.Timestamp("2022-01-01 00:04:30"),
             pytest.raises(KeyError),
         ),
     ],
     ids=[
-        "start and end keys present in df",
-        "start key not present in df",
-        "end key not present in df",
-        "both keys not present in df",
+        "start only",
+        "end only",
+        "both provided",
+        "start key not present",
+        "end key not present",
     ],
 )
-def test_filter_time_range_with_out_of_order_input(start, end, inclusive, expected_error, expected_length):
+def test_filter_time_range(start, end, inclusive, expected):
     """Test `_filter_time_range` with a DataFrame with out-of-order DatetimeIndex.
 
     The DataFrame has timestamps in this order (positions 3 and 4 are out-of-order):
@@ -145,47 +151,6 @@ def test_filter_time_range_with_out_of_order_input(start, end, inclusive, expect
     # Create a DataFrame with out-of-order DatetimeIndex
     idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
     idx_list[3], idx_list[4] = idx_list[4], idx_list[3]
-    df = pd.DataFrame({"value": range(10)}, index=idx_list)
-    with expected_error:
-        result = _filter_time_range(df, start, end, inclusive=inclusive)
-        assert len(result) == expected_length
-
-
-@pytest.mark.parametrize(
-    "inclusive",
-    ["both", "left", "right", "neither"],
-    ids=["both", "left", "right", "neither"],
-)
-@pytest.mark.parametrize(
-    ("start", "end", "expected"),
-    [
-        (None, None, nullcontext({"both": 10, "left": 10, "right": 10, "neither": 10})),
-        (
-            pd.Timestamp("2022-01-01 00:02:00"),
-            None,
-            nullcontext({"both": 8, "left": 8, "right": 7, "neither": 7}),
-        ),
-        (
-            None,
-            pd.Timestamp("2022-01-01 00:04:00"),
-            nullcontext({"both": 5, "left": 4, "right": 5, "neither": 4}),
-        ),
-        (
-            pd.Timestamp("2022-01-01 00:02:00"),
-            pd.Timestamp("2022-01-01 00:04:00"),
-            nullcontext({"both": 3, "left": 2, "right": 2, "neither": 1}),
-        ),
-    ],
-    ids=[
-        "Both bounds None",
-        "Start bound only",
-        "End bound only",
-        "Both bounds provided",
-    ],
-)
-def test_filter_time_range_with_none_bounds(start, end, inclusive, expected):
-    """Test `_filter_time_range` when `start` and/or `end` are None."""
-    idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
     df = pd.DataFrame({"value": range(10)}, index=idx_list)
     with expected as expected_lengths:
         result = _filter_time_range(df, start, end, inclusive=inclusive)

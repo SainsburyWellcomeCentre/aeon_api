@@ -43,7 +43,10 @@ def test_load_with_start_and_end_filters(fixture_name, device, start, end, expec
         ("neither", False, False),
     ],
 )
-def test_load_start_end(nonmonotonic_dir, inclusive, expect_start_included, expect_end_included):
+def test_load_start_end_boundary_inclusivity(
+    nonmonotonic_dir, inclusive, expect_start_included, expect_end_included
+):
+    """Test that `load` respects `inclusive` parameter for start/end filtering."""
     start = pd.Timestamp("2022-06-06T13:00:49")
     end = pd.Timestamp("2022-06-06T13:00:49.004000186")
     data = aeon.load(

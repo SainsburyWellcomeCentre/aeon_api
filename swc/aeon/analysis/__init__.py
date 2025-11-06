@@ -1,1 +1,1 @@
-"""Utilities for analyzing data."""
+"""Modules for analyzing aeon data."""

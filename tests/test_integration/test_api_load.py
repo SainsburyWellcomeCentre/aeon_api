@@ -5,7 +5,7 @@ from contextlib import nullcontext
 import pandas as pd
 import pytest
 
-from swc import aeon
+from swc.aeon import io as aeon
 from tests.schema import exp02, social02, social03
 
 

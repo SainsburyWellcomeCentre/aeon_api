@@ -124,7 +124,39 @@ def _empty(columns):
     return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="time"))
 
 
-def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=None, **kwargs):
+def _filter_time_range(df, start, end, inclusive="both"):
+    """Filters a DataFrame by a given time range.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame to filter.
+        start (datetime.datetime): The left bound of the time range.
+        end (datetime.datetime): The right bound of the time range.
+        inclusive (str): Specifies whether the start and end bounds are inclusive or exclusive.
+            Options are "both", "left", "right", or "neither".
+
+    Returns:
+        pandas.DataFrame: The filtered DataFrame.
+    """
+    result = df.loc[start:end]
+    if inclusive == "both" or len(result) == 0:
+        return result
+    first_idx_equals_start = result.index[0] == start
+    last_idx_equals_end = result.index[-1] == end
+    if inclusive == "left":  # drop final row if the index is equal to end
+        return result.iloc[:-1] if last_idx_equals_end else result
+    elif inclusive == "right":  # drop first row if the index is equal to start
+        return result.iloc[1:] if first_idx_equals_start else result
+    elif inclusive == "neither":
+        result = result.iloc[1:] if first_idx_equals_start else result
+        result = result.iloc[:-1] if last_idx_equals_end else result
+        return result
+    else:
+        raise ValueError(f"Invalid value for 'inclusive': {inclusive!r}")
+
+
+def load(
+    root, reader, start=None, end=None, inclusive="both", time=None, tolerance=None, epoch=None, **kwargs
+):
     """Extracts chunk data from the root path of an Aeon dataset.
 
     Reads all chunk data using the specified data stream reader. A subset of the data can be loaded
@@ -138,6 +170,9 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
             A data stream reader object used to read chunk data from the dataset.
         start (datetime.datetime, optional): The left bound of the time range to extract.
         end (datetime.datetime, optional): The right bound of the time range to extract.
+        inclusive (str, optional): Specifies whether the ``start`` and ``end`` bounds are inclusive or
+            exclusive. This is only applicable when ``start`` and/or ``end`` are provided.
+            Options are "both", "left", "right", or "neither".
         time (datetime.datetime, list[datetime.datetime], pandas.DatetimeIndex, pandas.DataFrame, optional):
             A single timestamp, list of timestamps, DatetimeIndex, or a DataFrame with
             DatetimeIndex specifying the timestamps to extract.
@@ -214,7 +249,7 @@ def load(root, reader, start=None, end=None, time=None, tolerance=None, epoch=No
     _set_index(data)
     if start is not None or end is not None:
         try:
-            return data.loc[start:end]
+            return _filter_time_range(data, start, end, inclusive)
         except KeyError:
             if not data.index.is_monotonic_increasing:
                 warnings.warn(

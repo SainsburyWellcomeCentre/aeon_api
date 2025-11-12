@@ -10,18 +10,18 @@ class MockReader:
     """Generic mock for reader classes that stores init args."""
 
     def __init__(self, *args, **kwargs):
-        """Initialises the MockReader."""
+        """Initialise the MockReader."""
         self._args = args
         self._kwargs = kwargs
 
     @property
     def pattern(self):
-        """Returns the pattern argument, if present."""
+        """Return the pattern argument, if present."""
         return self._args[0] if self._args else None
 
     @property
     def args(self):
-        """Returns the positional arguments."""
+        """Return the positional arguments."""
         return self._args
 
     @property
@@ -44,24 +44,25 @@ def _patch_readers(monkeypatch):
         (core_mod.Video, "Camera", "Camera_*"),
         (core_mod.Position, "Camera", "Camera_200_*"),
         (core_mod.Encoder, "Patch2", "Patch2_90_*"),
+        (core_mod.EnvironmentState, "Environment", "Environment_EnvironmentState_*"),
+        (core_mod.SubjectState, "Environment", "Environment_SubjectState_*"),
         (core_mod.MessageLog, "Environment", "Environment_MessageLog_*"),
         (core_mod.Metadata, "Metadata", "Metadata"),
     ],
 )
 def test_stream_classes_wrap_readers(klass, pattern, expected):
-    """Verify each Stream subclass constructs the correct reader pattern."""
+    """Test that each Stream subclass constructs the correct reader pattern."""
     inst = klass(pattern)
-    assert hasattr(inst, "reader")
     assert isinstance(inst.reader, MockReader)
     assert inst.reader.pattern == expected
 
 
 def test_environment_group_yields_nested_streams():
-    """Environment is a StreamGroup and should yield its nested streams."""
-    env = core_mod.Environment("ExperimentalMetadata")
-    items = list(iter(env))
-    names, readers = zip(*items, strict=False)
+    """Test that Environment, a StreamGroup, yields its nested streams."""
+    env = core_mod.Environment("Environment")
+    streams = list(iter(env))
+    names, readers = zip(*streams, strict=False)
     assert names == ("EnvironmentState", "SubjectState")
-    assert readers[0].pattern == "ExperimentalMetadata_EnvironmentState_*"
+    assert readers[0].pattern == "Environment_EnvironmentState_*"
     assert readers[0].args[1] == ["state"]
-    assert readers[1].pattern == "ExperimentalMetadata_SubjectState_*"
+    assert readers[1].pattern == "Environment_SubjectState_*"

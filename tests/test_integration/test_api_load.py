@@ -1,4 +1,4 @@
-"""Integration tests for end-to-end data loading via aeon.load()."""
+"""Integration tests for end-to-end data loading via swc.aeon.io.load()."""
 
 from contextlib import nullcontext
 

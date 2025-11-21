@@ -1,5 +1,5 @@
 from pydantic import Field
-from swc.aeon_rigs.harp import HarpOutputExpander
+from swc.aeon.rigs.harp import HarpOutputExpander
 
 
 class UndergroundFeeder(HarpOutputExpander):

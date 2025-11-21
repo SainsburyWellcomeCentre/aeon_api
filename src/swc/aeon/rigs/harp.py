@@ -1,6 +1,6 @@
 from typing import ClassVar
 from pydantic import Field
-from swc.aeon_rigs.base import Device
+from swc.aeon.rigs.base import Device
 
 
 class HarpDevice(Device):

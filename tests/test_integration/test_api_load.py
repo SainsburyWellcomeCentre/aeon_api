@@ -1,11 +1,11 @@
-"""Integration tests for end-to-end data loading via aeon.load()."""
+"""Integration tests for end-to-end data loading via swc.aeon.io.load()."""
 
 from contextlib import nullcontext
 
 import pandas as pd
 import pytest
 
-from swc import aeon
+from swc.aeon.io import load
 from tests.schema import exp02, social02, social03
 
 
@@ -29,7 +29,7 @@ from tests.schema import exp02, social02, social03
 def test_load_with_start_and_end_filters(fixture_name, device, start, end, expected_sorted, request):
     """Test `load` with `start` and `end` filters on monotonic, non-monotonic, and non-chunked data."""
     data_dir = request.getfixturevalue(fixture_name)
-    data = aeon.load(data_dir, device, start=start, end=end)
+    data = load(data_dir, device, start=start, end=end)
     assert len(data) > 0
     assert data.index.is_monotonic_increasing == expected_sorted
 
@@ -49,7 +49,7 @@ def test_load_start_end_boundary_inclusivity(
     """Test that `load` respects `inclusive` parameter for start/end filtering."""
     start = pd.Timestamp("2022-06-06T13:00:49")
     end = pd.Timestamp("2022-06-06T13:00:49.004000186")
-    data = aeon.load(
+    data = load(
         nonmonotonic_dir,
         exp02.Patch2.Encoder,
         start=start,
@@ -76,7 +76,7 @@ def test_load_nonmonotonic_with_nonexistent_time_index(nonmonotonic_dir, start, 
     not in the data emits a warning and returns the full sorted dataframe.
     """
     with pytest.warns(UserWarning, match="out-of-order timestamps"):
-        data = aeon.load(nonmonotonic_dir, social03.CameraTop.Pose, start=start, end=end)
+        data = load(nonmonotonic_dir, social03.CameraTop.Pose, start=start, end=end)
     assert data.index.is_monotonic_increasing
 
 
@@ -105,7 +105,7 @@ def test_pose_config_handling(fixture_name, device, expected, request):
     """Test `load` with Pose reader with various config file scenarios."""
     data_dir = request.getfixturevalue(fixture_name)
     with expected:
-        data = aeon.load(data_dir, device)
+        data = load(data_dir, device)
         assert len(data) > 0
 
 
@@ -113,6 +113,6 @@ def test_pose_with_model_provenance(pose_sleap_centered_instance_root_dir):
     """Test that `include_model` parameter adds 'model' column to output
     for keeping track of model provenance.
     """
-    data = aeon.load(pose_sleap_centered_instance_root_dir, social03.CameraTop.Pose, include_model=True)
+    data = load(pose_sleap_centered_instance_root_dir, social03.CameraTop.Pose, include_model=True)
     assert len(data) > 0
     assert "model" in data.columns

@@ -1,10 +1,10 @@
-from typing import ClassVar
+from typing import Literal
 from pydantic import Field
 from swc.aeon.rigs.base import Device
 
 
 class SpinnakerCamera(Device):
-    device_type: ClassVar[str] = "SpinnakerCamera"
+    device_type: Literal["SpinnakerCamera"] = "SpinnakerCamera"
     serial_number: str = Field(examples=["00000"], description="The serial number of the camera.")
     exposure_time: float = Field(
         default=1000,

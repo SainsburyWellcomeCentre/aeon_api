@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel, to_pascal
 
@@ -14,4 +14,4 @@ class BaseSchema(BaseModel):
 
 
 class Device(BaseSchema):
-    device_type: ClassVar[str] = Field(..., description="The type of the device.")
+    device_type: Any = Field(description="The type of the device.")

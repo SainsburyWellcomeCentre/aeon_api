@@ -3,7 +3,7 @@ from swc.aeon.rigs.base import BaseSchema, Device
 
 
 class LightController(BaseSchema):
-    """Configures a network client for automated room light control."""
+    """Represents a network client for automated room light control."""
 
     event_socket: str = Field(
         default=">tcp://localhost:4303",
@@ -23,7 +23,7 @@ class LightController(BaseSchema):
 
 
 class WeightScale(Device):
-    """Configures acquisition functionality for automated habitat weighing scales."""
+    """Represents acquisition functionality for automated habitat weighing scales."""
 
     port_name: str = Field(examples=["COM"], description="The name of the device serial port.")
     filter_window: int = Field(

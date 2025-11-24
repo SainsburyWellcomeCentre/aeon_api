@@ -4,6 +4,8 @@ from swc.aeon.rigs.base import Device
 
 
 class SpinnakerCamera(Device):
+    """Represents a FLIR Spinnaker camera acquisition module."""
+
     device_type: Literal["SpinnakerCamera"] = "SpinnakerCamera"
     serial_number: str = Field(examples=["00000"], description="The serial number of the camera.")
     exposure_time: float = Field(

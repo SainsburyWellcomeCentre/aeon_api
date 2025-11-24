@@ -5,7 +5,7 @@ from swc.aeon.rigs.harp import HarpOutputExpander
 
 
 class UndergroundFeeder(HarpOutputExpander):
-    """Configures control and acquisition functionality for an underground feeder module."""
+    """Represents control and acquisition functionality for an underground feeder module."""
 
     pellet_delivery_retry_count: int = Field(
         default=2,

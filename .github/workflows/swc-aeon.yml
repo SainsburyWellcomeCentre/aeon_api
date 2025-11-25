@@ -25,16 +25,12 @@ jobs:
         python-version: [3.11]
     name: ${{ matrix.platform.name }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.platform.os }}
-    if: github.event.pull_request.draft == false
-    defaults:
-      run:
-        shell: ${{ matrix.platform.os == 'windows-latest' && 'cmd' || 'bash' }} -l {0} # Adjust shell based on OS
     steps:
-      # ----------------------------------------------------------------------- Checkout
+      # -------------------------------------------------------- Checkout
       - name: Checkout
         uses: actions/checkout@v5
 
-      # ----------------------------------------------------------------------- Set up tools
+      # -------------------------------------------------------- Set up tools
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -43,11 +39,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      # ----------------------------------------------------------------------- Configure build
+      # -------------------------------------------------------- Configure build
       - name: Install the project
         run: uv sync --locked --all-extras --dev
         
-      # ----------------------------------------------------------------------- Build
+      # -------------------------------------------------------- Build
       - name: ruff
         run: uv run ruff check .
 
@@ -57,11 +53,11 @@ jobs:
       - name: Build
         run: uv build
 
-      # ----------------------------------------------------------------------- Test
+      # -------------------------------------------------------- Test
       - name: Run tests
         run: uv run pytest tests/
 
-      # ----------------------------------------------------------------------- Test coverage
+      # -------------------------------------------------------- Test coverage
       - name: Generate test coverage report
         if: ${{ matrix.platform.os == 'ubuntu-latest' }}
         run: uv run pytest tests/ --cov-report=xml:tests/test_coverage/test_coverage_report.xml

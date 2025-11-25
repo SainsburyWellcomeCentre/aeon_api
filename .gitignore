@@ -20,4 +20,3 @@ scratch*.py
 
 # Environment
 .venv/
-uv.lock

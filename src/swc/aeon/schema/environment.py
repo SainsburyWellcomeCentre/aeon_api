@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from swc.aeon.rigs.base import BaseSchema, Device
+from swc.aeon.schema.base import BaseSchema, Device
 
 
 class LightCycle(BaseSchema):

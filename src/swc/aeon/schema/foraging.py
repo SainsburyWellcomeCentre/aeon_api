@@ -4,8 +4,8 @@ from enum import StrEnum
 
 from pydantic import Field
 
-from swc.aeon.rigs.base import BaseSchema
-from swc.aeon.rigs.harp import HarpOutputExpander
+from swc.aeon.schema.base import BaseSchema
+from swc.aeon.schema.harp import HarpOutputExpander
 
 
 class UndergroundFeeder(HarpOutputExpander):

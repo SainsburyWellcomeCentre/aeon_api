@@ -1,5 +1,9 @@
+"""Classes for defining foraging rig configuration models."""
+
 from enum import StrEnum
+
 from pydantic import Field
+
 from swc.aeon.rigs.base import BaseSchema
 from swc.aeon.rigs.harp import HarpOutputExpander
 

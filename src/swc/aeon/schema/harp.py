@@ -4,7 +4,7 @@ from typing import ClassVar, Literal
 
 from pydantic import Field
 
-from swc.aeon.rigs.base import Device
+from swc.aeon.schema.base import Device
 
 
 class HarpDevice(Device):

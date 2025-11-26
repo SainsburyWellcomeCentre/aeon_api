@@ -1,5 +1,9 @@
+"""Classes for defining video capture device configuration models."""
+
 from typing import Literal
+
 from pydantic import Field
+
 from swc.aeon.rigs.base import Device
 
 

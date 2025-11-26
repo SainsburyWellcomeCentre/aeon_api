@@ -1,5 +1,9 @@
+"""Classes for defining environment configuration models."""
+
 from typing import Literal
+
 from pydantic import Field
+
 from swc.aeon.rigs.base import BaseSchema, Device
 
 

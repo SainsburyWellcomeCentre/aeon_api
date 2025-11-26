@@ -1,4 +1,7 @@
+"""Base classes for defining experiment metadata models."""
+
 from pydantic import Field
+
 from swc.aeon.rigs.base import BaseSchema
 
 

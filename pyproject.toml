@@ -26,6 +26,8 @@ dependencies = [
   "numpy>=1.26.4",
   "opencv-python",
   "pandas>=2.2",
+  "pydantic>=2.12.4",
+  "pydantic-yaml>=1.6.0",
 ]
 
 [project.optional-dependencies]

@@ -1,6 +1,10 @@
-from typing import Dict, Self
+"""Classes for defining experiment data streams."""
+
+from typing import Self
+
 from pydantic import model_validator
 from pydantic.alias_generators import to_pascal
+
 from swc.aeon.rigs.base import BaseSchema
 
 
@@ -13,7 +17,7 @@ class DataSchema(BaseSchema):
     def _ensure_device_name(self) -> Self:
         for name in self.__class__.model_fields:
             f = getattr(self, name)
-            if isinstance(f, Dict):
+            if isinstance(f, dict):
                 for nk, nv in f.items():
                     if isinstance(nv, DataSchema):
                         nv._device_name = nk

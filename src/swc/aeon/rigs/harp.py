@@ -1,5 +1,9 @@
+"""Classes for defining Harp device configuration models."""
+
 from typing import ClassVar, Literal
+
 from pydantic import Field
+
 from swc.aeon.rigs.base import Device
 
 

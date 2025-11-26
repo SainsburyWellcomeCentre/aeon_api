@@ -1,4 +1,7 @@
+"""Base classes for defining experiment and rig configuration models."""
+
 from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel, to_pascal
 

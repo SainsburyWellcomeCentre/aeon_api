@@ -1,14 +1,17 @@
-"""Base classes for defining experiment configuration and data stream models."""
+"""Base classes for defining experiment configuration and data models."""
 
-from typing import Any, Self
+from collections.abc import Callable
+from functools import cached_property
+from typing import Any, Self, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from pydantic.alias_generators import to_camel, to_pascal
 
 
 class BaseSchema(BaseModel):
-    """The base class for all experiment configuration and data stream models."""
+    """The base class for all experiment configuration and data models."""
 
+    _pattern: str = ""
     model_config = ConfigDict(
         alias_generator=to_camel,
         arbitrary_types_allowed=True,
@@ -16,30 +19,6 @@ class BaseSchema(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-
-
-class Device(BaseSchema):
-    """The base class for creating hardware device models."""
-
-    device_type: Any = Field(description="The type of the device.")
-
-
-class DataSchema(BaseSchema):
-    """The base class for creating experiment data stream models."""
-
-    _device_name: str = ""
-
-    @model_validator(mode="after")
-    def _ensure_device_name(self) -> Self:
-        for name in self.__class__.model_fields:
-            f = getattr(self, name)
-            if isinstance(f, dict):
-                for nk, nv in f.items():
-                    if isinstance(nv, DataSchema):
-                        nv._device_name = nk
-            if isinstance(f, DataSchema):
-                f._device_name = to_pascal(name)
-        return self
 
 
 class Experiment(BaseSchema):
@@ -50,3 +29,37 @@ class Experiment(BaseSchema):
     repository_url: str = Field(
         description="The URL of the git repository used to version experiment source code."
     )
+
+
+class Device(BaseSchema):
+    """The base class for creating hardware device models."""
+
+    device_type: Any = Field(description="The type of the device.")
+
+
+class DataSchema(BaseSchema):
+    """The base class for creating experiment data models."""
+
+    @model_validator(mode="after")
+    def _ensure_device_name(self) -> Self:
+        for name in self.__class__.model_fields:
+            f = getattr(self, name)
+            if isinstance(f, dict):
+                for nk, nv in f.items():
+                    if isinstance(nv, BaseSchema):
+                        nv._pattern = nk
+            if isinstance(f, BaseSchema):
+                f._pattern = to_pascal(name)
+        return self
+
+
+_ReaderT = TypeVar("_ReaderT")
+
+
+def data_field(func: Callable[[Any, str], _ReaderT]) -> cached_property[_ReaderT]:
+    """Decorator to include stream readers as `computed_field` in experiment data models."""
+
+    def decorator(self) -> _ReaderT:
+        return func(self, self._device_name)
+
+    return computed_field(cached_property(decorator))

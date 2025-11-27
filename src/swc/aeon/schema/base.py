@@ -53,13 +53,14 @@ class DataSchema(BaseSchema):
         return self
 
 
+_SelfBaseSchema = TypeVar("_SelfBaseSchema", bound=BaseSchema)
 _ReaderT = TypeVar("_ReaderT")
 
 
-def data_field(func: Callable[[Any, str], _ReaderT]) -> cached_property[_ReaderT]:
+def data_field(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:
     """Decorator to include stream readers as `computed_field` in experiment data models."""
 
-    def decorator(self) -> _ReaderT:
-        return func(self, self._device_name)
+    def decorator(self: _SelfBaseSchema) -> _ReaderT:
+        return func(self, self._pattern)  # pyright: ignore[reportPrivateUsage]
 
     return computed_field(cached_property(decorator))

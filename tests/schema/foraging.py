@@ -2,7 +2,7 @@
 
 import swc.aeon.io.reader as _reader
 import swc.aeon.schema.core as _stream
-from swc.aeon.schema import Stream, StreamGroup
+from swc.aeon.schema.streams import Stream, StreamGroup
 
 
 class _PatchState(_reader.Csv):

@@ -31,7 +31,7 @@ class MockReader:
 
 
 @pytest.fixture(autouse=True)
-def _patch_readers(monkeypatch):
+def _patch_readers(monkeypatch):  # pyright: ignore[reportUnusedFunction]
     """Replace reader classes used by core.py with a simple MockReader."""
     for name in ("Heartbeat", "Video", "Position", "Encoder", "Csv", "Subject", "Log", "Metadata"):
         monkeypatch.setattr(_reader, name, MockReader)

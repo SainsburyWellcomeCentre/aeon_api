@@ -1,0 +1,78 @@
+# Builds the aeon environment; lints formatting and smells via ruff; checks type annotations via pyright;
+# tests via pytest; reports test coverage via pytest-cov and codecov.
+
+name: swc-aeon
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize]
+  workflow_dispatch: # allows running manually from GitHub Actions
+
+jobs:
+  build_env_run_tests: # runs codebase checks and tests using pyproject.toml
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test all supported Python versions on Linux
+        platform:
+          - name: Linux
+            os: ubuntu-latest
+        python-version: ["3.11", "3.12", "3.13"]
+        # Test latest supported Python version on Windows and macOS
+        include:
+          - platform:
+              name: Linux
+              os: ubuntu-latest
+            python-version: "3.13"
+            codecov: --cov-report=xml:tests/test_coverage/test_coverage_report.xml
+          - platform:
+              name: Windows
+              os: windows-latest
+            python-version: "3.13"
+          - platform:
+              name: macOS
+              os: macos-latest
+            python-version: "3.13"
+    name: ${{ matrix.platform.name }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      # -------------------------------------------------------- Checkout
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # -------------------------------------------------------- Set up tools
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # -------------------------------------------------------- Configure build
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+
+      # -------------------------------------------------------- Build
+      - name: ruff
+        run: uv run ruff check .
+
+      - name: pyright
+        run: uv run pyright --level error --project ./pyproject.toml .
+
+      - name: Build
+        run: uv build
+
+      # -------------------------------------------------------- Test
+      - name: Run tests
+        run: uv run pytest tests/ --cov-report term ${{ matrix.codecov }}
+
+      # -------------------------------------------------------- Coverage report
+      - name: Upload test coverage report to codecov
+        if: ${{ matrix.codecov }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: tests/test_coverage/
+          files: test_coverage_report.xml
+          fail_ci_if_error: true
+          verbose: true

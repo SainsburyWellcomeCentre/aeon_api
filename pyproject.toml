@@ -6,9 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "swc-aeon"
 dynamic = ["version"]
 requires-python = ">=3.11"
-description = '''
-    A package for interfacing with acquired data from Project Aeon experiments.
-'''
+description = "A package for interfacing with acquired data from Project Aeon experiments."
 authors = [
   { name = "Jai Bhagat", email = "jkbhagatio@gmail.com" },
   { name = "Goncalo Lopes", email = "g.lopes@neurogears.org" },
@@ -18,7 +16,8 @@ authors = [
   { name = "Jaerong Ahn", email = "jaerong.ahn@datajoint.com" },
   { name = "Milagros Marin", email = "milagros@datajoint.com" },
 ]
-license = { file = "license.md" }
+license = "BSD-3-Clause"
+license-files = ["LICENSE.md"]
 readme = "README.md"
 dependencies = [
   "dotmap",
@@ -41,13 +40,14 @@ dev = [
 
 [project.urls]
 Homepage = "https://sainsburywellcomecentre.github.io/aeon_docs/"
-Repository = "https://github.com/sainsburyWellcomeCentre/aeon_api"
+Repository = "https://github.com/SainsburyWellcomeCentre/aeon_api"
 Documentation = "https://sainsburywellcomecentre.github.io/aeon_docs/"
 
 [tool.setuptools_scm]
-version_file = "swc/aeon/_version.py"
+version_file = "src/swc/aeon/_version.py"
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["swc*"]
 
 [tool.ruff]
@@ -89,7 +89,7 @@ extend-exclude = [
   "S101",    # skip using assert
   "PLR2004", # skip checking for "magic" values
 ]
-"aeon/schema/*" = [
+"src/aeon/schema/*" = [
   "D101",    # skip adding docstrings for schema classes
   "D106",    # skip adding docstrings for nested streams
 ]
@@ -103,21 +103,20 @@ reportMissingImports = "none"
 reportImportCycles = "error"
 reportUnusedImport = "error"
 reportUnusedClass = "error"
-reportUnusedfunction = "error"
+reportUnusedFunction = "error"
 reportUnusedVariable = "error"
 reportDuplicateImport = "error"
 reportWildcardImportFromLibrary = "error"
 reportPrivateUsage = "error"
 reportCallInDefaultInitializer = "error"
 reportUnnecessaryIsInstance = "error"
-reportUnnecesaryCast = "error"
-reportUnnecesarryComparison = "error"
+reportUnnecessaryCast = "error"
+reportUnnecessaryComparison = "error"
 reportUnnecessaryContains = "error"
 reportAssertAlwaysTrue = "error"
 reportSelfClsParameterName = "error"
 reportUnusedExpression = "error"
 reportMatchNotExhaustive = "error"
-reportShadowedImports = "error"
 # *Note*: we may want to set all 'ReportOptional*' rules to "none", but leaving 'em default for now
 venvPath = "."
 venv = ".venv"
@@ -125,6 +124,7 @@ exclude = [".venv/*"]
 
 [tool.pytest.ini_options]
 markers = ["api"]
+pythonpath = ["src"]
 addopts = [
-  "--cov=swc/aeon",    # Enable pytest-cov for the aeon package
+  "--cov=src/swc/aeon",    # Enable pytest-cov for the aeon package
 ]

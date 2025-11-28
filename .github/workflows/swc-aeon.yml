@@ -15,14 +15,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Test all supported Python versions on Linux
         platform:
           - name: Linux
             os: ubuntu-latest
-          - name: Windows
-            os: windows-latest
-          - name: macOS
-            os: macos-latest
-        python-version: [3.11]
+        python-version: ["3.11", "3.12", "3.13"]
+        # Test latest supported Python version on Windows and macOS
+        include:
+          - platform:
+              name: Windows
+              os: windows-latest
+            python-version: "3.13"
+          - platform:
+              name: macOS
+              os: macos-latest
+            python-version: "3.13"
     name: ${{ matrix.platform.name }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.platform.os }}
     steps:

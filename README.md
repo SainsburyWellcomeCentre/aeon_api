@@ -1,7 +1,7 @@
 # aeon_api
 
-![aeon_api_env_build_and_tests](https://github.com/SainsburyWellcomeCentre/aeon_api/actions/workflows/build_env_run_tests.yml/badge.svg?branch=main)
-[![aeon_api_tests_code_coverage](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_api/branch/main/graph/badge.svg?token=973EC1CG03)](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_api)
+![swc-aeon](https://github.com/SainsburyWellcomeCentre/aeon_api/actions/workflows/swc-aeon.yml/badge.svg?branch=main)
+[![swc-aeon_code_coverage](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_api/branch/main/graph/badge.svg?token=973EC1CG03)](https://codecov.io/gh/SainsburyWellcomeCentre/aeon_api)
 
 Project Aeon low-level library for interfacing with acquired data. Contains modules for loading and processing raw data.
 

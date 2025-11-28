@@ -14,7 +14,7 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
       - id: end-of-file-fixer
-        exclude: LICENSE
+        exclude: LICENSE|.python-version|.gitignore|.git-blame-ignore-revs|tests/data/
       - id: no-commit-to-branch
       - id: mixed-line-ending
       - id: trailing-whitespace

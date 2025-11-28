@@ -4,7 +4,7 @@ from collections.abc import Callable
 from functools import cached_property
 from typing import Any, Self, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel, to_pascal
 
 from swc.aeon.io.reader import Reader
@@ -59,10 +59,10 @@ _SelfBaseSchema = TypeVar("_SelfBaseSchema", bound=BaseSchema)
 _ReaderT = TypeVar("_ReaderT", bound=Reader)
 
 
-def data_field(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:
-    """Decorator to include stream readers as `computed_field` in experiment data models."""
+def reader_factory(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:
+    """Decorator to include stream reader factory as `cached_property` in experiment data models."""
 
     def decorator(self: _SelfBaseSchema) -> _ReaderT:
         return func(self, self._pattern)  # pyright: ignore[reportPrivateUsage]
 
-    return computed_field(cached_property(decorator))
+    return cached_property(decorator)

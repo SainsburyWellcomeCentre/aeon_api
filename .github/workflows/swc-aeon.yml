@@ -26,7 +26,7 @@ jobs:
               name: Linux
               os: ubuntu-latest
             python-version: "3.13"
-            codecov: true
+            codecov: --cov-report=xml:tests/test_coverage/test_coverage_report.xml
           - platform:
               name: Windows
               os: windows-latest
@@ -64,13 +64,9 @@ jobs:
 
       # -------------------------------------------------------- Test
       - name: Run tests
-        run: uv run pytest tests/
+        run: uv run pytest tests/ --cov-report term ${{ matrix.codecov }}
 
-      # -------------------------------------------------------- Test coverage
-      - name: Generate test coverage report
-        if: ${{ matrix.codecov }}
-        run: uv run pytest tests/ --cov-report=xml:tests/test_coverage/test_coverage_report.xml
-
+      # -------------------------------------------------------- Coverage report
       - name: Upload test coverage report to codecov
         if: ${{ matrix.codecov }}
         uses: codecov/codecov-action@v5

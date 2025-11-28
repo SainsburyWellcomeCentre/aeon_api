@@ -7,6 +7,8 @@ from typing import Any, Self, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from pydantic.alias_generators import to_camel, to_pascal
 
+from swc.aeon.io.reader import Reader
+
 
 class BaseSchema(BaseModel):
     """The base class for all experiment configuration and data models."""
@@ -54,7 +56,7 @@ class DataSchema(BaseSchema):
 
 
 _SelfBaseSchema = TypeVar("_SelfBaseSchema", bound=BaseSchema)
-_ReaderT = TypeVar("_ReaderT")
+_ReaderT = TypeVar("_ReaderT", bound=Reader)
 
 
 def data_field(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:

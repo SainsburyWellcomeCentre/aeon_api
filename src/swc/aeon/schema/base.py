@@ -1,10 +1,12 @@
 """Base classes for defining experiment configuration and data models."""
 
+import datetime
 from collections.abc import Callable
 from functools import cached_property
 from typing import Any, Self, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+import pandas as pd
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 from pydantic.alias_generators import to_camel, to_pascal
 
 from swc.aeon.io.reader import Reader
@@ -53,6 +55,27 @@ class DataSchema(BaseSchema):
             if isinstance(f, BaseSchema):
                 f._pattern = to_pascal(name)
         return self
+
+
+ModelT = TypeVar("ModelT", bound=BaseSchema)
+
+
+class Metadata(Reader):
+    """Extracts metadata information from all epochs in the dataset."""
+
+    def __init__(self, type: type[ModelT], pattern="Metadata"):  # noqa: A002
+        """Initialize the reader object with the specified model type and optional pattern."""
+        super().__init__(pattern, columns=["metadata", "epoch"], extension="json")
+        self.type = TypeAdapter(type)
+
+    def read(self, file):
+        """Returns metadata for the epoch associated with the specified file."""
+        epoch_str = file.parts[-2]
+        date_str, time_str = epoch_str.split("T")
+        time = datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
+        metadata = file.read_text()
+        data = {"metadata": [self.type.validate_json(metadata)], "epoch": [epoch_str]}
+        return pd.DataFrame(data, index=pd.Series(time), columns=self.columns)
 
 
 _SelfBaseSchema = TypeVar("_SelfBaseSchema", bound=BaseSchema)

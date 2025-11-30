@@ -82,7 +82,7 @@ _SelfBaseSchema = TypeVar("_SelfBaseSchema", bound=BaseSchema)
 _ReaderT = TypeVar("_ReaderT", bound=Reader)
 
 
-def reader_factory(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:
+def data_reader(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:
     """Decorator to include stream reader factory as `cached_property` in experiment data models."""
 
     def decorator(self: _SelfBaseSchema) -> _ReaderT:

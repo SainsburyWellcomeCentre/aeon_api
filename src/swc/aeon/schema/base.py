@@ -1,6 +1,7 @@
 """Base classes for defining experiment configuration and data models."""
 
 import datetime
+import os
 from collections.abc import Callable
 from functools import cached_property
 from typing import Any, Self, TypeVar
@@ -15,7 +16,6 @@ from swc.aeon.io.reader import Reader
 class BaseSchema(BaseModel):
     """The base class for all experiment configuration and data models."""
 
-    _pattern: str = ""
     model_config = ConfigDict(
         alias_generator=to_camel,
         arbitrary_types_allowed=True,
@@ -23,6 +23,35 @@ class BaseSchema(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
+
+    _container_prefix: str = ""
+    _container: "BaseSchema | None" = None
+
+    def _join_pattern_prefix(self, pattern_prefix: str) -> str:
+        return self._container_prefix
+
+    def _resolve_pattern_prefix(self) -> str:
+        container = self._container
+        pattern_prefix = self._container_prefix
+        while container is not None:
+            pattern_prefix = container._join_pattern_prefix(pattern_prefix)
+            container = container._container
+
+        return pattern_prefix
+
+    @model_validator(mode="after")
+    def _validate_container_prefix(self) -> Self:
+        for name in self.__class__.model_fields:
+            f = getattr(self, name)
+            if isinstance(f, dict):
+                for nk, nv in f.items():
+                    if isinstance(nv, BaseSchema):
+                        nv._container_prefix = nk
+                        nv._container = self
+            elif isinstance(f, BaseSchema):
+                f._container_prefix = to_pascal(name)
+                f._container = self
+        return self
 
 
 class Experiment(BaseSchema):
@@ -41,20 +70,11 @@ class Device(BaseSchema):
     device_type: Any = Field(description="The type of the device.")
 
 
-class DataSchema(BaseSchema):
-    """The base class for creating experiment data models."""
+class Dataset(BaseSchema):
+    """The base class for creating dataset models."""
 
-    @model_validator(mode="after")
-    def _ensure_device_name(self) -> Self:
-        for name in self.__class__.model_fields:
-            f = getattr(self, name)
-            if isinstance(f, dict):
-                for nk, nv in f.items():
-                    if isinstance(nv, BaseSchema):
-                        nv._pattern = nk
-            if isinstance(f, BaseSchema):
-                f._pattern = to_pascal(name)
-        return self
+    def _join_pattern_prefix(self, pattern_prefix: str) -> str:
+        return os.path.join(self._container_prefix, pattern_prefix)
 
 
 ModelT = TypeVar("ModelT", bound=BaseSchema)
@@ -83,9 +103,10 @@ _ReaderT = TypeVar("_ReaderT", bound=Reader)
 
 
 def data_reader(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:
-    """Decorator to include stream reader factory as `cached_property` in experiment data models."""
+    """Decorator to include a data reader as `cached_property` in experiment dataset models."""
 
     def decorator(self: _SelfBaseSchema) -> _ReaderT:
-        return func(self, self._pattern)  # pyright: ignore[reportPrivateUsage]
+        pattern_prefix = self._resolve_pattern_prefix()  # pyright: ignore[reportPrivateUsage]
+        return func(self, pattern_prefix)
 
     return cached_property(decorator)

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import overload
 
 import pandas as pd
+from pandas._typing import SequenceNotStr
 from typing_extensions import deprecated
 
 CHUNK_DURATION = 1
@@ -187,7 +188,7 @@ class Reader:
         extension (str): Extension of data file pathnames.
     """
 
-    def __init__(self, pattern: str, columns: list[str], extension: str):
+    def __init__(self, pattern: str, columns: SequenceNotStr[str], extension: str):
         """Initialize the object with specified pattern, columns, and file extension."""
         self.pattern = pattern
         self.columns = columns

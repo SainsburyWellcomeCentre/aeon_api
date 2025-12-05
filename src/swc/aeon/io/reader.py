@@ -12,14 +12,15 @@ import harp
 import numpy as np
 import pandas as pd
 from dotmap import DotMap
+from pandas._typing import DtypeArg
 
-from swc.aeon.io.api import Reader, chunk_key
+from swc.aeon.io.api import Reader, SequenceNotStr, chunk_key
 
 
 class Harp(Reader):
     """Extracts data from raw binary files encoded using the Harp protocol."""
 
-    def __init__(self, pattern, columns, extension="bin"):
+    def __init__(self, pattern: str, columns: SequenceNotStr[str], extension="bin"):
         """Initialize the object."""
         super().__init__(pattern, columns, extension)
 
@@ -40,7 +41,7 @@ class Chunk(Reader):
             extension = reader.extension
         elif pattern is None or extension is None:
             raise ValueError("reader must be specified if pattern or extension are None.")
-        super().__init__(pattern, columns=["path", "epoch"], extension=extension)
+        super().__init__(pattern, columns=("path", "epoch"), extension=extension)
 
     def read(self, file):
         """Returns path and epoch information for the chunk associated with the specified file."""
@@ -54,7 +55,7 @@ class Metadata(Reader):
 
     def __init__(self, pattern="Metadata"):
         """Initialize the object with the specified pattern."""
-        super().__init__(pattern, columns=["workflow", "commit", "metadata"], extension="yml")
+        super().__init__(pattern, columns=("workflow", "commit", "metadata"), extension="yml")
 
     def read(self, file):
         """Returns metadata for the epoch associated with the specified file."""
@@ -75,10 +76,13 @@ class Csv(Reader):
     The first column stores the Aeon timestamp, in seconds.
     """
 
-    def __init__(self, pattern, columns, dtype=None, extension="csv"):
+    def __init__(
+        self, pattern: str, columns: SequenceNotStr[str], dtype: DtypeArg | None = None, extension="csv"
+    ):
         """Initialize the object with the specified pattern, columns, and data type."""
         super().__init__(pattern, columns, extension)
         self.dtype = dtype
+        self._names = tuple(columns)
 
     def read(self, file):
         """Reads data from the specified CSV text file.
@@ -90,7 +94,7 @@ class Csv(Reader):
         return pd.read_csv(
             file,
             header=0,
-            names=self.columns,
+            names=self._names,
             dtype=self.dtype,
             index_col=0 if file.stat().st_size else None,
         )
@@ -110,7 +114,13 @@ class JsonList(Reader):
 
     """
 
-    def __init__(self, pattern, columns=(), root_key="value", extension="jsonl"):
+    def __init__(
+        self,
+        pattern: str,
+        columns: SequenceNotStr[str] = (),
+        root_key: str = "value",
+        extension: str = "jsonl",
+    ):
         """Initialize the object with the specified pattern, columns, and root key."""
         super().__init__(pattern, columns, extension)
         self.columns = columns
@@ -147,9 +157,9 @@ class Subject(Csv):
     - event (str): Event type. Can be one of `Enter`, `Exit` or `Remain`.
     """
 
-    def __init__(self, pattern):
+    def __init__(self, pattern: str):
         """Initialize the object with a specified pattern."""
-        super().__init__(pattern, columns=["id", "weight", "event"])
+        super().__init__(pattern, columns=("id", "weight", "event"))
 
 
 class Log(Csv):
@@ -163,9 +173,9 @@ class Log(Csv):
       separated values.
     """
 
-    def __init__(self, pattern):
+    def __init__(self, pattern: str):
         """Initialize the object with a specified pattern and columns."""
-        super().__init__(pattern, columns=["priority", "type", "message"])
+        super().__init__(pattern, columns=("priority", "type", "message"))
 
 
 class Heartbeat(Harp):
@@ -176,9 +186,9 @@ class Heartbeat(Harp):
     - second (int): The whole second corresponding to the heartbeat, in seconds.
     """
 
-    def __init__(self, pattern):
+    def __init__(self, pattern: str):
         """Initialize the object with a specified pattern."""
-        super().__init__(pattern, columns=["second"])
+        super().__init__(pattern, columns=("second",))
 
 
 class Encoder(Harp):
@@ -190,9 +200,9 @@ class Encoder(Harp):
     - intensity (float): Intensity of the magnetic field.
     """
 
-    def __init__(self, pattern):
+    def __init__(self, pattern: str):
         """Initialize the object with a specified pattern and columns."""
-        super().__init__(pattern, columns=["angle", "intensity"])
+        super().__init__(pattern, columns=("angle", "intensity"))
 
 
 class Position(Harp):
@@ -211,9 +221,9 @@ class Position(Harp):
     - id (float): unique tracking ID of the object in a frame.
     """
 
-    def __init__(self, pattern):
+    def __init__(self, pattern: str):
         """Initialize the object with a specified pattern and columns."""
-        super().__init__(pattern, columns=["x", "y", "angle", "major", "minor", "area", "id"])
+        super().__init__(pattern, columns=("x", "y", "angle", "major", "minor", "area", "id"))
 
 
 class BitmaskEvent(Harp):
@@ -230,9 +240,9 @@ class BitmaskEvent(Harp):
 
     """
 
-    def __init__(self, pattern, value, tag):
+    def __init__(self, pattern: str, value: int, tag: str):
         """Initialize the object with specified pattern, value, and tag."""
-        super().__init__(pattern, columns=["event"])
+        super().__init__(pattern, columns=("event",))
         self.value = value
         self.tag = tag
 
@@ -255,7 +265,7 @@ class DigitalBitmask(Harp):
     - event (str): Unique identifier for the event code.
     """
 
-    def __init__(self, pattern, mask, columns):
+    def __init__(self, pattern: str, mask: int, columns: SequenceNotStr[str]):
         """Initialize the object with specified pattern, mask, and columns."""
         super().__init__(pattern, columns)
         self.mask = mask
@@ -282,10 +292,10 @@ class Video(Csv):
     - _epoch (str): Epoch name associated with the video file.
     """
 
-    def __init__(self, pattern):
+    def __init__(self, pattern: str):
         """Initialize the object with a specified pattern."""
-        super().__init__(pattern, columns=["hw_counter", "hw_timestamp", "_frame", "_path", "_epoch"])
-        self._rawcolumns = ["time"] + self.columns[0:2]
+        super().__init__(pattern, columns=("hw_counter", "hw_timestamp", "_frame", "_path", "_epoch"))
+        self._rawcolumns = ("time",) + tuple(self.columns[0:2])
 
     def read(self, file):
         """Reads video metadata from the specified file.
@@ -326,7 +336,7 @@ class Pose(Harp):
         common prefix for the pose model folder excluding the trailing underscore,
         e.g. `Camera_model-dir*`.
         """
-        super().__init__(pattern, columns=[])
+        super().__init__(pattern, columns=())
         self._model_root = model_root
         self._pattern_offset = pattern.rfind("_") + 1
 

@@ -157,13 +157,6 @@ def test_filter_time_range(start, end, inclusive, expected):
         assert len(result) == expected_lengths[inclusive]
 
 
-def test_filter_time_range_with_invalid_inclusive():
-    """Test `_filter_time_range` raises ValueError for invalid `inclusive` values."""
-    df = pd.DataFrame({"value": range(10)})
-    with pytest.raises(ValueError, match="Invalid value for 'inclusive'"):
-        _filter_time_range(df, None, None, inclusive="invalid")
-
-
 @pytest.mark.parametrize(
     ("root", "to_str", "expect_monotonic"),
     [

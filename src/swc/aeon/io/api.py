@@ -5,7 +5,7 @@ import datetime
 import warnings
 from os import PathLike
 from pathlib import Path
-from typing import overload
+from typing import Literal, overload
 
 import pandas as pd
 from pandas._typing import SequenceNotStr
@@ -144,11 +144,16 @@ def _set_index(data: pd.DataFrame):
     data.index.name = "time"
 
 
-def _empty(columns):
+def _empty(columns: SequenceNotStr[str]):
     return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="time"))
 
 
-def _filter_time_range(df, start, end, inclusive="both"):
+def _filter_time_range(
+    df: pd.DataFrame,
+    start: datetime.datetime | None,
+    end: datetime.datetime | None,
+    inclusive: Literal["both", "neither", "left", "right"] = "both",
+):
     """Filters a DataFrame by a given time range.
 
     Args:
@@ -170,12 +175,10 @@ def _filter_time_range(df, start, end, inclusive="both"):
         return result.iloc[:-1] if last_idx_equals_end else result
     elif inclusive == "right":  # drop first row if the index is equal to start
         return result.iloc[1:] if first_idx_equals_start else result
-    elif inclusive == "neither":
+    else:
         result = result.iloc[1:] if first_idx_equals_start else result
         result = result.iloc[:-1] if last_idx_equals_end else result
         return result
-    else:
-        raise ValueError(f"Invalid value for 'inclusive': {inclusive!r}")
 
 
 class Reader:
@@ -204,7 +207,7 @@ def load(
     reader: Reader,
     start: datetime.datetime | None = None,
     end: datetime.datetime | None = None,
-    inclusive: str = "both",
+    inclusive: Literal["both", "neither", "left", "right"] = "both",
     time: datetime.datetime | list[datetime.datetime] | pd.DatetimeIndex | pd.DataFrame | None = None,
     tolerance: pd.Timedelta | None = None,
     epoch: str | None = None,

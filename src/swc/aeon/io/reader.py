@@ -417,7 +417,7 @@ class Pose(Harp):
 
         # Set model column using model_dir
         if include_model:
-            data["model"] = model_dir
+            data["model"] = pd.Series(model_dir)
         return data
 
     @staticmethod

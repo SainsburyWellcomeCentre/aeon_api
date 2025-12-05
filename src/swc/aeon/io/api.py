@@ -177,9 +177,30 @@ def _filter_time_range(df, start, end, inclusive="both"):
         raise ValueError(f"Invalid value for 'inclusive': {inclusive!r}")
 
 
+class Reader:
+    """Extracts data from raw files in an Aeon dataset.
+
+    Attributes:
+        pattern (str): Pattern used to find raw files,
+            usually in the format `<Device>_<DataStream>`.
+        columns (pandas.Index or array-like): Column labels to use for the data.
+        extension (str): Extension of data file pathnames.
+    """
+
+    def __init__(self, pattern: str, columns: list[str], extension: str):
+        """Initialize the object with specified pattern, columns, and file extension."""
+        self.pattern = pattern
+        self.columns = columns
+        self.extension = extension
+
+    def read(self, file: Path) -> pd.DataFrame:
+        """Reads data from the specified file."""
+        return pd.DataFrame(columns=self.columns, index=pd.DatetimeIndex([]))
+
+
 def load(
     root: str | PathLike | list[str] | list[PathLike],
-    reader,
+    reader: Reader,
     start: datetime.datetime | None = None,
     end: datetime.datetime | None = None,
     inclusive: str = "both",

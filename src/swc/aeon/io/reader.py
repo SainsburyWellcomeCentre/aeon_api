@@ -13,28 +13,7 @@ import numpy as np
 import pandas as pd
 from dotmap import DotMap
 
-from swc.aeon.io.api import chunk_key
-
-
-class Reader:
-    """Extracts data from raw files in an Aeon dataset.
-
-    Attributes:
-        pattern (str): Pattern used to find raw files,
-            usually in the format `<Device>_<DataStream>`.
-        columns (pandas.Index or array-like): Column labels to use for the data.
-        extension (str): Extension of data file pathnames.
-    """
-
-    def __init__(self, pattern, columns, extension):
-        """Initialize the object with specified pattern, columns, and file extension."""
-        self.pattern = pattern
-        self.columns = columns
-        self.extension = extension
-
-    def read(self, file):
-        """Reads data from the specified file."""
-        return pd.DataFrame(columns=self.columns, index=pd.DatetimeIndex([]))
+from swc.aeon.io.api import Reader, chunk_key
 
 
 class Harp(Reader):
@@ -52,11 +31,15 @@ class Harp(Reader):
 class Chunk(Reader):
     """Extracts path and epoch information from chunk files in the dataset."""
 
-    def __init__(self, reader=None, pattern=None, extension=None):
+    def __init__(
+        self, reader: Reader | None = None, pattern: str | None = None, extension: str | None = None
+    ):
         """Initialize the object with optional reader, pattern, and file extension."""
         if isinstance(reader, Reader):
             pattern = reader.pattern
             extension = reader.extension
+        elif pattern is None or extension is None:
+            raise ValueError("reader must be specified if pattern or extension are None.")
         super().__init__(pattern, columns=["path", "epoch"], extension=extension)
 
     def read(self, file):
@@ -343,7 +326,7 @@ class Pose(Harp):
         common prefix for the pose model folder excluding the trailing underscore,
         e.g. `Camera_model-dir*`.
         """
-        super().__init__(pattern, columns=None)
+        super().__init__(pattern, columns=[])
         self._model_root = model_root
         self._pattern_offset = pattern.rfind("_") + 1
 

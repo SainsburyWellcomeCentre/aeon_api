@@ -77,15 +77,15 @@ def triggerclip(data, events, before=None, after=None):
     """
     if before is None:
         before = pd.Timedelta(0)
-    elif before is not pd.Timedelta:
+    elif not isinstance(before, pd.Timedelta):
         before = pd.Timedelta(before)
 
     if after is None:
         after = pd.Timedelta(0)
-    elif after is not pd.Timedelta:
+    elif not isinstance(after, pd.Timedelta):
         after = pd.Timedelta(after)
 
-    if events is not pd.Index:
+    if not isinstance(events, pd.Index):
         events = events.index
 
     clips = []

@@ -77,15 +77,24 @@ def test_harp_read(monotonic_file):
     ("reader_arg", "expected_pattern", "expected_extension"),
     [
         (Harp("pattern", ["col1", "col2"]), "pattern", "bin"),
-        (None, None, None),  # When reader is None, all defaults are None
+        (None, "pattern", "bin"),  # When reader is None, pattern and extension must be specified
     ],
     ids=["Harp", "Default"],
 )
 def test_chunk_init(reader_arg, expected_pattern, expected_extension):
     """Test that `Chunk` initialises with the expected pattern and extension."""
-    reader = Chunk(reader=reader_arg)
+    reader = (
+        Chunk(reader=reader_arg)
+        if reader_arg is not None
+        else Chunk(pattern=expected_pattern, extension=expected_extension)
+    )
     assert reader.pattern == expected_pattern
     assert reader.extension == expected_extension
+
+
+def test_chunk_init_defaults():
+    with pytest.raises(ValueError, match="reader must be specified if pattern or extension are None."):
+        Chunk()
 
 
 @pytest.mark.parametrize("reader_arg", [Harp("pattern", ["col1", "col2"]), None], ids=["Harp", "Default"])

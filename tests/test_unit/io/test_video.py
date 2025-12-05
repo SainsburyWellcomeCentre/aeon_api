@@ -132,7 +132,7 @@ class TestExport:
 
     @pytest.mark.parametrize(
         "fourcc",
-        [None, cv2.VideoWriter_fourcc(*"XVID")],  # type: ignore
+        [None, cv2.VideoWriter.fourcc(*"XVID")],
         ids=["default fourcc", "custom fourcc"],
     )
     @pytest.mark.parametrize(
@@ -151,7 +151,7 @@ class TestExport:
         video.export([mock_frame] * n_frames, output_file, fps, fourcc)
         mock_writer_constructor.assert_called_with(
             output_file,
-            (cv2.VideoWriter_fourcc(*"mp4v") if fourcc is None else fourcc),  # type: ignore
+            (cv2.VideoWriter.fourcc(*"mp4v") if fourcc is None else fourcc),  # type: ignore
             fps,
             mock_frame.shape[1::-1],
         )

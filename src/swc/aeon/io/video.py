@@ -7,7 +7,7 @@ import pandas as pd
 from cv2.typing import MatLike
 
 
-def frames(data: pd.DataFrame):
+def frames(data: pd.DataFrame) -> Iterable[MatLike]:
     """Extracts the raw frames corresponding to the provided video metadata.
 
     :param DataFrame data:
@@ -41,7 +41,7 @@ def frames(data: pd.DataFrame):
             capture.release()
 
 
-def export(frames: Iterable[MatLike], filename: str, fps: float, fourcc: int | None = None):
+def export(frames: Iterable[MatLike], filename: str, fps: float, fourcc: int | None = None) -> None:
     """Exports the specified frame sequence to a new video file.
 
     :param iterable frames: An object to iterate over the raw video frame data.

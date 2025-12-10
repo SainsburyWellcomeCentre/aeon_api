@@ -118,7 +118,7 @@ def chunk_range(start: datetime.datetime, end: datetime.datetime) -> pd.Datetime
     return pd.date_range(chunk(start), chunk(end), freq=pd.DateOffset(hours=CHUNK_DURATION))
 
 
-def chunk_key(file):
+def chunk_key(file: Path) -> tuple[str, datetime.datetime]:
     """Returns the acquisition chunk key for the specified file.
 
     Args:
@@ -138,13 +138,13 @@ def chunk_key(file):
     return epoch, datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
 
 
-def _set_index(data: pd.DataFrame):
+def _set_index(data: pd.DataFrame) -> None:
     if not isinstance(data.index, pd.DatetimeIndex):
         data.index = to_datetime(data.index)
     data.index.name = "time"
 
 
-def _empty(columns: SequenceNotStr[str]):
+def _empty(columns: SequenceNotStr[str]) -> pd.DataFrame:
     return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="time"))
 
 
@@ -153,7 +153,7 @@ def _filter_time_range(
     start: datetime.datetime | None,
     end: datetime.datetime | None,
     inclusive: Literal["both", "neither", "left", "right"] = "both",
-):
+) -> pd.DataFrame:
     """Filters a DataFrame by a given time range.
 
     Args:
@@ -212,7 +212,7 @@ def load(
     tolerance: pd.Timedelta | None = None,
     epoch: str | None = None,
     **kwargs,
-):
+) -> pd.DataFrame:
     """Extracts chunk data from the root path of an Aeon dataset.
 
     Reads all chunk data using the specified data stream reader. A subset of the data can be loaded

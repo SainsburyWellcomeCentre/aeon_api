@@ -12,9 +12,9 @@ import harp
 import numpy as np
 import pandas as pd
 from dotmap import DotMap
-from pandas._typing import DtypeArg
+from pandas._typing import DtypeArg, SequenceNotStr
 
-from swc.aeon.io.api import Reader, SequenceNotStr, chunk_key
+from swc.aeon.io.api import Reader, chunk_key
 
 
 class Harp(Reader):

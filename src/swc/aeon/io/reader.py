@@ -1,7 +1,5 @@
 """Module for reading data from raw files in an Aeon dataset."""
 
-from __future__ import annotations
-
 import datetime
 import json
 import os

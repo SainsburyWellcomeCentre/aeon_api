@@ -207,11 +207,11 @@ class Reader:
         self.columns = columns
         self.extension = extension
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Reads data from the specified file.
 
         Args:
-            file: Path to the data file.
+            path: Path to the data file.
 
         Returns:
             A DataFrame representing the data extracted from the specified file.

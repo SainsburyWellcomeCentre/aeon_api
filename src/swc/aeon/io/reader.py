@@ -102,13 +102,13 @@ class JsonList(Reader):
     """Extracts data from .jsonl files, where the key "seconds" stores the Aeon timestamp.
 
     Attributes:
-        pattern (str): Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
-        columns (pandas.Index or array-like): Column labels to extract from the dictionary stored in
+        pattern: Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
+        columns: Column labels to extract from the dictionary stored in
             the `root_key` of the JSON object. Each column name must correspond to a key in the
             dictionary stored in the `root_key`. Defaults to an empty tuple, i.e. the JSON objects
             are read as-is.
-        root_key (str): The key in the JSON object that contains the data. Defaults to "value".
-        extension (str): Extension of data file pathnames. Defaults to "jsonl".
+        root_key: The key in the JSON object that contains the data. Defaults to "value".
+        extension: Extension of data file pathnames. Defaults to "jsonl".
 
     """
 
@@ -128,12 +128,12 @@ class JsonList(Reader):
         """Reads data from the specified jsonl file.
 
         Args:
-            file (str or Path): Path to the jsonl file to read. The file must contain a
+            file: Path to the jsonl file to read. The file must contain a
                 "seconds" key that stores the Aeon timestamp, and the `root_key` must
                 contain a dictionary with keys corresponding to the specified `columns`.
 
         Returns:
-            pd.DataFrame: A DataFrame with "seconds" as the index, other keys as columns,
+            DataFrame: A DataFrame with "seconds" as the index, other keys as columns,
                 and the specified columns extracted from the `root_key` dictionary (if any).
         """
         with open(file) as f:
@@ -232,9 +232,9 @@ class BitmaskEvent(Harp):
     - event (str): Unique identifier for the event code.
 
     Attributes:
-        pattern (str): Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
-        value (int): The unique event code to match against the digital I/O data.
-        tag (str): A tag/label to assign to the event code for identification.
+        pattern: Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
+        value: The unique event code to match against the digital I/O data.
+        tag: A tag/label to assign to the event code for identification.
 
     """
 
@@ -449,13 +449,11 @@ class Pose(Harp):
         """Converts a class integer in a tracking data dataframe to its associated string (subject id).
 
         Args:
-            data (pd.DataFrame): DataFrame containing a column named "identity" with integer class
-                identifiers.
-            classes (list[str]): List of class names corresponding to the integer identifiers in the
-                "identity" column.
+            data: DataFrame containing a column named "identity" with integer class identifiers.
+            classes: List of class names corresponding to the integer identifiers in the "identity" column.
 
         Returns:
-            pd.DataFrame: DataFrame with the "identity" column converted to string class names.
+            DataFrame: DataFrame with the "identity" column converted to string class names.
         """
         if classes:
             identity_mapping = dict(enumerate(classes))

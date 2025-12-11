@@ -10,10 +10,11 @@ from cv2.typing import MatLike
 def frames(data: pd.DataFrame) -> Iterable[MatLike]:
     """Extracts the raw frames corresponding to the provided video metadata.
 
-    :param DataFrame data:
-        A pandas DataFrame where each row specifies video acquisition path and frame number.
-    :return:
-        An object to iterate over numpy arrays for each row in the DataFrame,
+    Args:
+        data: A DataFrame where each row specifies video acquisition path and frame number.
+
+    Returns:
+        iterable: An object to iterate over numpy arrays for each row in the DataFrame,
         containing the raw video frame data.
     """
     capture = None
@@ -44,11 +45,11 @@ def frames(data: pd.DataFrame) -> Iterable[MatLike]:
 def export(frames: Iterable[MatLike], filename: str, fps: float, fourcc: int | None = None) -> None:
     """Exports the specified frame sequence to a new video file.
 
-    :param iterable frames: An object to iterate over the raw video frame data.
-    :param str filename: The path to the exported video file.
-    :param float fps: The frame rate of the exported video.
-    :param optional fourcc:
-        Specifies the four character code of the codec used to compress the frames.
+    Args:
+        frames: An object to iterate over the raw video frame data.
+        filename: The path to the exported video file.
+        fps: The frame rate of the exported video.
+        fourcc: Specifies the four character code of the codec used to compress the frames.
     """
     writer = None
     try:

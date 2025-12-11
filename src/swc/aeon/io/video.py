@@ -1,9 +1,13 @@
 """Module for reading and writing video files using OpenCV."""
 
+from collections.abc import Iterable
+
 import cv2
+import pandas as pd
+from cv2.typing import MatLike
 
 
-def frames(data):
+def frames(data: pd.DataFrame) -> Iterable[MatLike]:
     """Extracts the raw frames corresponding to the provided video metadata.
 
     :param DataFrame data:
@@ -37,12 +41,12 @@ def frames(data):
             capture.release()
 
 
-def export(frames, file, fps, fourcc=None):
+def export(frames: Iterable[MatLike], filename: str, fps: float, fourcc: int | None = None) -> None:
     """Exports the specified frame sequence to a new video file.
 
     :param iterable frames: An object to iterate over the raw video frame data.
-    :param str file: The path to the exported video file.
-    :param fps: The frame rate of the exported video.
+    :param str filename: The path to the exported video file.
+    :param float fps: The frame rate of the exported video.
     :param optional fourcc:
         Specifies the four character code of the codec used to compress the frames.
     """
@@ -51,8 +55,8 @@ def export(frames, file, fps, fourcc=None):
         for frame in frames:
             if writer is None:
                 if fourcc is None:
-                    fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")  # type: ignore
-                writer = cv2.VideoWriter(file, fourcc, fps, (frame.shape[1], frame.shape[0]))
+                    fourcc = cv2.VideoWriter.fourcc(*"mp4v")
+                writer = cv2.VideoWriter(filename, fourcc, fps, (frame.shape[1], frame.shape[0]))
             writer.write(frame)
     finally:
         if writer is not None:

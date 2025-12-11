@@ -25,11 +25,12 @@ dependencies = [
   "matplotlib",
   "numpy>=1.26.4",
   "opencv-python",
-  "pandas>=1.3",
+  "pandas>=2.2",
 ]
 
 [project.optional-dependencies]
 dev = [
+  "pandas-stubs",
   "pre-commit",
   "pyright",
   "pytest",

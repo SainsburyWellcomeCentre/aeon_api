@@ -5,8 +5,10 @@ import datetime
 import warnings
 from os import PathLike
 from pathlib import Path
+from typing import Literal, overload
 
 import pandas as pd
+from pandas._typing import SequenceNotStr
 from typing_extensions import deprecated
 
 CHUNK_DURATION = 1
@@ -17,7 +19,7 @@ REFERENCE_EPOCH = datetime.datetime(1904, 1, 1)
 
 
 @deprecated("Please use the to_datetime function instead.")
-def aeon(seconds):
+def aeon(seconds: float | pd.Index | pd.Series) -> datetime.datetime | pd.Index | pd.Series:
     """Converts a Harp timestamp, in seconds, to a datetime object.
 
     .. deprecated:: 0.2.0
@@ -27,7 +29,13 @@ def aeon(seconds):
     return to_datetime(seconds)  # pragma: no cover
 
 
-def to_datetime(seconds):
+@overload
+def to_datetime(seconds: float) -> datetime.datetime: ...
+@overload
+def to_datetime(seconds: pd.Series) -> pd.Series: ...
+@overload
+def to_datetime(seconds: pd.Index) -> pd.Index: ...
+def to_datetime(seconds: float | pd.Index | pd.Series) -> datetime.datetime | pd.Index | pd.Series:
     """Converts a Harp timestamp, in seconds, to a datetime object.
 
     Args:
@@ -39,7 +47,15 @@ def to_datetime(seconds):
     return REFERENCE_EPOCH + pd.to_timedelta(seconds, "s")
 
 
-def to_seconds(time):
+@overload
+def to_seconds(time: datetime.datetime) -> float: ...
+@overload
+def to_seconds(time: pd.DatetimeIndex) -> pd.DatetimeIndex: ...
+@overload
+def to_seconds(time: pd.Series) -> pd.Series: ...
+def to_seconds(
+    time: datetime.datetime | pd.DatetimeIndex | pd.Series,
+) -> float | pd.Index | pd.Series:
     """Converts a datetime object to a Harp timestamp, in seconds.
 
     Args:
@@ -50,12 +66,20 @@ def to_seconds(time):
         float, pandas.Series: The Harp timestamp in seconds.
     """
     if isinstance(time, pd.Series):
-        return (time - REFERENCE_EPOCH).dt.total_seconds()
+        return (pd.to_datetime(time) - REFERENCE_EPOCH).dt.total_seconds()
     else:
         return (time - REFERENCE_EPOCH).total_seconds()
 
 
-def chunk(time):
+@overload
+def chunk(time: datetime.datetime) -> pd.Timestamp: ...
+@overload
+def chunk(time: pd.DatetimeIndex) -> pd.DatetimeIndex: ...
+@overload
+def chunk(time: "pd.Series[pd.Timestamp]") -> pd.Series: ...
+def chunk(
+    time: "datetime.datetime | pd.DatetimeIndex | pd.Series[pd.Timestamp]",
+) -> pd.Timestamp | pd.DatetimeIndex | pd.Series:
     """Returns the whole hour acquisition chunk for a measurement timestamp.
 
     Args:
@@ -75,13 +99,13 @@ def chunk(time):
         return pd.to_datetime(time.dt.date) + pd.to_timedelta(hour, "h")
     elif isinstance(time, pd.DatetimeIndex):
         hour = CHUNK_DURATION * (time.hour // CHUNK_DURATION)
-        return pd.to_datetime(time.date) + pd.to_timedelta(hour, "h")
+        return pd.DatetimeIndex(time.date) + pd.to_timedelta(hour, "h")
     else:
         hour = CHUNK_DURATION * (time.hour // CHUNK_DURATION)
         return pd.to_datetime(datetime.datetime.combine(time.date(), datetime.time(hour=hour)))
 
 
-def chunk_range(start, end):
+def chunk_range(start: datetime.datetime, end: datetime.datetime) -> pd.DatetimeIndex:
     """Returns a range of whole hour acquisition chunks.
 
     Args:
@@ -94,7 +118,7 @@ def chunk_range(start, end):
     return pd.date_range(chunk(start), chunk(end), freq=pd.DateOffset(hours=CHUNK_DURATION))
 
 
-def chunk_key(file):
+def chunk_key(file: Path) -> tuple[str, datetime.datetime]:
     """Returns the acquisition chunk key for the specified file.
 
     Args:
@@ -114,17 +138,22 @@ def chunk_key(file):
     return epoch, datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
 
 
-def _set_index(data):
+def _set_index(data: pd.DataFrame) -> None:
     if not isinstance(data.index, pd.DatetimeIndex):
         data.index = to_datetime(data.index)
     data.index.name = "time"
 
 
-def _empty(columns):
+def _empty(columns: SequenceNotStr[str]) -> pd.DataFrame:
     return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="time"))
 
 
-def _filter_time_range(df, start, end, inclusive="both"):
+def _filter_time_range(
+    df: pd.DataFrame,
+    start: datetime.datetime | None,
+    end: datetime.datetime | None,
+    inclusive: Literal["both", "neither", "left", "right"] = "both",
+) -> pd.DataFrame:
     """Filters a DataFrame by a given time range.
 
     Args:
@@ -146,17 +175,44 @@ def _filter_time_range(df, start, end, inclusive="both"):
         return result.iloc[:-1] if last_idx_equals_end else result
     elif inclusive == "right":  # drop first row if the index is equal to start
         return result.iloc[1:] if first_idx_equals_start else result
-    elif inclusive == "neither":
+    else:
         result = result.iloc[1:] if first_idx_equals_start else result
         result = result.iloc[:-1] if last_idx_equals_end else result
         return result
-    else:
-        raise ValueError(f"Invalid value for 'inclusive': {inclusive!r}")
+
+
+class Reader:
+    """Extracts data from raw files in an Aeon dataset.
+
+    Attributes:
+        pattern (str): Pattern used to find raw files,
+            usually in the format `<Device>_<DataStream>`.
+        columns (pandas.Index or array-like): Column labels to use for the data.
+        extension (str): Extension of data file pathnames.
+    """
+
+    def __init__(self, pattern: str, columns: SequenceNotStr[str], extension: str):
+        """Initialize the object with specified pattern, columns, and file extension."""
+        self.pattern = pattern
+        self.columns = columns
+        self.extension = extension
+
+    def read(self, file: Path) -> pd.DataFrame:
+        """Reads data from the specified file."""
+        return pd.DataFrame(columns=self.columns, index=pd.DatetimeIndex([]))
 
 
 def load(
-    root, reader, start=None, end=None, inclusive="both", time=None, tolerance=None, epoch=None, **kwargs
-):
+    root: str | PathLike | list[str] | list[PathLike],
+    reader: Reader,
+    start: datetime.datetime | None = None,
+    end: datetime.datetime | None = None,
+    inclusive: Literal["both", "neither", "left", "right"] = "both",
+    time: datetime.datetime | list[datetime.datetime] | pd.DatetimeIndex | pd.DataFrame | None = None,
+    tolerance: pd.Timedelta | None = None,
+    epoch: str | None = None,
+    **kwargs,
+) -> pd.DataFrame:
     """Extracts chunk data from the root path of an Aeon dataset.
 
     Reads all chunk data using the specified data stream reader. A subset of the data can be loaded
@@ -201,16 +257,17 @@ def load(
 
     if time is not None:
         # ensure input is converted to timestamp series
+        timestamps: pd.Series
         if isinstance(time, pd.DataFrame):
-            time = time.index
-        if not isinstance(time, pd.Series):
-            time = pd.Series(time)
-            time.index = time
+            timestamps = time.index.to_series()
+        else:
+            timestamps = pd.Series(time)
+            timestamps.index = pd.DatetimeIndex(timestamps)
 
         dataframes = []
         filetimes = [chunk for (_, chunk), _ in files]
         files = [file for _, file in files]
-        for key, values in time.groupby(by=chunk):
+        for key, values in timestamps.groupby(by=chunk):
             i = bisect.bisect_left(filetimes, key)  # type: ignore
             if i < len(filetimes):
                 frame = reader.read(files[i], **kwargs)

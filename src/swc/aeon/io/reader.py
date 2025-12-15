@@ -112,6 +112,8 @@ class JsonList(Reader):
 
     """
 
+    root_key: str
+
     def __init__(
         self,
         pattern: str,
@@ -237,6 +239,9 @@ class BitmaskEvent(Harp):
         tag: A tag/label to assign to the event code for identification.
 
     """
+
+    value: int
+    tag: str
 
     def __init__(self, pattern: str, value: int, tag: str):
         """Initialize the object with specified pattern, value, and tag."""

@@ -195,6 +195,10 @@ class Reader:
         extension: Extension of data file pathnames.
     """
 
+    pattern: str
+    columns: SequenceNotStr[str]
+    extension: str
+
     def __init__(self, pattern: str, columns: SequenceNotStr[str], extension: str):
         """Initialize the object with specified pattern, columns, and file extension."""
         self.pattern = pattern

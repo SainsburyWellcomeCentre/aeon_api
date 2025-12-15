@@ -44,9 +44,9 @@ def to_datetime(seconds: float | pd.Index | pd.Series) -> datetime.datetime | pd
         seconds: The Harp timestamp data, in fractional seconds, to convert to datetime.
 
     Returns:
-        If parsing succeeded. Return type depends on input.
+        The decoded UTC Harp timestamp data. Return type depends on input.
 
-        - scalar: datetime object representing the decoded UTC Harp timestamp
+        - scalar: datetime object
         - Index: DatetimeIndex of datetime64 dtype
         - Series: Series of datetime64 dtype
     """
@@ -70,11 +70,11 @@ def to_seconds(
         time: The object to convert to a UTC Harp timestamp type.
 
     Returns:
-        If parsing succeeded. Return type depends on input.
+        The UTC Harp timestamp data, in fractional seconds. Return type depends on input.
 
-        - datetime: scalar representing the UTC Harp timestamp, in fractional seconds
-        - DatetimeIndex: Index of decoded UTC Harp timestamps, in fractional seconds
-        - Series: Series of decoded UTC Harp timestamps, in fractional seconds
+        - datetime: scalar
+        - DatetimeIndex: Index
+        - Series: Series
     """
     if isinstance(time, pd.Series):
         return (pd.to_datetime(time) - REFERENCE_EPOCH).dt.total_seconds()

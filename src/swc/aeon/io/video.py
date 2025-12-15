@@ -14,7 +14,7 @@ def frames(data: pd.DataFrame) -> Iterable[MatLike]:
         data: A DataFrame where each row specifies video acquisition path and frame number.
 
     Returns:
-        iterable: An object to iterate over numpy arrays for each row in the DataFrame,
+        An object to iterate over numpy arrays for each row in the DataFrame,
         containing the raw video frame data.
     """
     capture = None

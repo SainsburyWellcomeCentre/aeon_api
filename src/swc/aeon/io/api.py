@@ -44,10 +44,12 @@ def to_datetime(seconds: float | pd.Index | pd.Series) -> datetime.datetime | pd
         seconds: The Harp timestamp data, in fractional seconds, to convert to datetime.
 
     Returns:
-        datetime: If parsing succeeded. Return type depends on input.
-          - scalar: datetime object representing the decoded UTC Harp timestamp
-          - Index: DatetimeIndex of datetime64 dtype
-          - Series: Series of datetime64 dtype
+        datetime
+            If parsing succeeded. Return type depends on input.
+
+            - scalar: datetime object representing the decoded UTC Harp timestamp
+            - Index: DatetimeIndex of datetime64 dtype
+            - Series: Series of datetime64 dtype
     """
     return REFERENCE_EPOCH + pd.to_timedelta(seconds, "s")
 
@@ -69,10 +71,12 @@ def to_seconds(
         time: The object to convert to a UTC Harp timestamp type.
 
     Returns:
-        seconds: If parsing succeeded. Return type depends on input.
-          - datetime: scalar representing the UTC Harp timestamp, in fractional seconds
-          - DatetimeIndex: Index of decoded UTC Harp timestamps, in fractional seconds
-          - Series: Series of decoded UTC Harp timestamps, in fractional seconds
+        seconds
+            If parsing succeeded. Return type depends on input.
+
+            - datetime: scalar representing the UTC Harp timestamp, in fractional seconds
+            - DatetimeIndex: Index of decoded UTC Harp timestamps, in fractional seconds
+            - Series: Series of decoded UTC Harp timestamps, in fractional seconds
     """
     if isinstance(time, pd.Series):
         return (pd.to_datetime(time) - REFERENCE_EPOCH).dt.total_seconds()
@@ -95,10 +99,12 @@ def chunk(
         time: The object for which to retrieve the acquisition chunk.
 
     Returns:
-        datetime: Return type depends on input.
-          - datetime: Timestamp representing the acquisition chunk
-          - DatetimeIndex: DatetimeIndex of decoded acquisition chunks
-          - Series: Series of decoded acquisition chunks
+        datetime
+            Return type depends on input.
+
+            - datetime: Timestamp representing the acquisition chunk
+            - DatetimeIndex: DatetimeIndex of decoded acquisition chunks
+            - Series: Series of decoded acquisition chunks
     """
     if isinstance(time, pd.Series):
         hour = CHUNK_DURATION * (time.dt.hour // CHUNK_DURATION)
@@ -119,7 +125,8 @@ def chunk_range(start: datetime.datetime, end: datetime.datetime) -> pd.Datetime
         end: The right bound for generating chunk dates.
 
     Returns:
-        DatetimeIndex: The acquisition chunk range.
+        DatetimeIndex
+            The acquisition chunk range.
     """
     return pd.date_range(chunk(start), chunk(end), freq=pd.DateOffset(hours=CHUNK_DURATION))
 
@@ -131,7 +138,8 @@ def chunk_key(path: Path) -> tuple[str, datetime.datetime]:
         path: The path to the file for which to retrieve the acquisition chunk key.
 
     Returns:
-        key: A tuple containing the epoch string and the acquisition chunk datetime.
+        key
+            A tuple containing the epoch string and the acquisition chunk datetime.
     """
     epoch = path.parts[-3]
     chunk_str = path.stem.split("_")[-1]
@@ -169,7 +177,7 @@ def _filter_time_range(
             Options are "both", "left", "right", or "neither".
 
     Returns:
-        DataFrame: The filtered DataFrame.
+        The filtered DataFrame.
     """
     result = frame.loc[start:end]
     if inclusive == "both" or len(result) == 0:
@@ -242,7 +250,7 @@ def load(
         **kwargs: Optional keyword arguments to forward to `reader` when reading chunk data.
 
     Returns:
-        DataFrame: A DataFrame containing extracted chunk data, sorted by time.
+        A DataFrame containing extracted chunk data, sorted by time.
 
     """
     if isinstance(root, str):

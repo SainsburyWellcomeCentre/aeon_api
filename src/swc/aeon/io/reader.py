@@ -123,7 +123,6 @@ class JsonList(Reader):
     ):
         """Initialize the object with the specified pattern, columns, and root key."""
         super().__init__(pattern, columns, extension)
-        self.columns = columns
         self.root_key = root_key
 
     def read(self, file):
@@ -135,8 +134,8 @@ class JsonList(Reader):
                 contain a dictionary with keys corresponding to the specified `columns`.
 
         Returns:
-            DataFrame: A DataFrame with "seconds" as the index, other keys as columns,
-                and the specified columns extracted from the `root_key` dictionary (if any).
+            A DataFrame with "seconds" as the index, other keys as columns,
+            and the specified columns extracted from the `root_key` dictionary (if any).
         """
         with open(file) as f:
             df = pd.read_json(f, lines=True)
@@ -307,7 +306,7 @@ class Video(Csv):
             file (Path): Path to the video metadata CSV file.
 
         Returns:
-            pd.DataFrame: A DataFrame containing the video metadata.
+            A DataFrame containing the video metadata.
         """
         data = pd.read_csv(file, header=0, names=self._rawcolumns)
         data["_frame"] = data.index
@@ -458,7 +457,7 @@ class Pose(Harp):
             classes: List of class names corresponding to the integer identifiers in the "identity" column.
 
         Returns:
-            DataFrame: DataFrame with the "identity" column converted to string class names.
+            DataFrame with the "identity" column converted to string class names.
         """
         if classes:
             identity_mapping = dict(enumerate(classes))

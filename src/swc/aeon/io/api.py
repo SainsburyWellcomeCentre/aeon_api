@@ -190,17 +190,16 @@ def _filter_time_range(
 
 
 class Reader:
-    """Extracts data from raw files in an Aeon dataset.
-
-    Attributes:
-        pattern: Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
-        columns: Column labels to use for the data.
-        extension: Extension of data file pathnames.
-    """
+    """Extracts data from raw files in an Aeon dataset."""
 
     pattern: str
+    """Pattern used to find raw files, usually in the format `<Device>_<DataStream>`."""
+
     columns: SequenceNotStr[str]
+    """Column labels to use for the data."""
+
     extension: str
+    """Extension of data file pathnames."""
 
     def __init__(self, pattern: str, columns: SequenceNotStr[str], extension: str):
         """Initialize the object with specified pattern, columns, and file extension."""
@@ -209,7 +208,14 @@ class Reader:
         self.extension = extension
 
     def read(self, file: Path) -> pd.DataFrame:
-        """Reads data from the specified file."""
+        """Reads data from the specified file.
+
+        Args:
+            file: Path to the data file.
+
+        Returns:
+            A DataFrame representing the data extracted from the specified file.
+        """
         return pd.DataFrame(columns=self.columns, index=pd.DatetimeIndex([]))
 
 

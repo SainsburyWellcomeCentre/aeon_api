@@ -22,8 +22,15 @@ class Harp(Reader):
         """Initialize the object."""
         super().__init__(pattern, columns, extension)
 
-    def read(self, file):
-        """Reads data from the specified Harp binary file."""
+    def read(self, file: Path) -> pd.DataFrame:
+        """Reads data from the specified Harp binary file.
+
+        Args:
+            file: Path to the Harp binary file.
+
+        Returns:
+            A DataFrame representing the data extracted from the Harp binary file.
+        """
         return harp.read(file, columns=self.columns)
 
 
@@ -41,8 +48,15 @@ class Chunk(Reader):
             raise ValueError("reader must be specified if pattern or extension are None.")
         super().__init__(pattern, columns=("path", "epoch"), extension=extension)
 
-    def read(self, file):
-        """Returns path and epoch information for the chunk associated with the specified file."""
+    def read(self, file: Path) -> pd.DataFrame:
+        """Returns path and epoch information for the chunk associated with the specified file.
+
+        Args:
+            file: Path to the data file.
+
+        Returns:
+            A DataFrame representing the path and epoch information for the specified file.
+        """
         epoch, chunk = chunk_key(file)
         data = {"path": file, "epoch": epoch}
         return pd.DataFrame(data, index=pd.Series(chunk), columns=self.columns)
@@ -55,8 +69,15 @@ class Metadata(Reader):
         """Initialize the object with the specified pattern."""
         super().__init__(pattern, columns=("workflow", "commit", "metadata"), extension="yml")
 
-    def read(self, file):
-        """Returns metadata for the epoch associated with the specified file."""
+    def read(self, file: Path) -> pd.DataFrame:
+        """Returns epoch metadata stored in the specified file.
+
+        Args:
+            file: Path to the data file.
+
+        Returns:
+            A DataFrame representing the epoch metadata stored in the specified file.
+        """
         epoch_str = file.parts[-2]
         date_str, time_str = epoch_str.split("T")
         time = datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
@@ -82,12 +103,18 @@ class Csv(Reader):
         self.dtype = dtype
         self._names = tuple(columns)
 
-    def read(self, file):
+    def read(self, file: Path) -> pd.DataFrame:
         """Reads data from the specified CSV text file.
 
         If the file is non-empty, the first column is assumed to contain the Aeon timestamp
         and is set as the index of the DataFrame. If the file is empty, pandas defaults to
         using pandas.RangeIndex as the index.
+
+        Args:
+            file: Path to the CSV text file.
+
+        Returns:
+            A DataFrame representing the data extracted from the CSV text file.
         """
         return pd.read_csv(
             file,
@@ -99,20 +126,17 @@ class Csv(Reader):
 
 
 class JsonList(Reader):
-    """Extracts data from .jsonl files, where the key "seconds" stores the Aeon timestamp.
+    """Extracts data from .jsonl files, where the key "seconds" stores the Aeon timestamp."""
 
-    Attributes:
-        pattern: Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
-        columns: Column labels to extract from the dictionary stored in
-            the `root_key` of the JSON object. Each column name must correspond to a key in the
-            dictionary stored in the `root_key`. Defaults to an empty tuple, i.e. the JSON objects
-            are read as-is.
-        root_key: The key in the JSON object that contains the data. Defaults to "value".
-        extension: Extension of data file pathnames. Defaults to "jsonl".
-
+    columns: SequenceNotStr[str]
+    """
+    Column labels to extract from the dictionary stored in the `root_key` of the JSON object.
+    Each column name must correspond to a key in the dictionary stored in the `root_key`.
+    Defaults to an empty tuple, i.e. the JSON objects are read as-is.
     """
 
     root_key: str
+    """The key in the JSON object that contains the data. Defaults to "value"."""
 
     def __init__(
         self,
@@ -123,9 +147,10 @@ class JsonList(Reader):
     ):
         """Initialize the object with the specified pattern, columns, and root key."""
         super().__init__(pattern, columns, extension)
+        self.columns = columns
         self.root_key = root_key
 
-    def read(self, file):
+    def read(self, file: Path) -> pd.DataFrame:
         """Reads data from the specified jsonl file.
 
         Args:
@@ -231,16 +256,13 @@ class BitmaskEvent(Harp):
     Columns:
 
     - event (str): Unique identifier for the event code.
-
-    Attributes:
-        pattern: Pattern used to find raw files, usually in the format `<Device>_<DataStream>`.
-        value: The unique event code to match against the digital I/O data.
-        tag: A tag/label to assign to the event code for identification.
-
     """
 
     value: int
+    """The unique event code to match against the digital I/O data."""
+
     tag: str
+    """A tag/label to assign to the event code for identification."""
 
     def __init__(self, pattern: str, value: int, tag: str):
         """Initialize the object with specified pattern, value, and tag."""
@@ -248,10 +270,16 @@ class BitmaskEvent(Harp):
         self.value = value
         self.tag = tag
 
-    def read(self, file):
+    def read(self, file: Path) -> pd.DataFrame:
         """Reads a specific event code from digital data.
 
         Each data value is matched against the unique event identifier.
+
+        Args:
+            file: Path to the Harp binary file.
+
+        Returns:
+            A DataFrame representing the event data extracted from the Harp binary file.
         """
         data = super().read(file)
         data = data[(data.event & self.value) == self.value]
@@ -267,15 +295,24 @@ class DigitalBitmask(Harp):
     - event (str): Unique identifier for the event code.
     """
 
+    mask: int
+    """The bitmask to match against changes in the digital I/O data."""
+
     def __init__(self, pattern: str, mask: int, columns: SequenceNotStr[str]):
         """Initialize the object with specified pattern, mask, and columns."""
         super().__init__(pattern, columns)
         self.mask = mask
 
-    def read(self, file):
+    def read(self, file: Path) -> pd.DataFrame:
         """Reads a specific event code from digital data.
 
         Each data value is checked against the specified bitmask.
+
+        Args:
+            file: Path to the Harp binary file.
+
+        Returns:
+            A DataFrame representing the bitmask data extracted from the Harp binary file.
         """
         data = super().read(file)
         state = data[self.columns] & self.mask
@@ -299,11 +336,11 @@ class Video(Csv):
         super().__init__(pattern, columns=("hw_counter", "hw_timestamp", "_frame", "_path", "_epoch"))
         self._rawcolumns = ("time",) + tuple(self.columns[0:2])
 
-    def read(self, file):
+    def read(self, file: Path) -> pd.DataFrame:
         """Reads video metadata from the specified file.
 
         Args:
-            file (Path): Path to the video metadata CSV file.
+            file: Path to the video metadata CSV file.
 
         Returns:
             A DataFrame containing the video metadata.
@@ -343,7 +380,15 @@ class Pose(Harp):
         self._pattern_offset = pattern.rfind("_") + 1
 
     def read(self, file: Path, include_model: bool = False) -> pd.DataFrame:
-        """Reads data from the Harp-binarized tracking file."""
+        """Reads data from the Harp-binarized tracking file.
+
+        Args:
+            file: Path to the Harp binary file.
+            include_model: Specifies whether to include the path to the pose tracking model.
+
+        Returns:
+            A DataFrame representing the data extracted from the Harp binary file.
+        """
         # Get config file from `file`, then bodyparts from config file.
         model_dir = Path(file.stem[self._pattern_offset :].replace("_", "/")).parent
 

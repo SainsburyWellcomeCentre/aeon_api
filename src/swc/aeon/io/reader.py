@@ -22,16 +22,16 @@ class Harp(Reader):
         """Initialize the object."""
         super().__init__(pattern, columns, extension)
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Reads data from the specified Harp binary file.
 
         Args:
-            file: Path to the Harp binary file.
+            path: Path to the Harp binary file.
 
         Returns:
             A DataFrame representing the data extracted from the Harp binary file.
         """
-        return harp.read(file, columns=self.columns)
+        return harp.read(path, columns=self.columns)
 
 
 class Chunk(Reader):
@@ -48,17 +48,17 @@ class Chunk(Reader):
             raise ValueError("reader must be specified if pattern or extension are None.")
         super().__init__(pattern, columns=("path", "epoch"), extension=extension)
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Returns path and epoch information for the chunk associated with the specified file.
 
         Args:
-            file: Path to the data file.
+            path: Path to the data file.
 
         Returns:
             A DataFrame representing the path and epoch information for the specified file.
         """
-        epoch, chunk = chunk_key(file)
-        data = {"path": file, "epoch": epoch}
+        epoch, chunk = chunk_key(path)
+        data = {"path": path, "epoch": epoch}
         return pd.DataFrame(data, index=pd.Series(chunk), columns=self.columns)
 
 
@@ -69,19 +69,19 @@ class Metadata(Reader):
         """Initialize the object with the specified pattern."""
         super().__init__(pattern, columns=("workflow", "commit", "metadata"), extension="yml")
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Returns epoch metadata stored in the specified file.
 
         Args:
-            file: Path to the data file.
+            path: Path to the data file.
 
         Returns:
             A DataFrame representing the epoch metadata stored in the specified file.
         """
-        epoch_str = file.parts[-2]
+        epoch_str = path.parts[-2]
         date_str, time_str = epoch_str.split("T")
         time = datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
-        with open(file) as fp:
+        with open(path) as fp:
             metadata = json.load(fp)
         workflow = metadata.pop("Workflow")
         commit = metadata.pop("Commit", pd.NA)
@@ -103,7 +103,7 @@ class Csv(Reader):
         self.dtype = dtype
         self._names = tuple(columns)
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Reads data from the specified CSV text file.
 
         If the file is non-empty, the first column is assumed to contain the Aeon timestamp
@@ -111,17 +111,17 @@ class Csv(Reader):
         using pandas.RangeIndex as the index.
 
         Args:
-            file: Path to the CSV text file.
+            path: Path to the CSV text file.
 
         Returns:
             A DataFrame representing the data extracted from the CSV text file.
         """
         return pd.read_csv(
-            file,
+            path,
             header=0,
             names=self._names,
             dtype=self.dtype,
-            index_col=0 if file.stat().st_size else None,
+            index_col=0 if path.stat().st_size else None,
         )
 
 
@@ -150,11 +150,11 @@ class JsonList(Reader):
         self.columns = columns
         self.root_key = root_key
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Reads data from the specified jsonl file.
 
         Args:
-            file: Path to the jsonl file to read. The file must contain a
+            path: Path to the jsonl file to read. The file must contain a
                 "seconds" key that stores the Aeon timestamp, and the `root_key` must
                 contain a dictionary with keys corresponding to the specified `columns`.
 
@@ -162,7 +162,7 @@ class JsonList(Reader):
             A DataFrame with "seconds" as the index, other keys as columns,
             and the specified columns extracted from the `root_key` dictionary (if any).
         """
-        with open(file) as f:
+        with open(path) as f:
             df = pd.read_json(f, lines=True)
         df.set_index("seconds", inplace=True)
         for column in self.columns:
@@ -270,18 +270,18 @@ class BitmaskEvent(Harp):
         self.value = value
         self.tag = tag
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Reads a specific event code from digital data.
 
         Each data value is matched against the unique event identifier.
 
         Args:
-            file: Path to the Harp binary file.
+            path: Path to the Harp binary file.
 
         Returns:
             A DataFrame representing the event data extracted from the Harp binary file.
         """
-        data = super().read(file)
+        data = super().read(path)
         data = data[(data.event & self.value) == self.value]
         data["event"] = self.tag
         return data
@@ -303,18 +303,18 @@ class DigitalBitmask(Harp):
         super().__init__(pattern, columns)
         self.mask = mask
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Reads a specific event code from digital data.
 
         Each data value is checked against the specified bitmask.
 
         Args:
-            file: Path to the Harp binary file.
+            path: Path to the Harp binary file.
 
         Returns:
             A DataFrame representing the bitmask data extracted from the Harp binary file.
         """
-        data = super().read(file)
+        data = super().read(path)
         state = data[self.columns] & self.mask
         return state[(state.diff() != 0).values] != 0
 
@@ -336,19 +336,19 @@ class Video(Csv):
         super().__init__(pattern, columns=("hw_counter", "hw_timestamp", "_frame", "_path", "_epoch"))
         self._rawcolumns = ("time",) + tuple(self.columns[0:2])
 
-    def read(self, file: Path) -> pd.DataFrame:
+    def read(self, path: Path) -> pd.DataFrame:
         """Reads video metadata from the specified file.
 
         Args:
-            file: Path to the video metadata CSV file.
+            path: Path to the video metadata CSV file.
 
         Returns:
             A DataFrame containing the video metadata.
         """
-        data = pd.read_csv(file, header=0, names=self._rawcolumns)
+        data = pd.read_csv(path, header=0, names=self._rawcolumns)
         data["_frame"] = data.index
-        data["_path"] = os.path.splitext(file)[0] + ".avi"
-        data["_epoch"] = file.parts[-3]
+        data["_path"] = os.path.splitext(path)[0] + ".avi"
+        data["_epoch"] = path.parts[-3]
         data.set_index("time", inplace=True)
         return data
 
@@ -379,22 +379,22 @@ class Pose(Harp):
         self._model_root = model_root
         self._pattern_offset = pattern.rfind("_") + 1
 
-    def read(self, file: Path, include_model: bool = False) -> pd.DataFrame:
+    def read(self, path: Path, include_model: bool = False) -> pd.DataFrame:
         """Reads data from the Harp-binarized tracking file.
 
         Args:
-            file: Path to the Harp binary file.
+            path: Path to the Harp binary file.
             include_model: Specifies whether to include the path to the pose tracking model.
 
         Returns:
             A DataFrame representing the data extracted from the Harp binary file.
         """
         # Get config file from `file`, then bodyparts from config file.
-        model_dir = Path(file.stem[self._pattern_offset :].replace("_", "/")).parent
+        model_dir = Path(path.stem[self._pattern_offset :].replace("_", "/")).parent
 
         # Check if model directory exists in local or shared directories.
         # Local directory is prioritized over shared directory.
-        local_config_file_dir = file.parent / model_dir
+        local_config_file_dir = path.parent / model_dir
         shared_config_file_dir = Path(self._model_root) / model_dir if self._model_root else None
         if local_config_file_dir.exists():
             config_file_dir = local_config_file_dir
@@ -419,7 +419,7 @@ class Pose(Harp):
             for part in parts:
                 columns.extend([f"{part}_x", f"{part}_y", f"{part}_likelihood"])
             self.columns = columns
-            data = super().read(file)
+            data = super().read(path)
         except ValueError:  # column mismatch; Bonsai.Sleap0.3
             bonsai_sleap_v = BONSAI_SLEAP_V3
             columns = ["identity"]
@@ -427,7 +427,7 @@ class Pose(Harp):
             for part in parts:
                 columns.extend([f"{part}_x", f"{part}_y", f"{part}_likelihood"])
             self.columns = columns
-            data = super().read(file)
+            data = super().read(path)
 
         # combine all identity_likelihood cols into a single column
         if bonsai_sleap_v == BONSAI_SLEAP_V3:
@@ -461,12 +461,12 @@ class Pose(Harp):
         return data
 
     @staticmethod
-    def get_class_names(config_file: Path) -> list[str]:
+    def get_class_names(config_file_path: Path) -> list[str]:
         """Returns a list of classes from a model's config file."""
-        with open(config_file) as f:
+        with open(config_file_path) as f:
             config = json.load(f)
-        if config_file.stem != "confmap_config":  # SLEAP
-            raise ValueError(f"The model config file '{config_file}' is not supported.")
+        if config_file_path.stem != "confmap_config":  # SLEAP
+            raise ValueError(f"The model config file '{config_file_path}' is not supported.")
 
         try:
             heads = config["model"]["heads"]
@@ -476,21 +476,21 @@ class Pose(Harp):
             else:
                 return list[str]()
         except KeyError as err:
-            raise KeyError(f"Cannot find class_vectors in {config_file}.") from err
+            raise KeyError(f"Cannot find class_vectors in {config_file_path}.") from err
 
     @staticmethod
-    def get_bodyparts(config_file: Path) -> list[str]:
+    def get_bodyparts(config_file_path: Path) -> list[str]:
         """Returns a list of bodyparts from a model's config file."""
         parts = []
-        with open(config_file) as f:
+        with open(config_file_path) as f:
             config = json.load(f)
-        if config_file.stem == "confmap_config":  # SLEAP
+        if config_file_path.stem == "confmap_config":  # SLEAP
             try:
                 heads = config["model"]["heads"]
                 parts = [f"anchor_{Pose._find_nested_key(heads, 'anchor_part')}"]
                 parts += Pose._find_nested_key(heads, "part_names")
             except KeyError as err:
-                raise KeyError(f"Cannot find anchor or bodyparts in {config_file}.") from err
+                raise KeyError(f"Cannot find anchor or bodyparts in {config_file_path}.") from err
         return parts
 
     @staticmethod

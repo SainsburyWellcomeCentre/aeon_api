@@ -1,5 +1,6 @@
 """Integration tests for end-to-end data loading via swc.aeon.io.load()."""
 
+import datetime
 from contextlib import nullcontext
 
 import pandas as pd
@@ -47,8 +48,8 @@ def test_load_start_end_boundary_inclusivity(
     nonmonotonic_dir, inclusive, expect_start_included, expect_end_included
 ):
     """Test that `load` respects `inclusive` parameter for start/end filtering."""
-    start = pd.Timestamp("2022-06-06T13:00:49")
-    end = pd.Timestamp("2022-06-06T13:00:49.004000186")
+    start = pd.Timestamp("2022-06-06T13:00:49", tzinfo=datetime.UTC)
+    end = pd.Timestamp("2022-06-06T13:00:49.004000186", tzinfo=datetime.UTC)
     data = load(
         nonmonotonic_dir,
         exp02.Patch2.Encoder,

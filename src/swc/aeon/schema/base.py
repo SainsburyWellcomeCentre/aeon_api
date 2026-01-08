@@ -4,6 +4,7 @@ import datetime
 import os
 from collections.abc import Callable
 from functools import cached_property
+from pathlib import Path
 from typing import Any, Self, TypeVar
 
 import pandas as pd
@@ -88,12 +89,12 @@ class Metadata(Reader):
         super().__init__(pattern, columns=["metadata", "epoch"], extension="json")
         self.type = TypeAdapter(type)
 
-    def read(self, file):
+    def read(self, path: Path) -> pd.DataFrame:
         """Returns metadata for the epoch associated with the specified file."""
-        epoch_str = file.parts[-2]
+        epoch_str = path.parts[-2]
         date_str, time_str = epoch_str.split("T")
         time = datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
-        metadata = file.read_text()
+        metadata = path.read_text()
         data = {"metadata": [self.type.validate_json(metadata)], "epoch": [epoch_str]}
         return pd.DataFrame(data, index=pd.Series(time), columns=self.columns)
 

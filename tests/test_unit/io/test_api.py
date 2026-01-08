@@ -52,7 +52,7 @@ def test_chunk(time, input_format):
     """Test that `chunk` can handle different time formats as input and correctly returns the
     acquisition chunk hour.
     """
-    expected = pd.Timestamp("1907-11-29 21:00:00")
+    expected = pd.Timestamp("1907-11-29 21:00:00", tzinfo=datetime.UTC)
     time = time if input_format == "scalar" else input_format([time])
     result = chunk(time)
     if isinstance(result, pd.Series):
@@ -74,16 +74,27 @@ def test_chunk_range(start):
     """Test that `chunk_range` returns the correct range of acquisition chunks for different input types."""
     end = start + pd.Timedelta(hours=24)
     result = chunk_range(start, end)
-    expected = pd.date_range("1907-11-29 21:00", "1907-11-30 21:00", freq=f"{CHUNK_DURATION}h")
+    expected = pd.date_range(
+        "1907-11-29 21:00", "1907-11-30 21:00", freq=f"{CHUNK_DURATION}h", tz=datetime.UTC
+    )
     tm.assert_index_equal(result, expected)
 
 
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        ("monotonic_file", ("2022-06-13T13_14_25", pd.Timestamp("2022-06-13 12:00:00"))),
-        ("nonmonotonic_file", ("2022-06-06T09-24-28", pd.Timestamp("2022-06-06 13:00:00"))),
-        ("metadata_file", ("2022-06-06T09-24-28", pd.Timestamp("2022-06-06 09:24:28"))),
+        (
+            "monotonic_file",
+            ("2022-06-13T13_14_25", pd.Timestamp("2022-06-13 12:00:00", tzinfo=datetime.UTC)),
+        ),
+        (
+            "nonmonotonic_file",
+            ("2022-06-06T09-24-28", pd.Timestamp("2022-06-06 13:00:00", tzinfo=datetime.UTC)),
+        ),
+        (
+            "metadata_file",
+            ("2022-06-06T09-24-28", pd.Timestamp("2022-06-06 09:24:28", tzinfo=datetime.UTC)),
+        ),
     ],
     ids=[
         "Monotonic data file",
@@ -270,9 +281,11 @@ def test_load_start_end_args(data_dir, start, end, request):
     # Monotonic filtering assertions
     if is_monotonic:
         if start is not None:
-            assert (result.index >= start).all(), (
+            assert (result.index >= pd.to_datetime(start, utc=True)).all(), (
                 f"Start filter failed: min index {result.index.min()} < {start}"
             )
         if end is not None:
-            assert (result.index <= end).all(), f"End filter failed: max index {result.index.max()} > {end}"
+            assert (result.index <= pd.to_datetime(end, utc=True)).all(), (
+                f"End filter failed: max index {result.index.max()} > {end}"
+            )
     assert result.index.is_monotonic_increasing

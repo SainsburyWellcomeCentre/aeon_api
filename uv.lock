@@ -1165,6 +1165,8 @@ dependencies = [
     { name = "numpy" },
     { name = "opencv-python" },
     { name = "pandas" },
+    { name = "pydantic" },
+    { name = "pydantic-yaml" },
 ]
 
 [package.optional-dependencies]
@@ -1188,6 +1190,8 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2" },
     { name = "pandas-stubs", marker = "extra == 'dev'" },
     { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "pydantic", specifier = ">=2.12.4" },
+    { name = "pydantic-yaml", specifier = ">=1.6.0" },
     { name = "pyright", marker = "extra == 'dev'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },

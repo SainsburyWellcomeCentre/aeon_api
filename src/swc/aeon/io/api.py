@@ -240,6 +240,9 @@ def load(
     by specifying an optional time range, or a list of timestamps used to index the data on file.
     Returned data will be sorted chronologically.
 
+    Note:
+        Any timezone-naive values in `start`, `end`, and `time` will be treated as UTC.
+
     Args:
         root: The root path, or prioritised sequence of paths, where data is stored.
         reader: A data stream reader object used to read chunk data from the dataset.

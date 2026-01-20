@@ -19,7 +19,8 @@ class UndergroundFeeder(HarpOutputExpander):
     pellet_delivery_timeout: float = Field(
         default=1,
         ge=0,
-        description="The amount of time to wait for pellet detection before reporting a failure.",
+        description="The amount of time in seconds to wait for pellet detection "
+        "before reporting a failure.",
     )
     wheel_radius: float = Field(default=-4.0, description="The radius of the wheel, in centimeters.")
 

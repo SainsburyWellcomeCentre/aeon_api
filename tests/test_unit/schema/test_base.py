@@ -102,8 +102,7 @@ def test_dataset_resolve_pattern_prefix():
     assert dataset.light_cycle.light_events.pattern == "LightCycle_Events"
 
 
-def test_dataset_read_metadata(request):
+def test_dataset_read_metadata(test_data_dir):
     """Test that dataset Metadata is loaded successfully."""
-    root_dir = request.getfixturevalue("test_data_dir")
-    metadata = load(root_dir, Metadata(DummyDataset))
+    metadata = load(test_data_dir, Metadata(DummyDataset))
     assert len(metadata) > 0

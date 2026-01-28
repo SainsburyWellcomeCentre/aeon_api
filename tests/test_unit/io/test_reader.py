@@ -1,5 +1,6 @@
 """Tests for the Reader classes."""
 
+import datetime
 from contextlib import nullcontext
 from pathlib import Path
 
@@ -104,7 +105,7 @@ def test_chunk_read(reader_arg, monotonic_file):
     df = reader.read(monotonic_file)
     expected = pd.DataFrame(
         data={"path": [monotonic_file], "epoch": ["2022-06-13T13_14_25"]},
-        index=[pd.Timestamp("2022-06-13 12:00:00")],
+        index=[pd.Timestamp("2022-06-13 12:00:00", tzinfo=datetime.UTC)],
         columns=["path", "epoch"],
     )
     assert df.equals(expected)

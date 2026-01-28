@@ -14,7 +14,7 @@ from typing_extensions import deprecated
 CHUNK_DURATION = 1
 """The duration of each acquisition chunk, in whole hours."""
 
-REFERENCE_EPOCH = datetime.datetime(1904, 1, 1)
+REFERENCE_EPOCH = datetime.datetime(1904, 1, 1, tzinfo=datetime.UTC)
 """The reference epoch for UTC harp time."""
 
 
@@ -77,9 +77,9 @@ def to_seconds(
         - Series: Series
     """
     if isinstance(time, pd.Series):
-        return (pd.to_datetime(time) - REFERENCE_EPOCH).dt.total_seconds()
+        return (pd.to_datetime(time, utc=True) - REFERENCE_EPOCH).dt.total_seconds()
     else:
-        return (time - REFERENCE_EPOCH).total_seconds()
+        return (pd.to_datetime(time, utc=True) - REFERENCE_EPOCH).total_seconds()
 
 
 @overload
@@ -105,13 +105,13 @@ def chunk(
     """
     if isinstance(time, pd.Series):
         hour = CHUNK_DURATION * (time.dt.hour // CHUNK_DURATION)
-        return pd.to_datetime(time.dt.date) + pd.to_timedelta(hour, "h")
+        return pd.to_datetime(time.dt.date, utc=True) + pd.to_timedelta(hour, "h")
     elif isinstance(time, pd.DatetimeIndex):
         hour = CHUNK_DURATION * (time.hour // CHUNK_DURATION)
-        return pd.DatetimeIndex(time.date) + pd.to_timedelta(hour, "h")
+        return pd.DatetimeIndex(time.date, tz=datetime.UTC) + pd.to_timedelta(hour, "h")
     else:
         hour = CHUNK_DURATION * (time.hour // CHUNK_DURATION)
-        return pd.to_datetime(datetime.datetime.combine(time.date(), datetime.time(hour=hour)))
+        return pd.to_datetime(datetime.datetime.combine(time.date(), datetime.time(hour=hour)), utc=True)
 
 
 def chunk_range(start: datetime.datetime, end: datetime.datetime) -> pd.DatetimeIndex:
@@ -143,17 +143,21 @@ def chunk_key(path: Path) -> tuple[str, datetime.datetime]:
     except ValueError:
         epoch = path.parts[-2]
         date_str, time_str = epoch.split("T")
-    return epoch, datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":"))
+    return epoch, pd.to_datetime(
+        datetime.datetime.fromisoformat(date_str + "T" + time_str.replace("-", ":")), utc=True
+    )
 
 
 def _set_index(data: pd.DataFrame) -> None:
     if not isinstance(data.index, pd.DatetimeIndex):
         data.index = to_datetime(data.index)
+    else:
+        data.index = pd.to_datetime(data.index, utc=True)
     data.index.name = "time"
 
 
 def _empty(columns: SequenceNotStr[str]) -> pd.DataFrame:
-    return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="time"))
+    return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="time", tz=datetime.UTC))
 
 
 def _filter_time_range(
@@ -236,6 +240,9 @@ def load(
     by specifying an optional time range, or a list of timestamps used to index the data on file.
     Returned data will be sorted chronologically.
 
+    Note:
+        Any timezone-naive values in `start`, `end`, and `time` will be treated as UTC.
+
     Args:
         root: The root path, or prioritised sequence of paths, where data is stored.
         reader: A data stream reader object used to read chunk data from the dataset.
@@ -258,6 +265,10 @@ def load(
         root = Path(root)
     if isinstance(root, PathLike):
         root = [root]
+    if start is not None:
+        start = pd.to_datetime(start, utc=True)
+    if end is not None:
+        end = pd.to_datetime(end, utc=True)
 
     epoch_pattern = "**" if epoch is None else epoch
     fileset = {
@@ -275,6 +286,7 @@ def load(
         else:
             timestamps = pd.Series(time)
             timestamps.index = pd.DatetimeIndex(timestamps)
+        timestamps = pd.to_datetime(timestamps, utc=True)
 
         dataframes = []
         filetimes = [chunk for (_, chunk), _ in files]
@@ -307,8 +319,8 @@ def load(
         return pd.concat(dataframes)
 
     if start is not None or end is not None:
-        chunk_start = chunk(start) if start is not None else pd.Timestamp.min
-        chunk_end = chunk(end) if end is not None else pd.Timestamp.max
+        chunk_start = chunk(start) if start is not None else pd.to_datetime(pd.Timestamp.min, utc=True)
+        chunk_end = chunk(end) if end is not None else pd.to_datetime(pd.Timestamp.max, utc=True)
         files = list(filter(lambda item: chunk_start <= chunk(item[0][1]) <= chunk_end, files))
 
     if len(files) == 0:

@@ -10,7 +10,7 @@
     }
   },
   "camera": {
-    "device_type": "SpinnakerCamera",
+    "device_type": "DummyCamera",
     "serial_number": "00000",
     "exposure_time": 1000.0,
     "gain": 0.0,
@@ -19,7 +19,7 @@
   },
   "feeder": {
     "Feeder1": {
-      "device_type": "HarpOutputExpander",
+      "device_type": "DummyFeeder",
       "port_name": "COM6",
       "pellet_delivery_retry_count": 2,
       "pellet_delivery_timeout": 1.0,

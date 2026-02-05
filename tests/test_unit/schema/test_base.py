@@ -2,8 +2,9 @@
 
 import os
 from enum import StrEnum
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, get_args, get_origin
 
+import pytest
 from pydantic import Field
 
 from swc.aeon.io.api import load
@@ -18,7 +19,6 @@ from swc.aeon.schema.video import SpinnakerCamera
 class DummyHarpDevice(HarpDevice):
     """A dummy Harp device."""
 
-    device_type: Literal["DummyHarpDevice"] = "DummyHarpDevice"
     who_am_i: ClassVar[int] = 0000
 
     @data_reader
@@ -106,3 +106,19 @@ def test_dataset_read_metadata(test_data_dir):
     """Test that dataset Metadata is loaded successfully."""
     metadata = load(test_data_dir, Metadata(DummyDataset))
     assert len(metadata) > 0
+
+
+@pytest.mark.parametrize(
+    ("device_instance", "expected_device_type"),
+    [
+        (DummyHarpDevice(port_name="COM3"), "DummyHarpDevice"),
+        (DummyCamera(serial_number="12345"), "DummyCamera"),
+    ],
+)
+def test_device_type_mixin(device_instance, expected_device_type):
+    """Test that DeviceTypeMixin correctly sets device_type to the subclass name."""
+    assert device_instance.device_type == expected_device_type
+    # Check that the device_type annotation is Literal[expected_device_type]
+    annotation = type(device_instance).__annotations__["device_type"]
+    assert get_origin(annotation) == Literal
+    assert get_args(annotation) == (expected_device_type,)

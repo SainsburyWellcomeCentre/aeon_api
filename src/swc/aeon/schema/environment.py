@@ -1,7 +1,5 @@
 """Classes for defining environment configuration models."""
 
-from typing import Literal
-
 from pydantic import Field
 
 from swc.aeon.schema.base import BaseSchema, Device
@@ -30,7 +28,6 @@ class LightCycle(BaseSchema):
 class WeightScale(Device):
     """Represents acquisition functionality for automated habitat weighing scales."""
 
-    device_type: Literal["WeightScale"] = "WeightScale"
     port_name: str = Field(examples=["COM"], description="The name of the device serial port.")
     filter_window: int = Field(
         default=40, description="Sliding window size of the weight linear regression filter."

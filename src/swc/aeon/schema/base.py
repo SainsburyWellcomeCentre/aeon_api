@@ -5,7 +5,7 @@ import os
 from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Self, TypeVar
+from typing import Any, Literal, Self, TypeVar
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
@@ -65,10 +65,21 @@ class Experiment(BaseSchema):
     )
 
 
-class Device(BaseSchema):
+class DeviceTypeMixin:
+    """Mixin to set `device_type` to the subclass name for hardware device models."""
+
+    def __init_subclass__(cls, **kwargs):
+        """Injects `device_type` as a Literal of the subclass name."""
+        super().__init_subclass__(**kwargs)
+        name = cls.__name__
+        cls.__annotations__["device_type"] = Literal[name]
+        cls.device_type = name
+
+
+class Device(DeviceTypeMixin, BaseSchema):
     """The base class for creating hardware device models."""
 
-    device_type: Any = Field(description="The type of the device.")
+    device_type: Any = Field(default=None, description="The type of the device.")
 
 
 class Dataset(BaseSchema):

@@ -1,16 +1,13 @@
 """Classes for defining video capture device configuration models."""
 
-from typing import Literal
-
 from pydantic import Field
 
-from swc.aeon.schema.base import Device
+from swc.aeon.schema.base import BaseSchema
 
 
-class SpinnakerCamera(Device):
+class SpinnakerCamera(BaseSchema):
     """Represents a FLIR Spinnaker camera acquisition module."""
 
-    device_type: Literal["SpinnakerCamera"] = "SpinnakerCamera"
     serial_number: str = Field(examples=["00000"], description="The serial number of the camera.")
     exposure_time: float = Field(
         default=1000,

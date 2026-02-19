@@ -5,7 +5,7 @@ import os
 from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Self, TypeVar
+from typing import Self, TypeVar
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
@@ -63,12 +63,6 @@ class Experiment(BaseSchema):
     repository_url: str = Field(
         description="The URL of the git repository used to version experiment source code."
     )
-
-
-class Device(BaseSchema):
-    """The base class for creating hardware device models."""
-
-    device_type: Any = Field(description="The type of the device.")
 
 
 class Dataset(BaseSchema):

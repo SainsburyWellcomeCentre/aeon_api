@@ -2,7 +2,7 @@
 
 import os
 from enum import StrEnum
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from pydantic import Field
 
@@ -18,7 +18,6 @@ from swc.aeon.schema.video import SpinnakerCamera
 class DummyHarpDevice(HarpDevice):
     """A dummy Harp device."""
 
-    device_type: Literal["DummyHarpDevice"] = "DummyHarpDevice"
     who_am_i: ClassVar[int] = 0000
 
     @data_reader

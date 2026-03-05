@@ -87,3 +87,37 @@ jobs:
           name: Packages
           if-no-files-found: error
           path: dist/
+
+      # -------------------------------------------------------- Upload release assets
+      - name: Upload release assets
+        if: github.event_name == 'release'
+        run: gh release upload --repo ${{ github.repository }} ${{ github.event.release.tag_name }} dist/* --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  publish-pypi:
+    name: Publish packages to PyPI
+    runs-on: ubuntu-latest
+    environment: public-release
+    needs: build
+    permissions:
+      # Needed to attach files to releases
+      contents: write
+    if: github.event_name == 'release'
+    steps:
+      # -------------------------------------------------------- Set up tools
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+
+      # -------------------------------------------------------- Download built packages
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: Packages
+          path: dist/
+
+      # -------------------------------------------------------- Push to PyPI
+      - name: Push to PyPI
+        run: uv publish dist/* --token ${{ secrets.PYPI_API_TOKEN }}

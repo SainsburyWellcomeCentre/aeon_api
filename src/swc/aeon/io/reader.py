@@ -186,7 +186,7 @@ class Subject(Csv):
         super().__init__(pattern, columns=("id", "weight", "event"))
 
 
-class Log(Csv):
+class MessageLog(Csv):
     """Extracts message log data.
 
     Columns:

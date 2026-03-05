@@ -65,7 +65,7 @@ class MessageLog(Stream):
 
     def __init__(self, pattern):
         """Initializes the MessageLog stream."""
-        super().__init__(_reader.Log(f"{pattern}_MessageLog_*"))
+        super().__init__(_reader.MessageLog(f"{pattern}_MessageLog_*"))
 
 
 class Metadata(Stream):

@@ -17,8 +17,8 @@ from swc.aeon.io.reader import (
     Harp,
     Heartbeat,
     JsonList,
-    Log,
     MagneticEncoder,
+    MessageLog,
     Metadata,
     Pose,
     Position,
@@ -43,7 +43,7 @@ def test_base_reader_read(columns):
     ("reader_class", "init_args", "expected_columns"),
     [
         (Subject, None, ["id", "weight", "event"]),
-        (Log, None, ["priority", "type", "message"]),
+        (MessageLog, None, ["priority", "type", "message"]),
         (Heartbeat, None, ["second"]),
         (MagneticEncoder, None, ["angle", "magnitude"]),
         (Position, None, ["x", "y", "angle", "major", "minor", "area", "id"]),

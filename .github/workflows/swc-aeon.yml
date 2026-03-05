@@ -68,10 +68,12 @@ jobs:
 
       # -------------------------------------------------------- Coverage report
       - name: Upload test coverage report to codecov
-        if: ${{ matrix.codecov }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        if: ${{ matrix.codecov && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
           directory: tests/test_coverage/
           files: test_coverage_report.xml
           fail_ci_if_error: true

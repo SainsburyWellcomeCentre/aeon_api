@@ -17,7 +17,7 @@ from swc.aeon.io.api import (
     to_datetime,
     to_seconds,
 )
-from swc.aeon.io.reader import Encoder
+from swc.aeon.io.reader import MagneticEncoder
 
 
 @pytest.mark.parametrize(
@@ -192,7 +192,7 @@ def test_load_root_arg_types_and_priority(root, to_str, expect_monotonic, reques
     else:
         root = request.getfixturevalue(root)
     root = [str(r) for r in root] if to_str and isinstance(root, list) else str(root)
-    result = load(root, Encoder("Patch2_90_*"))
+    result = load(root, MagneticEncoder("Patch2_90_*"))
     assert expect_monotonic == result.index.is_monotonic_increasing
 
 
@@ -231,7 +231,7 @@ def test_load_root_arg_types_and_priority(root, to_str, expect_monotonic, reques
 def test_load_time_arg(monotonic_dir, time, expected):
     """Test that `load` handles different `time` types."""
     with expected as expected_df_length:
-        result = load(monotonic_dir, Encoder("Patch2_90_*"), time=time)
+        result = load(monotonic_dir, MagneticEncoder("Patch2_90_*"), time=time)
         assert len(result) == expected_df_length
 
 
@@ -277,7 +277,7 @@ def test_load_start_end_args(data_dir, start, end, request):
         pytest.warns(UserWarning, match="out-of-order timestamps") if not is_monotonic else nullcontext()
     )
     with context:
-        result = load(root_dir, Encoder("Patch2_90_*"), start=start, end=end)
+        result = load(root_dir, MagneticEncoder("Patch2_90_*"), start=start, end=end)
     # Monotonic filtering assertions
     if is_monotonic:
         if start is not None:

@@ -16,6 +16,6 @@ def test_distancetravelled(monotonic_dir, radius, expected_sum):
     """Test `distancetravelled` correctly computes the expected sum (down to the closest integer)
     for the specified test file.
     """
-    data = load(monotonic_dir, exp02.Patch2.Encoder)
+    data = load(monotonic_dir, exp02.Patch2.MagneticEncoder)
     result = utils.distancetravelled(data.angle, radius)
     assert int(result.sum()) == expected_sum

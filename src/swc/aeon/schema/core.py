@@ -28,12 +28,12 @@ class Position(Stream):
         super().__init__(_reader.Position(f"{pattern}_200_*"))
 
 
-class Encoder(Stream):
+class MagneticEncoder(Stream):
     """Wheel magnetic encoder data."""
 
     def __init__(self, pattern):
-        """Initializes the Encoder stream."""
-        super().__init__(_reader.Encoder(f"{pattern}_90_*"))
+        """Initializes the MagneticEncoder stream."""
+        super().__init__(_reader.MagneticEncoder(f"{pattern}_90_*"))
 
 
 class Environment(StreamGroup):

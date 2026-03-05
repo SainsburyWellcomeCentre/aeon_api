@@ -13,11 +13,17 @@ from tests.schema import exp02, social02, social03
 @pytest.mark.parametrize(
     ("fixture_name", "device", "start", "end", "expected_sorted"),
     [
-        ("nonmonotonic_dir", exp02.Patch2.Encoder, pd.Timestamp("2022-06-06T13:00:49"), None, False),
-        ("nonmonotonic_dir", exp02.Patch2.Encoder, None, pd.Timestamp("2022-06-06T13:00:49"), True),
+        (
+            "nonmonotonic_dir",
+            exp02.Patch2.MagneticEncoder,
+            pd.Timestamp("2022-06-06T13:00:49"),
+            None,
+            False,
+        ),
+        ("nonmonotonic_dir", exp02.Patch2.MagneticEncoder, None, pd.Timestamp("2022-06-06T13:00:49"), True),
         ("nonmonotonic_dir", exp02.Metadata, pd.Timestamp("2022-06-06T09:00:00"), None, True),
-        ("monotonic_dir", exp02.Patch2.Encoder, None, None, True),
-        ("nonmonotonic_dir", exp02.Patch2.Encoder, None, None, False),
+        ("monotonic_dir", exp02.Patch2.MagneticEncoder, None, None, True),
+        ("nonmonotonic_dir", exp02.Patch2.MagneticEncoder, None, None, False),
     ],
     ids=[
         "non-monotonic data: start only",
@@ -52,7 +58,7 @@ def test_load_start_end_boundary_inclusivity(
     end = pd.Timestamp("2022-06-06T13:00:49.004000186", tzinfo=datetime.UTC)
     data = load(
         nonmonotonic_dir,
-        exp02.Patch2.Encoder,
+        exp02.Patch2.MagneticEncoder,
         start=start,
         end=end,
         inclusive=inclusive,

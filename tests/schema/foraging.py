@@ -55,4 +55,4 @@ class Patch(StreamGroup):
 
     def __init__(self, pattern):
         """Initializes the Patch stream."""
-        super().__init__(pattern, DepletionFunction, _stream.Encoder, Feeder)
+        super().__init__(pattern, DepletionFunction, _stream.MagneticEncoder, Feeder)

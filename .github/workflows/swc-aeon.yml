@@ -6,12 +6,12 @@ on:
   push:
     branches: ['**']
   pull_request:
-    branches: [main]
-    types: [opened, reopened, synchronize]
+  release:
+    types: [published]
   workflow_dispatch: # allows running manually from GitHub Actions
 
 jobs:
-  build_env_run_tests: # runs codebase checks and tests using pyproject.toml
+  build: # build package and run codebase checks and tests using pyproject.toml
     strategy:
       fail-fast: false
       matrix:
@@ -27,6 +27,7 @@ jobs:
               os: ubuntu-latest
             python-version: "3.13"
             codecov: --cov-report=xml:tests/test_coverage/test_coverage_report.xml
+            collect-packages: true
           - platform:
               name: Windows
               os: windows-latest
@@ -60,6 +61,7 @@ jobs:
         run: uv run pyright --level error --project ./pyproject.toml .
 
       - name: Build
+        id: build
         run: uv build
 
       # -------------------------------------------------------- Test
@@ -76,3 +78,12 @@ jobs:
           files: test_coverage_report.xml
           fail_ci_if_error: true
           verbose: true
+
+      # -------------------------------------------------------- Collect artifacts
+      - name: Collect Python packages
+        uses: actions/upload-artifact@v4
+        if: matrix.collect-packages && steps.build.outcome == 'success' && always()
+        with:
+          name: Packages
+          if-no-files-found: error
+          path: dist/

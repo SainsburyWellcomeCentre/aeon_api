@@ -71,7 +71,7 @@ jobs:
         if: ${{ matrix.codecov }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ env.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
           directory: tests/test_coverage/
           files: test_coverage_report.xml
           fail_ci_if_error: true

@@ -110,6 +110,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.13"
+          enable-cache: false
 
       # -------------------------------------------------------- Download built packages
       - name: Download built packages

@@ -186,7 +186,7 @@ class Subject(Csv):
         super().__init__(pattern, columns=("id", "weight", "event"))
 
 
-class Log(Csv):
+class MessageLog(Csv):
     """Extracts message log data.
 
     Columns:
@@ -215,18 +215,18 @@ class Heartbeat(Harp):
         super().__init__(pattern, columns=("second",))
 
 
-class Encoder(Harp):
+class MagneticEncoder(Harp):
     """Extract magnetic encoder data.
 
     Columns:
 
     - angle (float): Absolute angular position, in radians, of the magnetic encoder.
-    - intensity (float): Intensity of the magnetic field.
+    - magnitude (float): Magnitude of the magnetic field.
     """
 
     def __init__(self, pattern: str):
         """Initialize the object with a specified pattern and columns."""
-        super().__init__(pattern, columns=("angle", "intensity"))
+        super().__init__(pattern, columns=("angle", "magnitude"))
 
 
 class Position(Harp):

@@ -26,7 +26,7 @@ jobs:
               name: Linux
               os: ubuntu-latest
             python-version: "3.13"
-            extra-pytest-args: --cov-report=xml
+            codecov: --cov-report=xml
             collect-packages: true
           - platform:
               name: Windows
@@ -66,7 +66,7 @@ jobs:
 
       # -------------------------------------------------------- Test
       - name: Run tests
-        run: uv run pytest tests/ --cov-report term ${{ matrix.extra-pytest-args }}
+        run: uv run pytest tests/ --cov-report term ${{ matrix.codecov }}
 
       # -------------------------------------------------------- Coverage report
       - name: Upload test coverage report to codecov

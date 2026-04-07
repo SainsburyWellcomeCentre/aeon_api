@@ -9,8 +9,9 @@ from typing import Any
 import pandas as pd
 import yaml
 from swc.aeon.io.api import Reader
-from swc.aeon.io.reader import Heartbeat, Video
+from swc.aeon.io.reader import Encoder, Heartbeat, Video
 
+from aeon_qc.encoder import encoder_gaps
 from aeon_qc.epochs import epoch_gaps
 from aeon_qc.heartbeat import heartbeat_gaps
 from aeon_qc.sync import MIN_DEVICES, sync_delta
@@ -46,6 +47,8 @@ def run_qc(
             heartbeat_readers[qualified_name] = reader
         elif isinstance(reader, Video):
             results[qualified_name] = dropped_frames(root, reader, start=start, end=end)
+        elif isinstance(reader, Encoder):
+            results[qualified_name] = encoder_gaps(root, reader, start=start, end=end)
     if len(heartbeat_readers) >= MIN_DEVICES:
         results["sync_delta"] = sync_delta(root, heartbeat_readers, start=start, end=end)
     return results
@@ -77,6 +80,8 @@ def generate_report(
             report["devices"][device_name] = epoch_gaps_section(df)
         elif "n_dropped" in df.columns:
             report["devices"][device_name] = video_section(df)
+        elif "n_missed" in df.columns:
+            report["devices"][device_name] = encoder_section(df)
         elif "duration" in df.columns:
             report["devices"][device_name] = heartbeat_section(df)
         elif "delta_seconds" in df.columns:
@@ -212,3 +217,34 @@ def epoch_gaps_section(df: pd.DataFrame) -> dict[str, Any]:
             for row in df.itertuples()
         ]
     return {"metric": "epoch_gaps", "summary": summary, "detail": detail}
+
+
+def encoder_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for an encoder_gaps result."""
+    data_found = df.attrs.get("data_found", True)
+    n_samples = df.attrs.get("n_samples", 0)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_samples": n_samples,
+            "n_gap_events": 0,
+            "total_missed_samples": 0,
+            "mean_duration_ms": None,
+        }
+        detail: list[dict[str, Any]] = []
+    else:
+        summary = {
+            "data_found": data_found,
+            "n_samples": n_samples,
+            "n_gap_events": len(df),
+            "total_missed_samples": int(df["n_missed"].sum()),
+            "mean_duration_ms": float(df["duration"].dt.total_seconds().mean() * 1000),
+        }
+        detail = [
+            {
+                "duration_ms": float(row.duration.total_seconds() * 1000),
+                "n_missed": int(row.n_missed),
+            }
+            for row in df.itertuples()
+        ]
+    return {"metric": "encoder_gaps", "summary": summary, "detail": detail}

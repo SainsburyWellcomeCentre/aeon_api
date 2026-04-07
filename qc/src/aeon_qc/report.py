@@ -11,6 +11,7 @@ import yaml
 from swc.aeon.io.api import Reader
 from swc.aeon.io.reader import Heartbeat, Video
 
+from aeon_qc.epochs import epoch_gaps
 from aeon_qc.heartbeat import heartbeat_gaps
 from aeon_qc.sync import MIN_DEVICES, sync_delta
 from aeon_qc.video import dropped_frames
@@ -35,7 +36,7 @@ def run_qc(
     end: datetime.datetime | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Run all applicable QC checks against every stream in a schema DotMap."""
-    results: dict[str, pd.DataFrame] = {}
+    results: dict[str, pd.DataFrame] = {"epoch_gaps": epoch_gaps(root, start=start, end=end)}
     heartbeat_readers: dict[str, Heartbeat] = {}
     for qualified_name, reader in iter_readers(schema):
         if isinstance(reader, Heartbeat):
@@ -72,7 +73,9 @@ def generate_report(
     }
 
     for device_name, df in results.items():
-        if "n_dropped" in df.columns:
+        if "gap_duration" in df.columns:
+            report["devices"][device_name] = epoch_gaps_section(df)
+        elif "n_dropped" in df.columns:
             report["devices"][device_name] = video_section(df)
         elif "duration" in df.columns:
             report["devices"][device_name] = heartbeat_section(df)
@@ -177,3 +180,35 @@ def sync_delta_section(df: pd.DataFrame) -> dict[str, Any]:
             for device, grp in df.groupby("device")
         ]
     return {"metric": "sync_delta", "summary": summary, "detail": detail}
+
+
+def epoch_gaps_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for an epoch_gaps result."""
+    data_found = df.attrs.get("data_found", True)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_epochs": 0,
+            "total_gap_seconds": 0.0,
+            "max_gap_seconds": None,
+            "min_gap_seconds": None,
+        }
+        detail: list[dict[str, Any]] = []
+    else:
+        durations = df["gap_duration"].dt.total_seconds()
+        summary = {
+            "data_found": data_found,
+            "n_epochs": len(df) + 1,
+            "total_gap_seconds": float(durations.sum()),
+            "max_gap_seconds": float(durations.max()),
+            "min_gap_seconds": float(durations.min()),
+        }
+        detail = [
+            {
+                "epoch_start": row.Index.isoformat(),
+                "next_epoch_start": row.next_epoch_start.isoformat(),
+                "gap_duration_seconds": float(row.gap_duration.total_seconds()),
+            }
+            for row in df.itertuples()
+        ]
+    return {"metric": "epoch_gaps", "summary": summary, "detail": detail}

@@ -9,9 +9,10 @@ from typing import Any
 import pandas as pd
 import yaml
 from swc.aeon.io.api import Reader
-from swc.aeon.io.reader import Heartbeat
+from swc.aeon.io.reader import Heartbeat, Video
 
 from aeon_qc.heartbeat import heartbeat_gaps
+from aeon_qc.video import dropped_frames
 
 
 
@@ -39,6 +40,8 @@ def run_qc(
             results[qualified_name] = heartbeat_gaps(
                 root, reader, start=start, end=end
             )
+        elif isinstance(reader, Video):
+            results[qualified_name] = dropped_frames(root, reader, start=start, end=end)
     return results
 
 
@@ -64,7 +67,9 @@ def generate_report(
     }
 
     for device_name, df in results.items():
-        if "duration" in df.columns:
+        if "n_dropped" in df.columns:
+            report["devices"][device_name] = video_section(df)
+        elif "duration" in df.columns:
             report["devices"][device_name] = heartbeat_section(df)
 
     missing = [name for name, df in results.items() if not df.attrs.get("data_found", True)]
@@ -98,3 +103,36 @@ def heartbeat_section(df: pd.DataFrame) -> dict[str, Any]:
             "mean_duration_seconds": float(df["duration"].dt.total_seconds().mean()),
         }
     return {"metric": "heartbeat_gaps", "summary": summary}
+
+
+def video_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a dropped_frames result."""
+    data_found = df.attrs.get("data_found", True)
+    n_frames = df.attrs.get("n_frames", 0)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_frames": n_frames,
+            "n_drop_events": 0,
+            "total_frames_dropped": 0,
+            "mean_duration_seconds": None,
+        }
+        detail: list[dict[str, Any]] = []
+    else:
+        summary = {
+            "data_found": data_found,
+            "n_frames": n_frames,
+            "n_drop_events": len(df),
+            "total_frames_dropped": int(df["n_dropped"].sum()),
+            "mean_duration_seconds": float(df["duration"].dt.total_seconds().mean()),
+        }
+        detail = [
+            {
+                "time": row.Index.isoformat(),
+                "n_dropped": int(row.n_dropped),
+                "hw_counter_before": int(row.hw_counter_before),
+                "hw_counter_after": int(row.hw_counter_after),
+            }
+            for row in df.itertuples()
+        ]
+    return {"metric": "dropped_frames", "summary": summary, "detail": detail}

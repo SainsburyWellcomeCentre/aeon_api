@@ -1,0 +1,9 @@
+.venv/
+*.egg-info/
+__pycache__/
+devdata/
+.pytest_cache/
+.ruff_cache/
+tests/
+.coverage
+notebooks/qc_results/

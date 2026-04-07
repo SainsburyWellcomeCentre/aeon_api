@@ -1,0 +1,100 @@
+"""High-level run_qc orchestration and YAML report generation."""
+
+import datetime
+from collections.abc import Iterator
+from os import PathLike
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+import yaml
+from swc.aeon.io.api import Reader
+from swc.aeon.io.reader import Heartbeat
+
+from aeon_qc.heartbeat import heartbeat_gaps
+
+
+
+def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:
+    """Yield (qualified_name, reader) pairs from a schema DotMap."""
+    for device_name, streams in schema.items():
+        if isinstance(streams, Reader):
+            yield (device_name, streams)
+        elif isinstance(streams, dict):
+            for stream_name, reader in streams.items():
+                if isinstance(reader, Reader):
+                    yield (f"{device_name}.{stream_name}", reader)
+
+
+def run_qc(
+    root: str | PathLike | list[str] | list[PathLike],
+    schema: Any,
+    start: datetime.datetime | None = None,
+    end: datetime.datetime | None = None,
+) -> dict[str, pd.DataFrame]:
+    """Run all applicable QC checks against every stream in a schema DotMap."""
+    results: dict[str, pd.DataFrame] = {}
+    for qualified_name, reader in iter_readers(schema):
+        if isinstance(reader, Heartbeat):
+            results[qualified_name] = heartbeat_gaps(
+                root, reader, start=start, end=end
+            )
+    return results
+
+
+def generate_report(
+    root: str | PathLike | list[str] | list[PathLike],
+    results: dict[str, pd.DataFrame],
+    output_path: str | PathLike,
+    start: datetime.datetime | None = None,
+    end: datetime.datetime | None = None,
+) -> Path:
+    """Write a human-readable YAML QC summary from QC metric DataFrames."""
+    output_path = Path(output_path)
+    root_list = root if isinstance(root, list) else [root]
+
+    report: dict[str, Any] = {
+        "generated_at": datetime.datetime.now(tz=datetime.UTC).isoformat(),
+        "dataset_root": str(root_list[0]) if len(root_list) == 1 else [str(p) for p in root_list],
+        "time_range": {
+            "start": start.isoformat() if start is not None else None,
+            "end": end.isoformat() if end is not None else None,
+        },
+        "devices": {},
+    }
+
+    for device_name, df in results.items():
+        if "duration" in df.columns:
+            report["devices"][device_name] = heartbeat_section(df)
+
+    missing = [name for name, df in results.items() if not df.attrs.get("data_found", True)]
+    if missing:
+        report["missing_devices"] = sorted(missing)
+
+    with open(output_path, "w") as f:
+        yaml.dump(report, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    return output_path
+
+
+def heartbeat_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a heartbeat_gaps result."""
+    data_found = df.attrs.get("data_found", True)
+    n_heartbeats = df.attrs.get("n_heartbeats", 0)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_heartbeats": n_heartbeats,
+            "n_gaps": 0,
+            "total_dropout_seconds": 0.0,
+            "mean_duration_seconds": None,
+        }
+    else:
+        summary = {
+            "data_found": data_found,
+            "n_heartbeats": n_heartbeats,
+            "n_gaps": len(df),
+            "total_dropout_seconds": float(df["duration"].dt.total_seconds().sum()),
+            "mean_duration_seconds": float(df["duration"].dt.total_seconds().mean()),
+        }
+    return {"metric": "heartbeat_gaps", "summary": summary}

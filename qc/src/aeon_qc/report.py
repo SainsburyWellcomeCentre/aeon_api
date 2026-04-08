@@ -9,11 +9,11 @@ from typing import Any
 import pandas as pd
 import yaml
 from swc.aeon.io.api import Reader
-from swc.aeon.io.reader import Encoder, Heartbeat, Video
+from swc.aeon.io.reader import Heartbeat, Video
 
-from aeon_qc.encoder import encoder_gaps
 from aeon_qc.epochs import epoch_gaps
 from aeon_qc.heartbeat import heartbeat_gaps
+from aeon_qc.pellet import pellet_failures
 from aeon_qc.sync import MIN_DEVICES, sync_delta
 from aeon_qc.video import dropped_frames
 
@@ -47,10 +47,26 @@ def run_qc(
             heartbeat_readers[qualified_name] = reader
         elif isinstance(reader, Video):
             results[qualified_name] = dropped_frames(root, reader, start=start, end=end)
-        elif isinstance(reader, Encoder):
-            results[qualified_name] = encoder_gaps(root, reader, start=start, end=end)
     if len(heartbeat_readers) >= MIN_DEVICES:
         results["sync_delta"] = sync_delta(root, heartbeat_readers, start=start, end=end)
+
+    # Pellet QC: group readers by device name, run pellet_failures for feeder devices
+    device_streams: dict[str, dict[str, Reader]] = {}
+    for qualified_name, reader in iter_readers(schema):
+        device, _, stream = qualified_name.partition(".")
+        device_streams.setdefault(device, {})[stream or device] = reader
+
+    for device_name, streams in device_streams.items():
+        if "DeliverPellet" in streams:
+            results[f"{device_name}.pellet_stats"] = pellet_failures(
+                root,
+                deliver_reader=streams["DeliverPellet"],
+                missed_reader=streams.get("MissedPellet"),
+                retried_reader=streams.get("RetriedDelivery"),
+                start=start,
+                end=end,
+            )
+
     return results
 
 
@@ -84,6 +100,8 @@ def generate_report(
             report["devices"][device_name] = encoder_section(df)
         elif "duration" in df.columns:
             report["devices"][device_name] = heartbeat_section(df)
+        elif "outcome" in df.columns:
+            report["devices"][device_name] = pellet_section(df)
         elif "delta_seconds" in df.columns:
             report["devices"][device_name] = sync_delta_section(df)
 
@@ -248,3 +266,22 @@ def encoder_section(df: pd.DataFrame) -> dict[str, Any]:
             for row in df.itertuples()
         ]
     return {"metric": "encoder_gaps", "summary": summary, "detail": detail}
+
+
+def pellet_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a pellet_failures result."""
+    data_found = df.attrs.get("data_found", True)
+    n_deliveries = df.attrs.get("n_deliveries", 0)
+    n_retried = df.attrs.get("n_retried", 0)
+    n_missed = df.attrs.get("n_missed", 0)
+    summary: dict[str, Any] = {
+        "data_found": data_found,
+        "n_deliveries": n_deliveries,
+        "n_retried": n_retried,
+        "n_missed": n_missed,
+    }
+    detail: list[dict[str, Any]] = [
+        {"time": row.Index.isoformat(), "outcome": row.outcome}
+        for row in df.itertuples()
+    ]
+    return {"metric": "pellet_failures", "summary": summary, "detail": detail}

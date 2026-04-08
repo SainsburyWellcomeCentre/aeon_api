@@ -9,8 +9,10 @@ from typing import Any
 import pandas as pd
 import yaml
 from swc.aeon.io.api import Reader
-from swc.aeon.io.reader import Heartbeat, Video
+from swc.aeon.io.reader import Encoder, Heartbeat, Video
 
+from aeon_qc.encoder import encoder_gaps
+from aeon_qc.environment import environment_state_durations, message_log_errors
 from aeon_qc.epochs import epoch_gaps
 from aeon_qc.heartbeat import heartbeat_gaps
 from aeon_qc.pellet import pellet_failures
@@ -47,6 +49,8 @@ def run_qc(
             heartbeat_readers[qualified_name] = reader
         elif isinstance(reader, Video):
             results[qualified_name] = dropped_frames(root, reader, start=start, end=end)
+        elif isinstance(reader, Encoder):
+            results[qualified_name] = encoder_gaps(root, reader, start=start, end=end)
     if len(heartbeat_readers) >= MIN_DEVICES:
         results["sync_delta"] = sync_delta(root, heartbeat_readers, start=start, end=end)
 
@@ -65,6 +69,14 @@ def run_qc(
                 retried_reader=streams.get("RetriedDelivery"),
                 start=start,
                 end=end,
+            )
+        if "MessageLog" in streams:
+            results[f"{device_name}.message_log"] = message_log_errors(
+                root, streams["MessageLog"], start=start, end=end
+            )
+        if "EnvironmentState" in streams:
+            results[f"{device_name}.environment_state"] = environment_state_durations(
+                root, streams["EnvironmentState"], start=start, end=end
             )
 
     return results
@@ -98,10 +110,14 @@ def generate_report(
             report["devices"][device_name] = video_section(df)
         elif "n_missed" in df.columns:
             report["devices"][device_name] = encoder_section(df)
+        elif "duration" in df.columns and "state" in df.columns:
+            report["devices"][device_name] = environment_state_section(df)
         elif "duration" in df.columns:
             report["devices"][device_name] = heartbeat_section(df)
         elif "outcome" in df.columns:
             report["devices"][device_name] = pellet_section(df)
+        elif "priority" in df.columns:
+            report["devices"][device_name] = message_log_section(df)
         elif "delta_seconds" in df.columns:
             report["devices"][device_name] = sync_delta_section(df)
 
@@ -285,3 +301,69 @@ def pellet_section(df: pd.DataFrame) -> dict[str, Any]:
         for row in df.itertuples()
     ]
     return {"metric": "pellet_failures", "summary": summary, "detail": detail}
+
+
+def message_log_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a message_log_errors result."""
+    data_found = df.attrs.get("data_found", True)
+    n_total = df.attrs.get("n_total", 0)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_total": n_total,
+            "n_warnings": 0,
+            "n_errors": 0,
+        }
+        detail: list[dict[str, Any]] = []
+    else:
+        counts = df["priority"].str.lower().value_counts()
+        summary = {
+            "data_found": data_found,
+            "n_total": n_total,
+            "n_warnings": int(counts.get("warning", 0)),
+            "n_errors": int(counts.get("error", 0)),
+        }
+        detail = [
+            {
+                "time": row.Index.isoformat(),
+                "priority": row.priority,
+                "type": row.type,
+                "message": row.message,
+            }
+            for row in df.itertuples()
+        ]
+    return {"metric": "message_log_errors", "summary": summary, "detail": detail}
+
+
+def environment_state_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for an environment_state_durations result."""
+    data_found = df.attrs.get("data_found", True)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_transitions": 0,
+            "state_totals_seconds": {},
+        }
+        detail: list[dict[str, Any]] = []
+    else:
+        totals = (
+            df.groupby("state")["duration"]
+            .sum()
+            .dt.total_seconds()
+            .round(1)
+            .to_dict()
+        )
+        summary = {
+            "data_found": data_found,
+            "n_transitions": len(df),
+            "state_totals_seconds": {k: float(v) for k, v in totals.items()},
+        }
+        detail = [
+            {
+                "time": row.Index.isoformat(),
+                "state": row.state,
+                "duration_seconds": float(row.duration.total_seconds()),
+            }
+            for row in df.itertuples()
+        ]
+    return {"metric": "environment_state", "summary": summary, "detail": detail}

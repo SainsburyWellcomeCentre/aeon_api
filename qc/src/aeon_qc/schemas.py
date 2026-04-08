@@ -1,4 +1,37 @@
-"""Registry of known Aeon experiment schemas for use with ``run_qc()``."""
+"""Registry of known Aeon experiment schemas for use with ``run_qc()``.
+
+Schemas are constructed from the public ``swc.aeon`` API. Each schema is a
+DotMap mapping device names to stream readers (or dicts of readers).
+
+``schema_from_metadata(root)`` matches root path components against the
+REGISTRY (e.g. ``social0.4`` → ``social04``) and returns the full authoritative
+schema. Falls back to Heartbeat + Video discovery from ``Metadata.yml`` for
+unknown types. This is what ``--schema auto`` uses.
+
+Note: ``Metadata.yml`` does not contain a reliable schema identifier — the
+``Workflow`` field is a Bonsai filename, not an experiment type. See the
+``schema_from_metadata`` docstring for details.
+
+``schema_from_root(root)`` is a pure filesystem fallback that discovers only
+Heartbeat and Video streams — use it when no ``Metadata.yml`` is available.
+
+To add a new static schema, define a DotMap using ``Device`` and stream classes
+from ``swc.aeon.schema``, then add it to ``REGISTRY``.
+
+Example::
+
+    from swc.aeon.schema.streams import Device
+    import swc.aeon.schema.core as stream
+    from dotmap import DotMap
+
+    my_schema = DotMap([
+        Device("Metadata", stream.Metadata),
+        Device("CameraTop", stream.Video, stream.Position),
+        Device("Patch1", stream.Heartbeat, stream.Encoder),
+    ])
+
+    REGISTRY["my_schema"] = my_schema
+"""
 
 from os import PathLike
 from pathlib import Path
@@ -133,7 +166,24 @@ REGISTRY: dict[str, Any] = {
 
 
 def schema_from_root(root: str | PathLike) -> DotMap:
-    """Build a QC schema by run_qcning actual files in the first epoch directory."""
+    """Build a QC schema by scanning actual files in the first epoch directory.
+
+    Discovers Harp devices by looking for register-8 heartbeat files
+    (``{device}_8_*.bin``) and cameras by looking for video files (``*.avi``).
+    Register 8 is universal to all Harp devices, so this works for any
+    experiment type including soft Harp devices not listed in ``Metadata.yml``.
+
+    Args:
+        root: The dataset root path containing epoch subdirectories.
+
+    Returns:
+        A DotMap schema suitable for passing to ``run_qc()``, with ``Heartbeat``
+        readers for every Harp device found and ``Video`` readers for every
+        camera found.
+
+    Raises:
+        FileNotFoundError: If no epoch directories are found under ``root``.
+    """
     root_path = Path(root)
     epoch_dirs = sorted(d for d in root_path.iterdir() if d.is_dir() and "T" in d.name)
     if not epoch_dirs:
@@ -162,7 +212,32 @@ def schema_from_root(root: str | PathLike) -> DotMap:
 
 
 def schema_from_metadata(root: str | PathLike) -> DotMap:
-    """Build a QC schema by matching the root path against the REGISTRY."""
+    """Build a QC schema by matching the root path against the REGISTRY.
+
+    The ``Metadata.yml`` does not contain a reliable experiment-type identifier.
+    The ``Workflow`` field is the Bonsai workflow filename (e.g.
+    ``"Social-AEON4.bonsai"``), which does not map to a schema name. The
+    ``Commit`` hash points to the Bonsai workflow repo, not aeon_mecha. There is
+    currently no way to derive the schema from ``Metadata.yml`` alone via
+    ``swc.aeon`` — this is a known limitation that would require either an
+    explicit experiment-type field in ``Metadata.yml`` or a mapping from
+    aeon_mecha git tags to REGISTRY keys.
+
+    **Current approach**: search the root path components for a string that, after
+    stripping dots, matches a REGISTRY key (e.g. ``social0.4`` → ``social04``).
+    This works for the standard SWC data layout
+    ``/ceph/aeon/aeon/data/raw/<RIG>/<SCHEMA>/`` but is a convention, not a
+    guarantee.
+
+    Falls back to device-discovery from ``Metadata.yml``'s ``Devices`` block
+    (Heartbeat + Video only) if no path component matches the REGISTRY.
+
+    Args:
+        root: The dataset root path containing epoch subdirectories.
+
+    Returns:
+        A DotMap schema suitable for passing to ``run_qc()``.
+    """
     root_path = Path(root)
 
     # Try each path component as a potential registry key (e.g. "social0.4" → "social04")

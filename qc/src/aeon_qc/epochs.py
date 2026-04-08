@@ -16,7 +16,31 @@ def epoch_gaps(
     start: datetime.datetime | None = None,
     end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
-    """Detect gaps between consecutive recording epochs within a time range."""
+    """Return one row per recording epoch within a time range.
+
+    Each epoch is marked by a ``Metadata.yml`` file written when the Bonsai
+    workflow starts. If ``start`` and ``end`` span multiple Bonsai sessions,
+    ``load()`` assembles all ``Metadata.yml`` timestamps across those sessions.
+
+    In normal operation there will be a single epoch (one row). Multiple rows
+    indicate restarts; ``gap_duration`` then shows the outage between
+    consecutive starts. A short gap (seconds to minutes) typically indicates a
+    crash; a long gap indicates a planned stop or prolonged outage.
+
+    Args:
+        root: The dataset root path(s), forwarded to ``load()``.
+        start: Optional left bound of the time range to examine.
+        end: Optional right bound of the time range to examine.
+
+    Returns:
+        A tidy ``pd.DataFrame`` with a UTC ``DatetimeIndex`` (``name="time"``)
+        giving the start of each epoch, and columns:
+
+        - ``gap_duration`` (pd.Timedelta): Time elapsed from this epoch start
+          to the next. ``NaT`` for the final epoch.
+
+        Returns an empty DataFrame if no epochs are found.
+    """
     meta = load(root, MetadataReader(), start=start, end=end)
 
     if len(meta) < MIN_EPOCHS:

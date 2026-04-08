@@ -24,7 +24,34 @@ def sync_delta(
     end: datetime.datetime | None = None,
     reference: str | None = None,
 ) -> pd.DataFrame:
-    """Compare heartbeat timestamps across Harp devices to detect sync drift."""
+    """Compare heartbeat timestamps across Harp devices to detect sync drift.
+
+    All Harp devices emit a heartbeat once per second via the ClockSynchronizer.
+    Their timestamps should be identical. This function loads all provided
+    Heartbeat streams, aligns them on the ``second`` counter (the shared logical
+    clock), and returns per-second timestamp deltas relative to a reference device.
+
+    Args:
+        root: Dataset root path(s), forwarded to ``load()``.
+        readers: Mapping of device name to ``Heartbeat`` reader instance.
+        start: Optional left bound of the time range.
+        end: Optional right bound of the time range.
+        reference: Name of the device to use as reference. Defaults to
+            ``"ClockSynchronizer"`` (or a key starting with that prefix) if
+            present, otherwise the first key in ``readers``.
+
+    Returns:
+        Tidy DataFrame indexed by UTC reference timestamp (``name="time"``) with
+        columns:
+
+        - ``second`` (int): shared logical clock value used for alignment.
+        - ``device`` (str): device name.
+        - ``delta_seconds`` (float): signed offset vs. reference in seconds
+          (positive = device timestamp is ahead of reference).
+
+        Returns an empty DataFrame with the correct schema if fewer than two
+        devices have data.
+    """
     data: dict[str, pd.DataFrame] = {
         name: load(root, reader, start=start, end=end) for name, reader in readers.items()
     }

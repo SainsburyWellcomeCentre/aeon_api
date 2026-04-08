@@ -17,7 +17,12 @@ def dropped_frames(
     start: datetime.datetime | None = None,
     end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
-    """Detect dropped video frames by inspecting hardware frame counter jumps."""
+    """Detect dropped video frames by inspecting hardware frame counter jumps.
+
+    Returns one row per drop event (UTC DatetimeIndex ``"time"`` = last frame before drop)
+    with columns ``duration``, ``n_dropped``, ``hw_counter_before``, ``hw_counter_after``,
+    ``device``. Sets ``attrs["data_found"]`` and ``attrs["n_frames"]``.
+    """
     data = load(root, reader, start=start, end=end)
 
     if data.empty:

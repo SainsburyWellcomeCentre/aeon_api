@@ -1,6 +1,7 @@
 """High-level run_qc orchestration and YAML report generation."""
 
 import datetime
+import pickle
 from collections.abc import Iterator
 from os import PathLike
 from pathlib import Path
@@ -131,6 +132,14 @@ def generate_report(
     return output_path
 
 
+def save_results(results: dict[str, pd.DataFrame], output_path: str | PathLike) -> Path:
+    """Pickle a run_qc results dict to disk for later analysis."""
+    output_path = Path(output_path)
+    with open(output_path, "wb") as f:
+        pickle.dump(results, f)
+    return output_path
+
+
 def heartbeat_section(df: pd.DataFrame) -> dict[str, Any]:
     """Build the YAML section for a heartbeat_gaps result."""
     data_found = df.attrs.get("data_found", True)
@@ -234,19 +243,20 @@ def epoch_gaps_section(df: pd.DataFrame) -> dict[str, Any]:
         }
         detail: list[dict[str, Any]] = []
     else:
-        durations = df["gap_duration"].dt.total_seconds()
+        durations = df["gap_duration"].dropna().dt.total_seconds()
         summary = {
             "data_found": data_found,
-            "n_epochs": len(df) + 1,
+            "n_epochs": len(df),
             "total_gap_seconds": float(durations.sum()),
-            "max_gap_seconds": float(durations.max()),
-            "min_gap_seconds": float(durations.min()),
+            "max_gap_seconds": float(durations.max()) if len(durations) else None,
+            "min_gap_seconds": float(durations.min()) if len(durations) else None,
         }
         detail = [
             {
                 "epoch_start": row.Index.isoformat(),
-                "next_epoch_start": row.next_epoch_start.isoformat(),
-                "gap_duration_seconds": float(row.gap_duration.total_seconds()),
+                "gap_duration_seconds": float(row.gap_duration.total_seconds())
+                if pd.notna(row.gap_duration)
+                else None,
             }
             for row in df.itertuples()
         ]

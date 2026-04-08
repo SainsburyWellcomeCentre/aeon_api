@@ -65,7 +65,7 @@ def environment_state_durations(
 
     # Build end-times for each period
     if end is not None:
-        end_times = list(times[1:]) + [pd.Timestamp(end)]
+        end_times = list(times[1:]) + [pd.Timestamp(end, tz=datetime.UTC)]
     else:
         end_times = list(times[1:])
         times = times[:-1]

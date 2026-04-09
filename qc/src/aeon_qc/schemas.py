@@ -49,6 +49,9 @@ from aeon_qc import foraging, social
 exp02 = DotMap(
     [
         Device("Metadata", stream.Metadata),
+        # Harp timing devices
+        Device("ClockSynchronizer", stream.Heartbeat),
+        Device("VideoController", stream.Heartbeat),
         Device("ExperimentalMetadata", stream.Environment, stream.MessageLog),
         Device("CameraTop", stream.Video, stream.Position, foraging.Region),
         Device("CameraEast", stream.Video),
@@ -68,6 +71,9 @@ exp02 = DotMap(
 social02 = DotMap(
     [
         Device("Metadata", stream.Metadata),
+        # Harp timing devices
+        Device("ClockSynchronizer", stream.Heartbeat),
+        Device("VideoController", stream.Heartbeat),
         Device("Environment", social.Environment, social.SubjectData),
         Device("CameraTop", stream.Video, social.Pose),
         Device("CameraNorth", stream.Video),
@@ -96,6 +102,9 @@ social02 = DotMap(
 social03 = DotMap(
     [
         Device("Metadata", stream.Metadata),
+        # Harp timing devices
+        Device("ClockSynchronizer", stream.Heartbeat),
+        Device("VideoController", stream.Heartbeat),
         Device("Environment", social.Environment, social.SubjectData),
         Device("CameraTop", stream.Video, social.Pose),
         Device("CameraNorth", stream.Video),

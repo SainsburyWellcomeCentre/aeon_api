@@ -13,7 +13,7 @@ from swc.aeon.io.api import Reader
 from swc.aeon.io.reader import Encoder, Heartbeat, Video
 
 from aeon_qc.encoder import encoder_gaps
-from aeon_qc.environment import environment_state_durations, message_log_errors
+from aeon_qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
 from aeon_qc.epochs import epoch_gaps
 from aeon_qc.heartbeat import heartbeat_gaps
 from aeon_qc.pellet import pellet_failures
@@ -75,6 +75,9 @@ def run_qc(
             results[f"{device_name}.message_log"] = message_log_errors(
                 root, streams["MessageLog"], start=start, end=end
             )
+            results[f"{device_name}.harp_sync_alerts"] = harp_sync_alerts(
+                root, streams["MessageLog"], start=start, end=end
+            )
         if "EnvironmentState" in streams:
             results[f"{device_name}.environment_state"] = environment_state_durations(
                 root, streams["EnvironmentState"], start=start, end=end
@@ -117,6 +120,8 @@ def generate_report(
             report["devices"][device_name] = heartbeat_section(df)
         elif "outcome" in df.columns:
             report["devices"][device_name] = pellet_section(df)
+        elif "max_difference" in df.columns:
+            report["devices"][device_name] = harp_sync_alerts_section(df)
         elif "priority" in df.columns:
             report["devices"][device_name] = message_log_section(df)
         elif "delta_seconds" in df.columns:
@@ -311,6 +316,39 @@ def pellet_section(df: pd.DataFrame) -> dict[str, Any]:
         for row in df.itertuples()
     ]
     return {"metric": "pellet_failures", "summary": summary, "detail": detail}
+
+
+def harp_sync_alerts_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a harp_sync_alerts result."""
+    data_found = df.attrs.get("data_found", True)
+    n_total = df.attrs.get("n_total_messages", 0)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_total_messages": n_total,
+            "n_alerts": 0,
+            "max_max_difference": None,
+            "min_device_count": None,
+        }
+        detail: list[dict[str, Any]] = []
+    else:
+        summary = {
+            "data_found": data_found,
+            "n_total_messages": n_total,
+            "n_alerts": len(df),
+            "max_max_difference": float(df["max_difference"].max()),
+            "min_device_count": int(df["device_count"].min()),
+        }
+        detail = [
+            {
+                "time": row.Index.isoformat(),
+                "device_count": int(row.device_count),
+                "expected_device_count": int(row.expected_device_count),
+                "max_difference": float(row.max_difference),
+            }
+            for row in df.itertuples()
+        ]
+    return {"metric": "harp_sync_alerts", "summary": summary, "detail": detail}
 
 
 def message_log_section(df: pd.DataFrame) -> dict[str, Any]:

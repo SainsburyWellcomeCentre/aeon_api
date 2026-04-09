@@ -34,6 +34,53 @@ def message_log_errors(
     return result
 
 
+def harp_sync_alerts(
+    root: str | PathLike | list[str] | list[PathLike],
+    reader: Reader,
+    start: datetime.datetime | None = None,
+    end: datetime.datetime | None = None,
+) -> pd.DataFrame:
+    """Extract and parse HarpSynch alert entries from a MessageLog stream.
+
+    Returns one row per alert with structured columns parsed from the
+    Bonsai SynchronizerMonitor log message body. The Bonsai alert fires
+    when any of: DeviceCount != ExpectedDeviceCount, MaxDifference > 0,
+    or Abs(MeanUtcTimestamp - UtcNow) > 30 minutes.
+    """
+    cols = [
+        "mean_timestamp", "mean_utc_timestamp",
+        "expected_device_count", "device_count", "max_difference",
+    ]
+    empty_result = pd.DataFrame(
+        columns=cols,
+        index=pd.DatetimeIndex([], name="time", tz=datetime.UTC),
+    ).astype({"expected_device_count": "Int64", "device_count": "Int64", "max_difference": float})
+
+    data = load(root, reader, start=start, end=end)
+    if data.empty:
+        empty_result.attrs["data_found"] = False
+        empty_result.attrs["n_total_messages"] = 0
+        return empty_result
+
+    alerts = data[data["type"].str.lower() == "harpsynch"].copy()
+    if alerts.empty:
+        empty_result.attrs["data_found"] = True
+        empty_result.attrs["n_total_messages"] = len(data)
+        return empty_result
+
+    parsed = alerts["message"].str.split("\t", expand=True)
+    parsed.columns = cols
+    parsed["expected_device_count"] = parsed["expected_device_count"].astype("Int64")
+    parsed["device_count"] = parsed["device_count"].astype("Int64")
+    parsed["max_difference"] = parsed["max_difference"].astype(float)
+    parsed.index = alerts.index
+    parsed.index.name = "time"
+
+    parsed.attrs["data_found"] = True
+    parsed.attrs["n_total_messages"] = len(data)
+    return parsed
+
+
 def environment_state_durations(
     root: str | PathLike | list[str] | list[PathLike],
     reader: Reader,

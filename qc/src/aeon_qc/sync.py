@@ -12,7 +12,7 @@ MIN_DEVICES = 2
 
 
 def make_empty() -> pd.DataFrame:
-    """Return an empty sync_delta DataFrame with the correct schema."""
+    """Return an empty sync_delta DataFrame."""
     idx = pd.DatetimeIndex([], tz=datetime.UTC, name="time")
     return pd.DataFrame(columns=list(EMPTY_COLS), index=idx)
 
@@ -28,10 +28,10 @@ def sync_delta(
 
     All Harp devices emit a heartbeat once per second via the ClockSynchronizer.
     Their timestamps are decoded from each device's own hardware clock, so any
-    non-zero delta between devices reflects a genuine hardware clock difference —
-    not software or USB timing jitter. This function loads all provided Heartbeat
-    streams, aligns them on the ``second`` counter (the shared logical clock),
-    and returns per-second timestamp deltas relative to a reference device.
+    non-zero delta between devices reflects a genuine hardware clock difference.
+    This function loads all provided Heartbeat streams, aligns them on the ``second``
+    counter (the shared logical clock), and returns per-second timestamp deltas
+    relative to a reference device (A ClockSynchronizer).
 
     Args:
         root: Dataset root path(s), forwarded to ``load()``.
@@ -43,7 +43,7 @@ def sync_delta(
             present, otherwise the first key in ``readers``.
 
     Returns:
-        Tidy DataFrame indexed by UTC reference timestamp (``name="time"``) with
+        DataFrame indexed by UTC reference timestamp (``name="time"``) with
         columns:
 
         - ``second`` (int): shared logical clock value used for alignment.
@@ -51,8 +51,7 @@ def sync_delta(
         - ``delta_seconds`` (float): signed offset vs. reference in seconds
           (positive = device timestamp is ahead of reference).
 
-        Returns an empty DataFrame with the correct schema if fewer than two
-        devices have data.
+        Returns an empty DataFrame if fewer than two devices have data.
     """
     data: dict[str, pd.DataFrame] = {
         name: load(root, reader, start=start, end=end) for name, reader in readers.items()

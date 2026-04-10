@@ -43,7 +43,7 @@ from swc.aeon.io.api import load
 from swc.aeon.io.reader import Metadata as MetadataReader
 from swc.aeon.schema.streams import Device
 
-from aeon_qc import foraging, social
+from aeon_qc import foraging, octagon, social
 
 # Foraging experiment (exp0.2). Verified against aeon_mecha/aeon/schema/schemas.py.
 exp02 = DotMap(
@@ -166,11 +166,34 @@ social04 = DotMap(
     ]
 )
 
+# Octagon 0.1 experiment. Verified against aeon_mecha/aeon/schema/schemas.py (octagon01).
+# Note: no Heartbeat or MessageLog devices — heartbeat_gaps, sync_delta, and
+# harp_sync_alerts will return empty results for this schema.
+octagon01 = DotMap(
+    [
+        Device("Metadata", stream.Metadata),
+        Device("CameraTop", stream.Video),
+        Device("CameraColorTop", stream.Video),
+        Device("Photodiode", octagon.Photodiode),
+        Device("OSC", octagon.OSC),
+        Device("TaskLogic", octagon.TaskLogic),
+        Device("Wall1", octagon.Wall),
+        Device("Wall2", octagon.Wall),
+        Device("Wall3", octagon.Wall),
+        Device("Wall4", octagon.Wall),
+        Device("Wall5", octagon.Wall),
+        Device("Wall6", octagon.Wall),
+        Device("Wall7", octagon.Wall),
+        Device("Wall8", octagon.Wall),
+    ]
+)
+
 REGISTRY: dict[str, Any] = {
     "exp02": exp02,
     "social02": social02,
     "social03": social03,
     "social04": social04,
+    "octagon01": octagon01,
 }
 
 
@@ -251,7 +274,7 @@ def schema_from_metadata(root: str | PathLike) -> DotMap:
 
     # Try each path component as a potential registry key (e.g. "social0.4" → "social04")
     for part in root_path.parts:
-        registry_key = part.replace(".", "")
+        registry_key = part.replace(".", "").lower()
         if registry_key in REGISTRY:
             return REGISTRY[registry_key]
 

@@ -52,6 +52,7 @@ def sync_delta(
           (positive = device timestamp is ahead of reference).
 
         Returns an empty DataFrame if fewer than two devices have data.
+
     """
     data: dict[str, pd.DataFrame] = {
         name: load(root, reader, start=start, end=end) for name, reader in readers.items()

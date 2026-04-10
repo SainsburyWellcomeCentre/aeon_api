@@ -21,7 +21,6 @@ from aeon_qc.sync import MIN_DEVICES, sync_delta
 from aeon_qc.video import dropped_frames
 
 
-
 def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:
     """Yield (qualified_name, reader) pairs from a schema DotMap."""
     for device_name, streams in schema.items():

@@ -15,7 +15,7 @@ from swc.aeon.io.reader import Encoder, Heartbeat, Video
 from aeon_qc.encoder import encoder_gaps
 from aeon_qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
 from aeon_qc.epochs import epoch_gaps
-from aeon_qc.heartbeat import heartbeat_gaps
+from aeon_qc.heartbeat import heartbeat_duplicates, heartbeat_gaps
 from aeon_qc.pellet import pellet_failures
 from aeon_qc.sync import MIN_DEVICES, sync_delta
 from aeon_qc.video import dropped_frames
@@ -45,6 +45,9 @@ def run_qc(
     for qualified_name, reader in iter_readers(schema):
         if isinstance(reader, Heartbeat):
             results[qualified_name] = heartbeat_gaps(
+                root, reader, start=start, end=end
+            )
+            results[f"{qualified_name}.duplicates"] = heartbeat_duplicates(
                 root, reader, start=start, end=end
             )
             heartbeat_readers[qualified_name] = reader
@@ -110,6 +113,8 @@ def generate_report(
     for device_name, df in results.items():
         if "gap_duration" in df.columns:
             report["devices"][device_name] = epoch_gaps_section(df)
+        elif "count" in df.columns and "second" in df.columns:
+            report["devices"][device_name] = heartbeat_duplicates_section(df)
         elif "n_dropped" in df.columns:
             report["devices"][device_name] = video_section(df)
         elif "n_missed" in df.columns:
@@ -381,6 +386,30 @@ def message_log_section(df: pd.DataFrame) -> dict[str, Any]:
             for row in df.itertuples()
         ]
     return {"metric": "message_log_errors", "summary": summary, "detail": detail}
+
+
+def heartbeat_duplicates_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a heartbeat_duplicates result."""
+    data_found = df.attrs.get("data_found", True)
+    n_heartbeats = df.attrs.get("n_heartbeats", 0)
+    if df.empty:
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "n_heartbeats": n_heartbeats,
+            "n_affected_seconds": 0,
+        }
+        detail: list[dict[str, Any]] = []
+    else:
+        summary = {
+            "data_found": data_found,
+            "n_heartbeats": n_heartbeats,
+            "n_affected_seconds": len(df),
+        }
+        detail = [
+            {"time": row.Index.isoformat(), "second": int(row.second), "count": int(row.count)}
+            for row in df.itertuples()
+        ]
+    return {"metric": "heartbeat_duplicates", "summary": summary, "detail": detail}
 
 
 def environment_state_section(df: pd.DataFrame) -> dict[str, Any]:

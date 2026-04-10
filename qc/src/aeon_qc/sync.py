@@ -27,9 +27,11 @@ def sync_delta(
     """Compare heartbeat timestamps across Harp devices to detect sync drift.
 
     All Harp devices emit a heartbeat once per second via the ClockSynchronizer.
-    Their timestamps should be identical. This function loads all provided
-    Heartbeat streams, aligns them on the ``second`` counter (the shared logical
-    clock), and returns per-second timestamp deltas relative to a reference device.
+    Their timestamps are decoded from each device's own hardware clock, so any
+    non-zero delta between devices reflects a genuine hardware clock difference —
+    not software or USB timing jitter. This function loads all provided Heartbeat
+    streams, aligns them on the ``second`` counter (the shared logical clock),
+    and returns per-second timestamp deltas relative to a reference device.
 
     Args:
         root: Dataset root path(s), forwarded to ``load()``.

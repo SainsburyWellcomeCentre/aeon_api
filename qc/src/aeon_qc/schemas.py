@@ -232,7 +232,7 @@ def schema_from_root(
         registry = REGISTRY[registry_key]
         filtered: DotMap = DotMap()
         filtered["Metadata"] = registry["Metadata"]
-        for device_name in registry.keys():
+        for device_name in registry:
             if device_name != "Metadata" and device_name in existing_devices:
                 filtered[device_name] = registry[device_name]
         return filtered
@@ -327,7 +327,7 @@ def diagnose_devices(
     # Source 1: registry (path-based match)
     registry_key = match_registry(root)
     registry_devices = (
-        {name for name in REGISTRY[registry_key].keys() if name != "Metadata"}
+        {name for name in REGISTRY[registry_key] if name != "Metadata"}
         if registry_key is not None
         else None
     )

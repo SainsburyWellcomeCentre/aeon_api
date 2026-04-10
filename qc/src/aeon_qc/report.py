@@ -116,12 +116,12 @@ def generate_report(
             report["devices"][device_name] = heartbeat_duplicates_section(df)
         elif "n_dropped" in df.columns:
             report["devices"][device_name] = video_section(df)
+        elif "second_before" in df.columns:
+            report["devices"][device_name] = heartbeat_section(df)
         elif "n_missed" in df.columns:
             report["devices"][device_name] = encoder_section(df)
         elif "duration" in df.columns and "state" in df.columns:
             report["devices"][device_name] = environment_state_section(df)
-        elif "duration" in df.columns:
-            report["devices"][device_name] = heartbeat_section(df)
         elif "outcome" in df.columns:
             report["devices"][device_name] = pellet_section(df)
         elif "max_difference" in df.columns:
@@ -161,6 +161,7 @@ def heartbeat_section(df: pd.DataFrame) -> dict[str, Any]:
             "total_dropout_seconds": 0.0,
             "mean_duration_seconds": None,
         }
+        detail: list[dict[str, Any]] = []
     else:
         summary = {
             "data_found": data_found,
@@ -169,7 +170,16 @@ def heartbeat_section(df: pd.DataFrame) -> dict[str, Any]:
             "total_dropout_seconds": float(df["duration"].dt.total_seconds().sum()),
             "mean_duration_seconds": float(df["duration"].dt.total_seconds().mean()),
         }
-    return {"metric": "heartbeat_gaps", "summary": summary}
+        detail = [
+            {
+                "time": row.Index.isoformat(),
+                "duration_seconds": float(row.duration.total_seconds()),
+                "second_before": int(row.second_before),
+                "second_after": int(row.second_after),
+            }
+            for row in df.itertuples()
+        ]
+    return {"metric": "heartbeat_gaps", "summary": summary, "detail": detail}
 
 
 def video_section(df: pd.DataFrame) -> dict[str, Any]:
@@ -363,6 +373,7 @@ def message_log_section(df: pd.DataFrame) -> dict[str, Any]:
         summary: dict[str, Any] = {
             "data_found": data_found,
             "n_total": n_total,
+            "n_alerts": 0,
             "n_warnings": 0,
             "n_errors": 0,
         }
@@ -372,6 +383,7 @@ def message_log_section(df: pd.DataFrame) -> dict[str, Any]:
         summary = {
             "data_found": data_found,
             "n_total": n_total,
+            "n_alerts": int(counts.get("alert", 0)),
             "n_warnings": int(counts.get("warning", 0)),
             "n_errors": int(counts.get("error", 0)),
         }

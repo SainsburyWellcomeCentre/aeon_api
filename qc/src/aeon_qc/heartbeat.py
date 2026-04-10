@@ -13,10 +13,10 @@ DUPLICATE_COLS = ("second", "count", "device")
 
 
 def heartbeat_gaps(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     reader: Heartbeat,
-    start: datetime.datetime | None,
-    end: datetime.datetime | None,
+    start: datetime.datetime,
+    end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Detect gaps where a Harp device stops sending heartbeats.
 
@@ -61,10 +61,10 @@ def heartbeat_gaps(
 
 
 def heartbeat_duplicates(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     reader: Heartbeat,
-    start: datetime.datetime | None,
-    end: datetime.datetime | None,
+    start: datetime.datetime,
+    end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Detect seconds where a Harp device emits more than one heartbeat.
 

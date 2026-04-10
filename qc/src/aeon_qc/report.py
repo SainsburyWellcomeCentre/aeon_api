@@ -34,9 +34,9 @@ def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:
 
 
 def run_qc(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     schema: Any,
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Run all applicable QC checks against every stream in a schema DotMap."""
@@ -90,21 +90,20 @@ def run_qc(
 
 
 def generate_report(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     results: dict[str, pd.DataFrame],
     output_path: str | PathLike,
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
 ) -> Path:
     """Write a human-readable YAML QC summary from QC metric DataFrames."""
     output_path = Path(output_path)
-    root_list = root if isinstance(root, list) else [root]
 
     report: dict[str, Any] = {
         "generated_at": datetime.datetime.now(tz=datetime.UTC).isoformat(),
-        "dataset_root": str(root_list[0]) if len(root_list) == 1 else [str(p) for p in root_list],
+        "dataset_root": str(root),
         "time_range": {
-            "start": start.isoformat() if start is not None else None,
+            "start": start.isoformat(),
             "end": end.isoformat() if end is not None else None,
         },
         "devices": {},

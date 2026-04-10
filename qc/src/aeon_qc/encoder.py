@@ -1,4 +1,4 @@
-"""Wheel encoder gap detection — identifies dropped samples within activity bouts."""
+"""Wheel encoder gap detection — identifies dropped samples."""
 
 import datetime
 from os import PathLike
@@ -14,9 +14,9 @@ DEFAULT_THRESHOLD = pd.Timedelta(seconds=1)
 
 
 def encoder_gaps(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     reader: Encoder,
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
     threshold: pd.Timedelta = DEFAULT_THRESHOLD,
 ) -> pd.DataFrame:

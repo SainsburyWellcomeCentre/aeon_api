@@ -12,9 +12,9 @@ EMPTY_COLS = ("duration", "n_dropped", "hw_counter_before", "hw_counter_after", 
 
 
 def dropped_frames(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     reader: Video,
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Detect dropped video frames by inspecting hardware frame counter jumps.

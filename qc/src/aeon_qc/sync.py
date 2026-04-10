@@ -18,9 +18,9 @@ def make_empty() -> pd.DataFrame:
 
 
 def sync_delta(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     readers: dict[str, Heartbeat],
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
     reference: str | None = None,
 ) -> pd.DataFrame:
@@ -36,7 +36,7 @@ def sync_delta(
     Args:
         root: Dataset root path(s), forwarded to ``load()``.
         readers: Mapping of device name to ``Heartbeat`` reader instance.
-        start: Optional left bound of the time range.
+        start: Left bound of the time range.
         end: Optional right bound of the time range.
         reference: Name of the device to use as reference. Defaults to
             ``"ClockSynchronizer"`` (or a key starting with that prefix) if

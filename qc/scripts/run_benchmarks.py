@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pandas as pd
 import yaml
+from swc.aeon.io.api import load
+from swc.aeon.io.reader import Metadata as MetadataReader
 
 from aeon_qc import generate_report, run_qc, save_results
 from aeon_qc.schemas import REGISTRY
@@ -24,6 +26,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--benchmarks", default="benchmarks.yaml", help="Path to benchmarks.yaml")
     parser.add_argument("--output", default="benchmarks_output", help="Output root directory")
     return parser.parse_args()
+
+
+def next_epoch_on_disk(root: str, start: pd.Timestamp) -> pd.Timestamp | None:
+    """Return the start of the first epoch directory after `start`, or None."""
+    meta = load(root, MetadataReader(), start=start)
+    if len(meta.index) > 1:
+        return meta.index[1]
+    return None
 
 
 def run_epoch(
@@ -71,9 +81,18 @@ def main() -> None:
 
         print(f"\n=== {dataset['name']} ({len(epochs)} epochs) ===")
 
+        dataset_end = pd.Timestamp(dataset["end"]) if dataset.get("end") else None
+        if dataset_end is not None:
+            epochs = [e for e in epochs if pd.Timestamp(e["start"]) < dataset_end]
+
         for i, epoch in enumerate(epochs):
             start = pd.Timestamp(epoch["start"])
-            end = pd.Timestamp(epochs[i + 1]["start"]) if i + 1 < len(epochs) else None
+            if i + 1 < len(epochs):
+                end: pd.Timestamp | None = pd.Timestamp(epochs[i + 1]["start"])
+            elif dataset_end is not None:
+                end = dataset_end
+            else:
+                end = next_epoch_on_disk(root, start)
             label = epoch.get("phase") or epoch.get("ssid") or "epoch"
             start_safe = start.strftime("%Y-%m-%dT%H-%M-%S")
             stem = f"{label}_{start_safe}"

@@ -12,6 +12,12 @@
 #       for epoch in dataset["epochs"]:
 #           start = pd.Timestamp(epoch["start"])
 #           results = run_qc(dataset["root"], schema, start=start)
+#
+# Optional dataset-level field:
+#   end: "2024-03-01T00:00:00+00:00"
+#     Only epochs whose start precedes this timestamp are included.
+#     The final epoch's QC window closes at this timestamp.
+#     Without end, the final epoch closes at the next epoch directory found on disk.
 
 datasets:
 

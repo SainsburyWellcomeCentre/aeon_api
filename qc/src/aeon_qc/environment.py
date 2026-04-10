@@ -9,9 +9,9 @@ from swc.aeon.io.reader import Reader
 
 
 def message_log_errors(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     reader: Reader,
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Extract non-Info entries from a MessageLog stream."""
@@ -35,9 +35,9 @@ def message_log_errors(
 
 
 def harp_sync_alerts(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     reader: Reader,
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Extract and parse HarpSynch alert entries from a MessageLog stream.
@@ -82,9 +82,9 @@ def harp_sync_alerts(
 
 
 def environment_state_durations(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     reader: Reader,
-    start: datetime.datetime | None = None,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Compute time spent in each environment state from state-transition events."""

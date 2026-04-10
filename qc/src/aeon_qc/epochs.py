@@ -11,8 +11,8 @@ EMPTY_COLS = ("gap_duration",)
 
 
 def epoch_gaps(
-    root: str | PathLike | list[str] | list[PathLike],
-    start: datetime.datetime | None = None,
+    root: str | PathLike,
+    start: datetime.datetime,
     end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Return one row per Bonsai session start (epoch) within the time range.

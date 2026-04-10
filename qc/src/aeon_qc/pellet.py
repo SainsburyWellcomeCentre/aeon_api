@@ -11,12 +11,12 @@ EMPTY_COLS = ("outcome", "device")
 
 
 def pellet_failures(
-    root: str | PathLike | list[str] | list[PathLike],
+    root: str | PathLike,
     deliver_reader: Reader,
+    start: datetime.datetime,
+    end: datetime.datetime | None = None,
     missed_reader: Reader | None = None,
     retried_reader: Reader | None = None,
-    start: datetime.datetime | None = None,
-    end: datetime.datetime | None = None,
 ) -> pd.DataFrame:
     """Detect pellet delivery failures for a single feeder device."""
     deliver = load(root, deliver_reader, start=start, end=end)

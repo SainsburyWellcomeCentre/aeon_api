@@ -113,14 +113,15 @@ def environment_state_durations(
     # Build end-times for each period
     if end is not None:
         end_ts = pd.Timestamp(end)
-        end_ts = end_ts.tz_localize(datetime.UTC) if end_ts.tzinfo is None else end_ts.tz_convert(datetime.UTC)
+        end_ts = end_ts.tz_localize(datetime.UTC) if end_ts.tzinfo is None \
+            else end_ts.tz_convert(datetime.UTC)
         end_times = list(times[1:]) + [end_ts]
     else:
         end_times = list(times[1:])
         times = times[:-1]
         states = states.iloc[:-1]
 
-    durations = [pd.Timestamp(e) - s for s, e in zip(times, end_times)]
+    durations = [pd.Timestamp(e) - s for s, e in zip(times, end_times, strict=False)]
 
     result = pd.DataFrame(
         {"state": states.values, "duration": durations},

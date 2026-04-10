@@ -201,20 +201,9 @@ def schema_from_root(
 ) -> DotMap:
     """Build a QC schema by scanning actual files in the first epoch directory.
 
-    If a path component matches a REGISTRY key (e.g. ``social0.2`` = ``social02``),
-    the registry's device definitions are used for every device directory that
-    exists on disk.
-
-    Falls back to pure filesystem detection (Heartbeat + Video only) when no
-    registry key matches any path component.
-
-    Args:
-        root: The dataset root path containing epoch subdirectories.
-        start: Start of the time window. 
-        end: End of the time window. 
-
-    Returns:
-        A DotMap schema suitable for passing to ``run_qc()``.
+    Uses registry device definitions for any device directory present on disk when a
+    path component matches a REGISTRY key (e.g. ``social0.2`` → ``social02``). Falls
+    back to pure filesystem detection (Heartbeat + Video only) when no key matches.
     """
     root_path = Path(root)
     epoch_dirs = sorted(d for d in root_path.iterdir() if d.is_dir() and "T" in d.name)
@@ -261,19 +250,9 @@ def schema_from_root(
 def schema_from_metadata(root: str | PathLike) -> DotMap:
     """Build a QC schema by matching the root path against the REGISTRY.
 
-    Searches path components for a REGISTRY key after stripping dots
-    (e.g. ``social0.4`` = ``social04``). Works for the standard SWC layout
-    ``/ceph/aeon/aeon/data/raw/<RIG>/<SCHEMA>/`` but is a convention, not a
-    guarantee. ``Metadata.yml`` has no reliable experiment-type field.
-
-    Falls back to Heartbeat + Video discovery from ``Metadata.yml``'s
-    ``Devices`` block if no path component matches.
-
-    Args:
-        root: Dataset root path containing epoch subdirectories.
-
-    Returns:
-        A DotMap schema suitable for passing to ``run_qc()``.
+    Strips dots from path components and checks against REGISTRY keys
+    (e.g. ``social0.4`` → ``social04``). Falls back to Heartbeat + Video discovery
+    from ``Metadata.yml``'s ``Devices`` block if no path component matches.
     """
     registry_key = match_registry(root)
     if registry_key is not None:
@@ -300,27 +279,11 @@ def diagnose_devices(
     start: pd.Timestamp,
     end: pd.Timestamp,
 ) -> dict:
-    """Report device coverage from three independent sources.
+    """Report device coverage from registry, Metadata.yml, and filesystem.
 
-    Compares what the schema REGISTRY expects, what ``Metadata.yml`` lists, and
-    what is actually present on disk.
-
-    Args:
-        root: The dataset root path containing epoch subdirectories.
-        start: Start of the time window.
-        end: End of the time window.
-
-    Returns:
-        A dict with keys:
-
-        - ``registry_key`` (``str | None``): REGISTRY key matched from a path
-          component (e.g. ``"social02"``), or ``None`` if no match.
-        - ``registry`` (``set[str] | None``): device names in the matched registry
-          schema (excluding ``"Metadata"``), or ``None`` if no registry key matched.
-        - ``metadata`` (``set[str] | None``): device names listed in
-          ``Metadata.yml``, or ``None`` if no ``Metadata.yml`` was found.
-        - ``filesystem`` (``set[str]``): device names found on disk in the first
-          epoch directory (Harp heartbeat ``.bin`` files and ``.avi`` video files).
+    Returns a dict with ``registry_key``, ``registry`` (device names from matched schema),
+    ``metadata`` (device names from ``Metadata.yml``), and ``filesystem`` (devices with
+    Heartbeat or Video files in the first epoch directory).
     """
     root_path = Path(root)
 
@@ -338,7 +301,7 @@ def diagnose_devices(
         meta_df = load(root, MetadataReader(), start, end)
         if not meta_df.empty:
             metadata_devices = set(meta_df.iloc[0].metadata.Devices.keys())
-    except Exception:
+    except (AttributeError, IndexError, KeyError):
         pass
 
     # Source 3: filesystem

@@ -1,42 +1,20 @@
 """Registry of known Aeon experiment schemas for use with ``run_qc()``.
 
-Schemas are constructed from the public ``swc.aeon`` API. Each schema is a
-DotMap mapping device names to stream readers (or dicts of readers).
+Each schema is a DotMap mapping device names to stream readers.
 
-``schema_from_metadata(root)`` matches root path components against the
-REGISTRY (e.g. ``social0.4`` → ``social04``) and returns the full authoritative
-schema. Falls back to Heartbeat + Video discovery from ``Metadata.yml`` for
-unknown types. This is what ``--schema auto`` uses.
+- ``schema_from_metadata(root)`` — matches a root path component against REGISTRY
+  (e.g. ``social0.4`` = ``social04``); falls back to Heartbeat + Video discovery
+  from ``Metadata.yml``.
+- ``schema_from_root(root, start, end)`` — pure filesystem fallback (no ``Metadata.yml``
+  needed); discovers Heartbeat and Video streams only.
 
-Note: ``Metadata.yml`` does not contain a reliable schema identifier — the
-``Workflow`` field is a Bonsai filename, not an experiment type. See the
-``schema_from_metadata`` docstring for details.
-
-``schema_from_root(root)`` is a pure filesystem fallback that discovers only
-Heartbeat and Video streams — use it when no ``Metadata.yml`` is available.
-
-To add a new static schema, define a DotMap using ``Device`` and stream classes
-from ``swc.aeon.schema``, then add it to ``REGISTRY``.
-
-Example::
-
-    from swc.aeon.schema.streams import Device
-    import swc.aeon.schema.core as stream
-    from dotmap import DotMap
-
-    my_schema = DotMap([
-        Device("Metadata", stream.Metadata),
-        Device("CameraTop", stream.Video, stream.Position),
-        Device("Patch1", stream.Heartbeat, stream.Encoder),
-    ])
-
-    REGISTRY["my_schema"] = my_schema
 """
 
 from os import PathLike
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import swc.aeon.schema.core as stream
 from dotmap import DotMap
 from swc.aeon.io.api import load
@@ -98,7 +76,7 @@ social02 = DotMap(
 )
 
 # Social 0.3 experiment. Verified against aeon_mecha/aeon/schema/schemas.py (social03).
-# Same device types as social02 but RFID devices use older naming convention.
+# Same device types as social02 but RFID devices use different naming convention.
 social03 = DotMap(
     [
         Device("Metadata", stream.Metadata),
@@ -197,31 +175,69 @@ REGISTRY: dict[str, Any] = {
 }
 
 
-def schema_from_root(root: str | PathLike) -> DotMap:
+def parse_epoch_timestamp(epoch_dir: Path) -> pd.Timestamp:
+    """Parse the UTC timestamp from an epoch directory name (``YYYY-MM-DDTHH-MM-SS``)."""
+    date, time = epoch_dir.name.split("T", 1)
+    return pd.Timestamp(f"{date}T{time.replace('-', ':')}", tz="UTC")
+
+
+def match_registry(root: str | PathLike) -> str | None:
+    """Return the REGISTRY key for *root*, or ``None`` if no path component matches.
+
+    Strips dots and lowercases each component
+    (e.g. ``social0.4`` = ``social04``) before checking against REGISTRY.
+    """
+    for part in Path(root).parts:
+        key = part.replace(".", "").lower()
+        if key in REGISTRY:
+            return key
+    return None
+
+
+def schema_from_root(
+    root: str | PathLike,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> DotMap:
     """Build a QC schema by scanning actual files in the first epoch directory.
 
-    Discovers Harp devices by looking for register-8 heartbeat files
-    (``{device}_8_*.bin``) and cameras by looking for video files (``*.avi``).
-    Register 8 is universal to all Harp devices, so this works for any
-    experiment type including soft Harp devices not listed in ``Metadata.yml``.
+    If a path component matches a REGISTRY key (e.g. ``social0.2`` = ``social02``),
+    the registry's device definitions are used for every device directory that
+    exists on disk.
+
+    Falls back to pure filesystem detection (Heartbeat + Video only) when no
+    registry key matches any path component.
 
     Args:
         root: The dataset root path containing epoch subdirectories.
+        start: Start of the time window. 
+        end: End of the time window. 
 
     Returns:
-        A DotMap schema suitable for passing to ``run_qc()``, with ``Heartbeat``
-        readers for every Harp device found and ``Video`` readers for every
-        camera found.
-
-    Raises:
-        FileNotFoundError: If no epoch directories are found under ``root``.
+        A DotMap schema suitable for passing to ``run_qc()``.
     """
     root_path = Path(root)
     epoch_dirs = sorted(d for d in root_path.iterdir() if d.is_dir() and "T" in d.name)
+    epoch_dirs = [d for d in epoch_dirs if parse_epoch_timestamp(d) < end]
     if not epoch_dirs:
         raise FileNotFoundError(f"No epoch directories found under {root}")
 
     first_epoch = epoch_dirs[0]
+    existing_devices = {d.name for d in first_epoch.iterdir() if d.is_dir()}
+
+    # If the root path names a known schema, use its device definitions filtered
+    # to devices that actually have a directory in the first epoch.
+    registry_key = match_registry(root)
+    if registry_key is not None:
+        registry = REGISTRY[registry_key]
+        filtered: DotMap = DotMap()
+        filtered["Metadata"] = registry["Metadata"]
+        for device_name in registry.keys():
+            if device_name != "Metadata" and device_name in existing_devices:
+                filtered[device_name] = registry[device_name]
+        return filtered
+
+    # Fallback: pure filesystem detection — Harp heartbeat and video only.
     harp_devices: list[str] = []
     video_devices: list[str] = []
 
@@ -242,41 +258,26 @@ def schema_from_root(root: str | PathLike) -> DotMap:
 
     return DotMap(schema_devices)
 
-
 def schema_from_metadata(root: str | PathLike) -> DotMap:
     """Build a QC schema by matching the root path against the REGISTRY.
 
-    The ``Metadata.yml`` does not contain a reliable experiment-type identifier.
-    The ``Workflow`` field is the Bonsai workflow filename (e.g.
-    ``"Social-AEON4.bonsai"``), which does not map to a schema name. The
-    ``Commit`` hash points to the Bonsai workflow repo, not aeon_mecha. There is
-    currently no way to derive the schema from ``Metadata.yml`` alone via
-    ``swc.aeon`` — this is a known limitation that would require either an
-    explicit experiment-type field in ``Metadata.yml`` or a mapping from
-    aeon_mecha git tags to REGISTRY keys.
-
-    **Current approach**: search the root path components for a string that, after
-    stripping dots, matches a REGISTRY key (e.g. ``social0.4`` → ``social04``).
-    This works for the standard SWC data layout
+    Searches path components for a REGISTRY key after stripping dots
+    (e.g. ``social0.4`` = ``social04``). Works for the standard SWC layout
     ``/ceph/aeon/aeon/data/raw/<RIG>/<SCHEMA>/`` but is a convention, not a
-    guarantee.
+    guarantee. ``Metadata.yml`` has no reliable experiment-type field.
 
-    Falls back to device-discovery from ``Metadata.yml``'s ``Devices`` block
-    (Heartbeat + Video only) if no path component matches the REGISTRY.
+    Falls back to Heartbeat + Video discovery from ``Metadata.yml``'s
+    ``Devices`` block if no path component matches.
 
     Args:
-        root: The dataset root path containing epoch subdirectories.
+        root: Dataset root path containing epoch subdirectories.
 
     Returns:
         A DotMap schema suitable for passing to ``run_qc()``.
     """
-    root_path = Path(root)
-
-    # Try each path component as a potential registry key (e.g. "social0.4" → "social04")
-    for part in root_path.parts:
-        registry_key = part.replace(".", "").lower()
-        if registry_key in REGISTRY:
-            return REGISTRY[registry_key]
+    registry_key = match_registry(root)
+    if registry_key is not None:
+        return REGISTRY[registry_key]
 
     # Fallback: discover devices from Metadata.yml Devices block
     meta_df = load(root, MetadataReader())
@@ -293,3 +294,69 @@ def schema_from_metadata(root: str | PathLike) -> DotMap:
             schema_devices.append(Device(device_name, stream.Video))
 
     return DotMap(schema_devices)
+
+def diagnose_devices(
+    root: str | PathLike,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> dict:
+    """Report device coverage from three independent sources.
+
+    Compares what the schema REGISTRY expects, what ``Metadata.yml`` lists, and
+    what is actually present on disk.
+
+    Args:
+        root: The dataset root path containing epoch subdirectories.
+        start: Start of the time window.
+        end: End of the time window.
+
+    Returns:
+        A dict with keys:
+
+        - ``registry_key`` (``str | None``): REGISTRY key matched from a path
+          component (e.g. ``"social02"``), or ``None`` if no match.
+        - ``registry`` (``set[str] | None``): device names in the matched registry
+          schema (excluding ``"Metadata"``), or ``None`` if no registry key matched.
+        - ``metadata`` (``set[str] | None``): device names listed in
+          ``Metadata.yml``, or ``None`` if no ``Metadata.yml`` was found.
+        - ``filesystem`` (``set[str]``): device names found on disk in the first
+          epoch directory (Harp heartbeat ``.bin`` files and ``.avi`` video files).
+    """
+    root_path = Path(root)
+
+    # Source 1: registry (path-based match)
+    registry_key = match_registry(root)
+    registry_devices = (
+        {name for name in REGISTRY[registry_key].keys() if name != "Metadata"}
+        if registry_key is not None
+        else None
+    )
+
+    # Source 2: Metadata.yml
+    metadata_devices = None
+    try:
+        meta_df = load(root, MetadataReader(), start, end)
+        if not meta_df.empty:
+            metadata_devices = set(meta_df.iloc[0].metadata.Devices.keys())
+    except Exception:
+        pass
+
+    # Source 3: filesystem
+    filesystem_devices: set[str] = set()
+    epoch_dirs = sorted(d for d in root_path.iterdir() if d.is_dir() and "T" in d.name)
+    epoch_dirs = [d for d in epoch_dirs if parse_epoch_timestamp(d) < end]
+    if epoch_dirs:
+        first_epoch = epoch_dirs[0]
+        for device_dir in sorted(first_epoch.iterdir()):
+            if not device_dir.is_dir():
+                continue
+            name = device_dir.name
+            if any(device_dir.glob(f"{name}_8_*.bin")) or any(device_dir.glob("*.avi")):
+                filesystem_devices.add(name)
+
+    return {
+        "registry_key": registry_key,
+        "registry": registry_devices,
+        "metadata": metadata_devices,
+        "filesystem": filesystem_devices,
+    }

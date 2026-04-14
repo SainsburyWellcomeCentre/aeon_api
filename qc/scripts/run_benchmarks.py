@@ -14,11 +14,9 @@ from pathlib import Path
 
 import pandas as pd
 import yaml
-from swc.aeon.io.api import load
-from swc.aeon.io.reader import Metadata as MetadataReader
 
 from aeon_qc import generate_report, run_qc, save_results
-from aeon_qc.schemas import REGISTRY
+from aeon_qc.schemas import REGISTRY, parse_epoch_timestamp
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,10 +28,9 @@ def parse_args() -> argparse.Namespace:
 
 def next_epoch_on_disk(root: str, start: pd.Timestamp) -> pd.Timestamp | None:
     """Return the start of the first epoch directory after `start`, or None."""
-    meta = load(root, MetadataReader(), start=start)
-    if len(meta.index) > 1:
-        return meta.index[1]
-    return None
+    epoch_dirs = sorted(d for d in Path(root).iterdir() if d.is_dir() and "T" in d.name)
+    later = [parse_epoch_timestamp(d) for d in epoch_dirs if parse_epoch_timestamp(d) > start]
+    return later[0] if later else None
 
 
 def run_epoch(

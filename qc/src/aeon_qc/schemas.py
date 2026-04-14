@@ -272,7 +272,7 @@ def build_schema(
     start: pd.Timestamp,
     end: pd.Timestamp,
 ) -> DotMap:
-    """Return the best available schema, trying registry → Metadata.yml → filesystem."""
+    """Return the best available schema, trying registry, then Metadata.yml, then filesystem."""
     return (
         schema_from_registry(root)
         or schema_from_metadata(root)

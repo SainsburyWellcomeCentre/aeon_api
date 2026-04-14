@@ -30,7 +30,6 @@ This tutorial covers interactive use — running QC from a Python script or note
 
 - Python ≥ 3.11
 - [`uv`](https://docs.astral.sh/uv/) (installed automatically by `deploy.cmd` if missing)
-- Access to `/ceph/aeon/aeon/data/raw/` on the SWC cluster
 
 ---
 
@@ -70,7 +69,7 @@ generate_report(root, results, "qc_report.yaml", start=start, end=end)
 ```
 
 > [!TIP]
-> `start` and `end` are optional. Omitting them runs QC across the entire dataset, which may take a long time for long experiments.
+> `end` is optional. Omitting it runs QC across all epochs that begin after `start`, which may take a long time for long experiments.
 
 ---
 
@@ -96,8 +95,8 @@ The discovery rules are:
 - Devices with `"Type": "SpinnakerVideoSource"` → camera → `Video` reader
 
 ### Using a static schema
-
-For reproducible analysis or when you need pellet, encoder, and environment metrics (which require additional stream readers beyond Heartbeat and Video), use a pre-defined schema from the registry:
+Predefined schemas for legacy Aeon experiments is recapitulated from aeon_mecha here. These have been phased out with [aeon-api](https://github.com/SainsburyWellcomeCentre/aeon_api), where data schemas are expected to live with individual experiment schema sets.
+To use a pre-defined schema from the registry:
 
 ```python
 from aeon_qc.schemas import REGISTRY

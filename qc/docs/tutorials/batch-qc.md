@@ -5,7 +5,7 @@ title: Batch QC with benchmarks.yaml
 
 # Batch QC with benchmarks.yaml
 
-For systematic QC across multiple datasets and epochs, `aeon-qc` provides a benchmark runner script that reads a `benchmarks.yaml` manifest and produces YAML reports and pickled results for every epoch.
+For systematic QC across multiple datasets and epochs, a script that reads a `benchmarks.yaml` manifest and produces YAML reports and pickled results for every epoch.
 
 For interactive use on a single dataset window, see [Interactive QC on an Aeon dataset](run-qc.md).
 
@@ -13,9 +13,9 @@ For interactive use on a single dataset window, see [Interactive QC on an Aeon d
 
 ## How it works
 
-`benchmarks.yaml` lists datasets and the epochs within them that you want to QC. The script `scripts/run_benchmarks.py` iterates every epoch, runs `run_qc` over the epoch's time window, and saves a YAML report and a pickled results dict for each one.
+`benchmarks.yaml` lists datasets and the epochs that you want to QC. The script `scripts/run_benchmarks.py` iterates every epoch, runs `run_qc` over the epoch's time window, and saves a YAML report and a pickled results dict for each one.
 
-**Time window per epoch:** `start` comes from the manifest; `end` is the next epoch's `start` within the same dataset. For the last epoch in a dataset, `end` is determined by scanning the filesystem for the next epoch directory after `start` — so only that single Bonsai session is processed. If a dataset-level `end` is given in the manifest, it is used instead: only epochs whose `start` precedes it are included, and the final epoch's window closes at `end`. Epoch gaps are reported as part of the QC, indicating Bonsai had crashed and restarted, automatically or manually.
+**Time window per epoch:** `start` comes from the manifest; `end` is the next epoch's `start`. For the last epoch in a dataset, `end` is determined by scanning epoch directories on disk to find the next one after `start`. If no subsequent epoch exists on disk, `end` is `None` and the window is open-ended. If an `end` is given in the manifest, it is used instead: only epochs whose `start` precedes it are included. Epoch gaps are reported as part of the QC, indicating Bonsai had crashed and restarted, automatically or manually.
 
 ---
 
@@ -53,11 +53,12 @@ datasets:
 | `name` | yes | Unique identifier; used as the output subdirectory name |
 | `root` | yes | Absolute path to the dataset root on the SWC cluster |
 | `schema` | yes | REGISTRY key, or `null` to skip this dataset |
-| `end` | no | UTC ISO 8601 timestamp capping the dataset; only epochs whose `start` precedes this are processed, and the final epoch's window closes here. Without it, the final epoch closes at the next epoch directory found on disk. |
+| `end` | no | UTC ISO 8601 timestamp capping the dataset; only epochs whose `start` precedes this are processed, and the final epoch's window closes here. Without it, the final epoch's `end` is found by scanning epoch directories on disk; if no subsequent epoch exists, the window is open-ended. |
 | `epochs` | yes | List of epoch entries; empty list `[]` skips the dataset |
 | `epochs[].start` | yes | UTC ISO 8601 timestamp for the epoch start |
 | `epochs[].phase` | no | Label used in output filenames (e.g. `presocial`, `social`) |
 | `epochs[].ssid` | no | Session ID label used in output filenames (alternative to `phase`) |
+| `epochs[].rigid` | no | Optional user-defined metadata (e.g. rigid body ID); ignored by the script |
 
 ### Available schema keys
 

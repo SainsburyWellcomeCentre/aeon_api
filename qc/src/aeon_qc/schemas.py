@@ -194,6 +194,15 @@ def match_registry(root: str | PathLike) -> str | None:
     return None
 
 
+def first_epoch_dir(root: Path, start: pd.Timestamp, end: pd.Timestamp) -> Path:
+    """Return the first epoch directory in [start, end)."""
+    epoch_dirs = sorted(d for d in root.iterdir() if d.is_dir() and "T" in d.name)
+    epoch_dirs = [d for d in epoch_dirs if start <= parse_epoch_timestamp(d) < end]
+    if not epoch_dirs:
+        raise FileNotFoundError(f"No epoch directories found under {root} in [{start}, {end})")
+    return epoch_dirs[0]
+
+
 def schema_from_root(
     root: str | PathLike,
     start: pd.Timestamp,
@@ -206,12 +215,7 @@ def schema_from_root(
     back to pure filesystem detection (Heartbeat + Video only) when no key matches.
     """
     root_path = Path(root)
-    epoch_dirs = sorted(d for d in root_path.iterdir() if d.is_dir() and "T" in d.name)
-    epoch_dirs = [d for d in epoch_dirs if parse_epoch_timestamp(d) < end]
-    if not epoch_dirs:
-        raise FileNotFoundError(f"No epoch directories found under {root}")
-
-    first_epoch = epoch_dirs[0]
+    first_epoch = first_epoch_dir(root_path, start, end)
     existing_devices = {d.name for d in first_epoch.iterdir() if d.is_dir()}
 
     # If the root path names a known schema, use its device definitions filtered
@@ -305,16 +309,16 @@ def diagnose_devices(
 
     # Source 3: filesystem
     filesystem_devices: set[str] = set()
-    epoch_dirs = sorted(d for d in root_path.iterdir() if d.is_dir() and "T" in d.name)
-    epoch_dirs = [d for d in epoch_dirs if parse_epoch_timestamp(d) < end]
-    if epoch_dirs:
-        first_epoch = epoch_dirs[0]
+    try:
+        first_epoch = first_epoch_dir(root_path, start, end)
         for device_dir in sorted(first_epoch.iterdir()):
             if not device_dir.is_dir():
                 continue
             name = device_dir.name
             if any(device_dir.glob(f"{name}_8_*.bin")) or any(device_dir.glob("*.avi")):
                 filesystem_devices.add(name)
+    except FileNotFoundError:
+        pass
 
     return {
         "registry_key": registry_key,

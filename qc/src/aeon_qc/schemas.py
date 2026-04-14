@@ -268,7 +268,7 @@ def schema_from_metadata(root: str | PathLike) -> DotMap:
 
         if is_harp:
             schema_devices.append(Device(device_name, stream.Heartbeat))
-        if is_camera:
+        elif is_camera:
             schema_devices.append(Device(device_name, stream.Video))
 
     return DotMap(schema_devices)

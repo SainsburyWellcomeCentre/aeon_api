@@ -10,6 +10,7 @@ Each schema is a DotMap mapping device names to stream readers.
 
 """
 
+import datetime
 from os import PathLike
 from pathlib import Path
 from typing import Any
@@ -179,6 +180,23 @@ def parse_epoch_timestamp(epoch_dir: Path) -> pd.Timestamp:
     """Parse the UTC timestamp from an epoch directory name (``YYYY-MM-DDTHH-MM-SS``)."""
     date, time = epoch_dir.name.split("T", 1)
     return pd.Timestamp(f"{date}T{time.replace('-', ':')}", tz="UTC")
+
+
+def normalise_timestamp(ts: str | datetime.datetime) -> pd.Timestamp:
+    """Accept either a filesystem epoch name or an ISO 8601 string and return a UTC Timestamp.
+
+    Filesystem epoch directories use hyphens in the time part (``YYYY-MM-DDTHH-MM-SS``).
+    Both that format and standard ISO 8601 strings are accepted; naive datetimes are treated as UTC.
+    """
+    if isinstance(ts, datetime.datetime):
+        return pd.Timestamp(ts, tz="UTC") if ts.tzinfo is None else pd.Timestamp(ts)
+    date_part, sep, time_part = ts.partition("T")
+    if sep and "-" in time_part and ":" not in time_part:
+        ts = f"{date_part}T{time_part.replace('-', ':')}+00:00"
+    result = pd.Timestamp(ts)
+    if result.tzinfo is None:
+        result = result.tz_localize("UTC")
+    return result
 
 
 def match_registry(root: str | PathLike) -> str | None:

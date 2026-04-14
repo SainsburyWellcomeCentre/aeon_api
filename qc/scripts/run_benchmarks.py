@@ -16,7 +16,7 @@ import pandas as pd
 import yaml
 
 from aeon_qc import generate_report, run_qc, save_results
-from aeon_qc.schemas import REGISTRY, parse_epoch_timestamp
+from aeon_qc.schemas import REGISTRY, normalise_timestamp, parse_epoch_timestamp
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,14 +78,14 @@ def main() -> None:
 
         print(f"\n=== {dataset['name']} ({len(epochs)} epochs) ===")
 
-        dataset_end = pd.Timestamp(dataset["end"]) if dataset.get("end") else None
+        dataset_end = normalise_timestamp(dataset["end"]) if dataset.get("end") else None
         if dataset_end is not None:
-            epochs = [e for e in epochs if pd.Timestamp(e["start"]) < dataset_end]
+            epochs = [e for e in epochs if normalise_timestamp(e["start"]) < dataset_end]
 
         for i, epoch in enumerate(epochs):
-            start = pd.Timestamp(epoch["start"])
+            start = normalise_timestamp(epoch["start"])
             if i + 1 < len(epochs):
-                end: pd.Timestamp | None = pd.Timestamp(epochs[i + 1]["start"])
+                end: pd.Timestamp | None = normalise_timestamp(epochs[i + 1]["start"])
             elif dataset_end is not None:
                 end = dataset_end
             else:

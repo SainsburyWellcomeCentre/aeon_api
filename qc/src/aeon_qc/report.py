@@ -12,6 +12,7 @@ import yaml
 from swc.aeon.io.api import Reader
 from swc.aeon.io.reader import Encoder, Heartbeat, Video
 
+from aeon_qc.schemas import normalise_timestamp
 from aeon_qc.encoder import encoder_gaps
 from aeon_qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
 from aeon_qc.epochs import epoch_gaps
@@ -35,10 +36,12 @@ def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:
 def run_qc(
     root: str | PathLike,
     schema: Any,
-    start: datetime.datetime,
-    end: datetime.datetime | None = None,
+    start: str | datetime.datetime,
+    end: str | datetime.datetime | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Run all applicable QC checks against every stream in a schema DotMap."""
+    start = normalise_timestamp(start)
+    end = normalise_timestamp(end) if end is not None else None
     results: dict[str, pd.DataFrame] = {"epoch_gaps": epoch_gaps(root, start=start, end=end)}
     heartbeat_readers: dict[str, Heartbeat] = {}
     device_streams: dict[str, dict[str, Reader]] = {}
@@ -89,11 +92,13 @@ def generate_report(
     root: str | PathLike,
     results: dict[str, pd.DataFrame],
     output_path: str | PathLike,
-    start: datetime.datetime,
-    end: datetime.datetime | None = None,
+    start: str | datetime.datetime,
+    end: str | datetime.datetime | None = None,
 ) -> Path:
     """Write a human-readable YAML QC summary from QC metric DataFrames."""
     output_path = Path(output_path)
+    start = normalise_timestamp(start)
+    end = normalise_timestamp(end) if end is not None else None
 
     report: dict[str, Any] = {
         "generated_at": datetime.datetime.now(tz=datetime.UTC).isoformat(),

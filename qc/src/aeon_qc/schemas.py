@@ -206,15 +206,25 @@ def first_epoch_dir(root: Path, start: pd.Timestamp, end: pd.Timestamp) -> Path:
 def schema_from_registry(root: str | PathLike) -> DotMap | None:
     """Return the REGISTRY schema for root, or None if no path component matches."""
     key = match_registry(root)
-    return REGISTRY[key] if key is not None else None
+    if key is not None:
+        return REGISTRY[key]
+    else:
+        return None
+
+
+def load_metadata_devices(root: str | PathLike):
+    """Return the Devices DotMap from Metadata.yml, or None if unavailable."""
+    try:
+        meta_df = load(root, MetadataReader())
+        return meta_df.iloc[0].metadata.Devices
+    except (AttributeError, IndexError, KeyError):
+        return None
 
 
 def schema_from_metadata(root: str | PathLike) -> DotMap | None:
     """Discover Heartbeat and Video devices from Metadata.yml, or None if unavailable."""
-    try:
-        meta_df = load(root, MetadataReader())
-        devices_dotmap = meta_df.iloc[0].metadata.Devices
-    except (AttributeError, IndexError, KeyError):
+    devices_dotmap = load_metadata_devices(root)
+    if devices_dotmap is None:
         return None
 
     schema_devices: list[Device] = [Device("Metadata", stream.Metadata)]
@@ -277,11 +287,9 @@ def diagnose_devices(
     """Report device coverage from registry, Metadata.yml, and filesystem.
 
     Returns a dict with ``registry_key``, ``registry`` (device names from matched schema),
-    ``metadata`` (device names from ``Metadata.yml``), and ``filesystem`` (devices with
+    ``metadata`` (all device names from ``Metadata.yml``), and ``filesystem`` (devices with
     Heartbeat or Video files in the first epoch directory).
     """
-    root_path = Path(root)
-
     # Source 1: registry (path-based match)
     registry_schema = schema_from_registry(root)
     registry_devices = (
@@ -290,25 +298,15 @@ def diagnose_devices(
         else None
     )
 
-    # Source 2: Metadata.yml
-    metadata_devices = None
-    try:
-        meta_df = load(root, MetadataReader(), start, end)
-        if not meta_df.empty:
-            metadata_devices = set(meta_df.iloc[0].metadata.Devices.keys())
-    except (AttributeError, IndexError, KeyError):
-        pass
+    # Source 2: Metadata.yml — full device list
+    devices_dotmap = load_metadata_devices(root)
+    metadata_devices = set(devices_dotmap.keys()) if devices_dotmap is not None else None
 
     # Source 3: filesystem
     filesystem_devices: set[str] = set()
     try:
-        first_epoch = first_epoch_dir(root_path, start, end)
-        for device_dir in sorted(first_epoch.iterdir()):
-            if not device_dir.is_dir():
-                continue
-            name = device_dir.name
-            if any(device_dir.glob(f"{name}_8_*.bin")) or any(device_dir.glob("*.avi")):
-                filesystem_devices.add(name)
+        fs_schema = schema_from_filesystem(root, start, end)
+        filesystem_devices = {name for name in fs_schema if name != "Metadata"}
     except FileNotFoundError:
         pass
 

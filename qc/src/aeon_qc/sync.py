@@ -89,7 +89,7 @@ def sync_delta(
         if df_common.empty:
             continue
         matched_sec = dev_sec[common_mask]
-        ref_ts = ref_lookup.loc[matched_sec.values]
+        ref_ts = ref_lookup.reindex(matched_sec.values)
         ref_ts_idx = pd.DatetimeIndex(ref_ts.array, name="time")
         delta = (df_common.index - ref_ts_idx).total_seconds()
         rows.append(

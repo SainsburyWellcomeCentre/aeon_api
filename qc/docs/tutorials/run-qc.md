@@ -50,13 +50,12 @@ This creates a `.venv`, installs all dependencies, and makes the `aeon_qc` packa
 The fastest way to run all checks on a dataset is to auto-discover the device schema from `Metadata.yml` and pass it to `run_qc`:
 
 ```python
-import pandas as pd
 from aeon_qc import run_qc, generate_report
 from aeon_qc.schemas import schema_from_metadata
 
 root = "/ceph/aeon/aeon/data/raw/AEON3/social0.2"
-start = pd.Timestamp("2024-02-01T22:00:00", tz="UTC")
-end   = pd.Timestamp("2024-02-02T10:00:00", tz="UTC")
+start = "2024-02-01T22-00-00"   # filesystem format; ISO 8601 strings and pd.Timestamp also accepted
+end   = "2024-02-02T10-00-00"
 
 schema  = schema_from_metadata(root)
 results = run_qc(root, schema, start=start, end=end)

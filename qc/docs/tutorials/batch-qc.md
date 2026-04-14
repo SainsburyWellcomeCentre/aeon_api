@@ -28,17 +28,17 @@ datasets:
     root: /ceph/aeon/aeon/data/raw/AEON3/social0.2   # path to the dataset root on the cluster
     schema: social02                                  # REGISTRY key (see table below)
     epochs:
-      - {phase: presocial,  start: "2024-01-31T11:28:39+00:00"}
-      - {phase: presocial,  start: "2024-02-01T22:36:47+00:00"}
-      - {phase: social,     start: "2024-02-09T16:07:32+00:00"}
-      - {phase: postsocial, start: "2024-02-25T17:22:33+00:00"}
+      - {phase: presocial,  start: "2024-01-31T11-28-39"}
+      - {phase: presocial,  start: "2024-02-01T22-36-47"}
+      - {phase: social,     start: "2024-02-09T16-07-32"}
+      - {phase: postsocial, start: "2024-02-25T17-22-33"}
 
   - name: octagon-conf1
     root: /ceph/aeon/aeon/data/raw/OCTAGON01/conf1
     schema: octagon01
     epochs:
-      - {ssid: 24997, rigid: 464001, start: "2024-03-25T12:16:27+00:00"}
-      - {ssid: 25010, rigid: 464001, start: "2024-03-25T12:41:07+00:00"}
+      - {ssid: 24997, start: "2024-03-25T12-16-27"}
+      - {ssid: 25010, start: "2024-03-25T12-41-07"}
 
   - name: harris-ses-043                              # schema: null skips this dataset, only placeholder
     root: /ceph/aeon/aeon/data/raw/aeon/test2/harris_benchmark_rawdata/ses-043_date-20251223
@@ -55,10 +55,9 @@ datasets:
 | `schema` | yes | REGISTRY key, or `null` to skip this dataset |
 | `end` | no | UTC ISO 8601 timestamp capping the dataset; only epochs whose `start` precedes this are processed, and the final epoch's window closes here. Without it, the final epoch's `end` is found by scanning epoch directories on disk; if no subsequent epoch exists, the window is open-ended. |
 | `epochs` | yes | List of epoch entries; empty list `[]` skips the dataset |
-| `epochs[].start` | yes | UTC ISO 8601 timestamp for the epoch start |
+| `epochs[].start` | yes | Epoch start timestamp — filesystem format (`2024-01-31T11-28-39`) or ISO 8601 (`2024-01-31T11:28:39+00:00`); naive strings are assumed UTC |
 | `epochs[].phase` | no | Label used in output filenames (e.g. `presocial`, `social`) |
 | `epochs[].ssid` | no | Session ID label used in output filenames (alternative to `phase`) |
-| `epochs[].rigid` | no | Optional user-defined metadata (e.g. rigid body ID); ignored by the script |
 
 ### Available schema keys
 
@@ -72,17 +71,17 @@ datasets:
 
 ### Finding epoch start timestamps
 
-Epoch start timestamps correspond to Bonsai session starts. Each session creates a new epoch directory under the dataset root named by its UTC timestamp (e.g. `2024-01-31T11-28-39`). You can list them on the cluster:
+Epoch start timestamps correspond to Bonsai session starts. Each session creates a new epoch directory under the dataset root named by its UTC timestamp. You can list them on the cluster:
 
 ```bash
 ls /ceph/aeon/aeon/data/raw/AEON3/social0.2/
 # 2024-01-31T11-28-39  2024-02-01T22-36-47  2024-02-02T00-15-00  ...
 ```
 
-Convert the directory name to a YAML timestamp by replacing `-` separators with `:` in the time part and appending `+00:00`:
+Paste the directory name directly as the `start` value — no conversion needed:
 
-```
-2024-01-31T11-28-39  →  "2024-01-31T11:28:39+00:00"
+```yaml
+- {phase: presocial, start: "2024-01-31T11-28-39"}
 ```
 
 ---

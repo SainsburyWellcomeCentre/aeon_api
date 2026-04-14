@@ -203,33 +203,39 @@ def first_epoch_dir(root: Path, start: pd.Timestamp, end: pd.Timestamp) -> Path:
     return epoch_dirs[0]
 
 
-def schema_from_root(
+def schema_from_registry(root: str | PathLike) -> DotMap | None:
+    """Return the REGISTRY schema for root, or None if no path component matches."""
+    key = match_registry(root)
+    return REGISTRY[key] if key is not None else None
+
+
+def schema_from_metadata(root: str | PathLike) -> DotMap | None:
+    """Discover Heartbeat and Video devices from Metadata.yml, or None if unavailable."""
+    try:
+        meta_df = load(root, MetadataReader())
+        devices_dotmap = meta_df.iloc[0].metadata.Devices
+    except (AttributeError, IndexError, KeyError):
+        return None
+
+    schema_devices: list[Device] = [Device("Metadata", stream.Metadata)]
+    for device_name, device_cfg in devices_dotmap.items():
+        is_harp = bool(getattr(device_cfg, "PortName", None))
+        is_camera = getattr(device_cfg, "Type", "") == "SpinnakerVideoSource"
+        if is_harp:
+            schema_devices.append(Device(device_name, stream.Heartbeat))
+        elif is_camera:
+            schema_devices.append(Device(device_name, stream.Video))
+
+    return DotMap(schema_devices)
+
+
+def schema_from_filesystem(
     root: str | PathLike,
     start: pd.Timestamp,
     end: pd.Timestamp,
 ) -> DotMap:
-    """Build a QC schema by scanning actual files in the first epoch directory.
-
-    Uses registry device definitions for any device directory present on disk when a
-    path component matches a REGISTRY key (e.g. ``social0.2`` → ``social02``). Falls
-    back to pure filesystem detection (Heartbeat + Video only) when no key matches.
-    """
-    root_path = Path(root)
-    first_epoch = first_epoch_dir(root_path, start, end)
-    existing_devices = {d.name for d in first_epoch.iterdir() if d.is_dir()}
-
-    # If the root path names a known schema, use its device definitions filtered
-    # to devices that actually have a directory in the first epoch.
-    registry_key = match_registry(root)
-    if registry_key is not None:
-        registry = REGISTRY[registry_key]
-        filtered: DotMap = DotMap()
-        for device_name in registry:
-            if device_name == "Metadata" or device_name in existing_devices:
-                filtered[device_name] = registry[device_name]
-        return filtered
-
-    # Fallback: pure filesystem detection — Harp heartbeat and video only.
+    """Discover Heartbeat and Video devices by scanning files in the first epoch directory."""
+    first_epoch = first_epoch_dir(Path(root), start, end)
     harp_devices: list[str] = []
     video_devices: list[str] = []
 
@@ -250,32 +256,18 @@ def schema_from_root(
 
     return DotMap(schema_devices)
 
-def schema_from_metadata(root: str | PathLike) -> DotMap:
-    """Build a QC schema by matching the root path against the REGISTRY.
 
-    Strips dots from path components and checks against REGISTRY keys
-    (e.g. ``social0.4`` → ``social04``). Falls back to Heartbeat + Video discovery
-    from ``Metadata.yml``'s ``Devices`` block if no path component matches.
-    """
-    registry_key = match_registry(root)
-    if registry_key is not None:
-        return REGISTRY[registry_key]
-
-    # Fallback: discover devices from Metadata.yml Devices block
-    meta_df = load(root, MetadataReader())
-    devices_dotmap = meta_df.iloc[0].metadata.Devices
-    schema_devices: list[Device] = [Device("Metadata", stream.Metadata)]
-
-    for device_name, device_cfg in devices_dotmap.items():
-        is_harp = bool(getattr(device_cfg, "PortName", None))
-        is_camera = getattr(device_cfg, "Type", "") == "SpinnakerVideoSource"
-
-        if is_harp:
-            schema_devices.append(Device(device_name, stream.Heartbeat))
-        elif is_camera:
-            schema_devices.append(Device(device_name, stream.Video))
-
-    return DotMap(schema_devices)
+def build_schema(
+    root: str | PathLike,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> DotMap:
+    """Return the best available schema, trying registry → Metadata.yml → filesystem."""
+    return (
+        schema_from_registry(root)
+        or schema_from_metadata(root)
+        or schema_from_filesystem(root, start, end)
+    )
 
 def diagnose_devices(
     root: str | PathLike,
@@ -291,10 +283,10 @@ def diagnose_devices(
     root_path = Path(root)
 
     # Source 1: registry (path-based match)
-    registry_key = match_registry(root)
+    registry_schema = schema_from_registry(root)
     registry_devices = (
-        {name for name in REGISTRY[registry_key] if name != "Metadata"}
-        if registry_key is not None
+        {name for name in registry_schema if name != "Metadata"}
+        if registry_schema is not None
         else None
     )
 
@@ -321,7 +313,7 @@ def diagnose_devices(
         pass
 
     return {
-        "registry_key": registry_key,
+        "registry_key": match_registry(root),
         "registry": registry_devices,
         "metadata": metadata_devices,
         "filesystem": filesystem_devices,

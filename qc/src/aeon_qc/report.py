@@ -41,7 +41,10 @@ def run_qc(
     """Run all applicable QC checks against every stream in a schema DotMap."""
     results: dict[str, pd.DataFrame] = {"epoch_gaps": epoch_gaps(root, start=start, end=end)}
     heartbeat_readers: dict[str, Heartbeat] = {}
+    device_streams: dict[str, dict[str, Reader]] = {}
     for qualified_name, reader in iter_readers(schema):
+        device, _, stream_name = qualified_name.partition(".")
+        device_streams.setdefault(device, {})[stream_name or device] = reader
         if isinstance(reader, Heartbeat):
             results[qualified_name] = heartbeat_gaps(
                 root, reader, start=start, end=end
@@ -56,12 +59,6 @@ def run_qc(
             results[qualified_name] = encoder_gaps(root, reader, start=start, end=end)
     if len(heartbeat_readers) >= MIN_DEVICES:
         results["sync_delta"] = sync_delta(root, heartbeat_readers, start=start, end=end)
-
-    # Pellet QC: group readers by device name, run pellet_failures for feeder devices
-    device_streams: dict[str, dict[str, Reader]] = {}
-    for qualified_name, reader in iter_readers(schema):
-        device, _, stream = qualified_name.partition(".")
-        device_streams.setdefault(device, {})[stream or device] = reader
 
     for device_name, streams in device_streams.items():
         if "DeliverPellet" in streams:

@@ -53,7 +53,7 @@ See the [run-qc tutorial](docs/tutorials/run-qc.md) for a full walkthrough.
 To run QC across all datasets defined in `benchmarks.yaml`:
 
 ```bash
-uv run python scripts/run_benchmarks.py
+uv run python scripts/run_benchmarks.py --benchmarks benchmarks.yaml --output benchmarks_output/
 ```
 
 See the [batch-qc tutorial](docs/tutorials/batch-qc.md) for manifest format and options.

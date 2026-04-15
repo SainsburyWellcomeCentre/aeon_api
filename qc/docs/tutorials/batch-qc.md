@@ -99,7 +99,7 @@ uv run python scripts/run_benchmarks.py [options]
 | Option | Default | Description |
 |---|---|---|
 | `--benchmarks PATH` | `benchmarks.yaml` | Path to the benchmarks manifest |
-| `--output DIR` | `benchmarks_output` | Root directory for output files |
+| `--output DIR` | `benchmarks_output/` | Root directory for output files |
 
 ### Run
 
@@ -107,7 +107,7 @@ uv run python scripts/run_benchmarks.py [options]
 uv run python scripts/run_benchmarks.py
 
 # Use a different manifest or output directory
-uv run python scripts/run_benchmarks.py --benchmarks /path/to/my_benchmarks.yaml --output /path/to/results
+uv run python scripts/run_benchmarks.py --benchmarks /path/to/my_benchmarks.yaml --output /path/to/results/
 ```
 
 ---

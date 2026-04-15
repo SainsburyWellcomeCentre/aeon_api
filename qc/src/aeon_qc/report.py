@@ -114,7 +114,8 @@ def generate_report(
         if "gap_duration" in df.columns:
             report["devices"][device_name] = epoch_gaps_section(df)
         elif "count" in df.columns and "second" in df.columns:
-            report["devices"][device_name] = heartbeat_duplicates_section(df)
+            if "rfid" not in device_name.lower():
+                report["devices"][device_name] = heartbeat_duplicates_section(df)
         elif "n_dropped" in df.columns:
             report["devices"][device_name] = video_section(df)
         elif "second_before" in df.columns:

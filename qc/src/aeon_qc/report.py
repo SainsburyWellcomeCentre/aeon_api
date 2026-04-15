@@ -52,9 +52,10 @@ def run_qc(
             results[qualified_name] = heartbeat_gaps(
                 root, reader, start=start, end=end
             )
-            results[f"{qualified_name}.duplicates"] = heartbeat_duplicates(
-                root, reader, start=start, end=end
-            )
+            if "rfid" not in device.lower():
+                results[f"{qualified_name}.duplicates"] = heartbeat_duplicates(
+                    root, reader, start=start, end=end
+                )
             heartbeat_readers[qualified_name] = reader
         elif isinstance(reader, Video):
             results[qualified_name] = dropped_frames(root, reader, start=start, end=end)
@@ -114,8 +115,7 @@ def generate_report(
         if "gap_duration" in df.columns:
             report["devices"][device_name] = epoch_gaps_section(df)
         elif "count" in df.columns and "second" in df.columns:
-            if "rfid" not in device_name.lower():
-                report["devices"][device_name] = heartbeat_duplicates_section(df)
+            report["devices"][device_name] = heartbeat_duplicates_section(df)
         elif "n_dropped" in df.columns:
             report["devices"][device_name] = video_section(df)
         elif "second_before" in df.columns:

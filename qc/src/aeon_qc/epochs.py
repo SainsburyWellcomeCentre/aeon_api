@@ -21,7 +21,7 @@ def epoch_gaps(
     ``gap_duration`` shows the outage between consecutive starts (``NaT`` for the last epoch).
     A short gap suggests a crash; a long gap suggests a planned stop.
     """
-    meta = load(root, MetadataReader(), start=start, end=end)
+    meta = load(root, MetadataReader(), start=start, end=end, inclusive="left")
 
     if meta.empty:
         result = pd.DataFrame(

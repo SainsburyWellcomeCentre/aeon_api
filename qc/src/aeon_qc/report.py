@@ -12,14 +12,14 @@ import yaml
 from swc.aeon.io.api import Reader
 from swc.aeon.io.reader import Encoder, Heartbeat, Video
 
-from aeon_qc.schemas import normalise_timestamp
 from aeon_qc.encoder import encoder_gaps
 from aeon_qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
 from aeon_qc.epochs import epoch_gaps
 from aeon_qc.heartbeat import heartbeat_duplicates, heartbeat_gaps
 from aeon_qc.pellet import pellet_failures
+from aeon_qc.schemas import normalise_timestamp
 from aeon_qc.sync import MIN_DEVICES, sync_delta
-from aeon_qc.video import dropped_frames
+from aeon_qc.video import dropped_frames, frame_rate_stability
 
 
 def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:
@@ -59,6 +59,10 @@ def run_qc(
             heartbeat_readers[qualified_name] = reader
         elif isinstance(reader, Video):
             results[qualified_name] = dropped_frames(root, reader, start=start, end=end)
+            device = qualified_name.rpartition(".")[0] or qualified_name
+            results[f"{device}.frame_rate"] = frame_rate_stability(
+                root, reader, start=start, end=end
+            )
         elif isinstance(reader, Encoder):
             results[qualified_name] = encoder_gaps(root, reader, start=start, end=end)
     if len(heartbeat_readers) >= MIN_DEVICES:
@@ -130,6 +134,8 @@ def generate_report(
             report["devices"][device_name] = harp_sync_alerts_section(df)
         elif "priority" in df.columns:
             report["devices"][device_name] = message_log_section(df)
+        elif "fps_inferred" in df.columns:
+            report["devices"][device_name] = frame_rate_section(df)
         elif "delta_seconds" in df.columns:
             report["devices"][device_name] = sync_delta_section(df)
 
@@ -423,6 +429,35 @@ def heartbeat_duplicates_section(df: pd.DataFrame) -> dict[str, Any]:
             for row in df.itertuples()
         ]
     return {"metric": "heartbeat_duplicates", "summary": summary, "detail": detail}
+
+
+def frame_rate_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a frame_rate_stability result."""
+    data_found = df.attrs.get("data_found", True)
+    fps_source = df.attrs.get("fps_source", "inferred_from_median")
+    clock = df.attrs.get("clock", "hw_timestamp_ns")
+    row = df.iloc[0]
+    fps = row["fps_inferred"]
+    if not data_found or pd.isna(fps):
+        summary: dict[str, Any] = {
+            "data_found": data_found,
+            "fps_inferred": None,
+            "fps_source": fps_source,
+            "clock": clock,
+        }
+        return {"metric": "frame_rate_stability", "summary": summary}
+    summary = {
+        "data_found": data_found,
+        "n_frames": int(row["n_frames"]),
+        "fps_inferred": round(float(fps), 3),
+        "fps_source": fps_source,
+        "clock": clock,
+        "interval_median_ms": round(float(row["interval_median_ms"]), 4),
+        "interval_std_ms": round(float(row["interval_std_ms"]), 4),
+        "interval_p99_ms": round(float(row["interval_p99_ms"]), 4),
+        "interval_max_ms": round(float(row["interval_max_ms"]), 4),
+    }
+    return {"metric": "frame_rate_stability", "summary": summary}
 
 
 def environment_state_section(df: pd.DataFrame) -> dict[str, Any]:

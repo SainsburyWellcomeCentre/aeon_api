@@ -14,12 +14,13 @@ from aeon_qc.schemas import (
     schema_from_registry,
 )
 from aeon_qc.sync import sync_delta
-from aeon_qc.video import dropped_frames
+from aeon_qc.video import dropped_frames, frame_rate_stability
 
 __all__ = [
     "heartbeat_gaps",
     "heartbeat_duplicates",
     "dropped_frames",
+    "frame_rate_stability",
     "sync_delta",
     "epoch_gaps",
     "encoder_gaps",

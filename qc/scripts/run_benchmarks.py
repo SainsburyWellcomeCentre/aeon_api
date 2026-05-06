@@ -33,6 +33,32 @@ def next_epoch_on_disk(root: str, start: pd.Timestamp) -> pd.Timestamp | None:
     return later[0] if later else None
 
 
+def derive_epoch_window(epoch_dir: Path) -> tuple[pd.Timestamp, pd.Timestamp] | None:
+    """Return (start, end) for load() based on actual filenames inside epoch_dir.
+
+    For rigs whose Harp hub uses a non-UTC time origin (e.g. Harris-lab's
+    1904-01-01 baseline), the chunk filenames inside an epoch directory
+    won't match the epoch dir's wall-clock name. Walks all files two
+    levels deep, parses the trailing _YYYY-MM-DDTHH-MM-SS portion of every
+    filename, and returns (min, max + 1 hour). Returns None when no
+    parseable filenames are found.
+    """
+    timestamps: list[pd.Timestamp] = []
+    for fname in epoch_dir.glob("*/*"):
+        if not fname.is_file():
+            continue
+        stem_parts = fname.stem.rsplit("_", 1)
+        if len(stem_parts) < 2:
+            continue
+        try:
+            timestamps.append(parse_epoch_timestamp(Path(stem_parts[-1])))
+        except (ValueError, IndexError):
+            continue
+    if not timestamps:
+        return None
+    return min(timestamps), max(timestamps) + pd.Timedelta(hours=1)
+
+
 def run_epoch(
     root: str,
     schema: object,
@@ -74,6 +100,7 @@ def main() -> None:
 
         schema_key = dataset.get("schema")
         epochs = dataset.get("epochs") or []
+        epochs_auto = False
         if not epochs:
             disk_epochs = sorted(
                 d for d in Path(root).iterdir() if d.is_dir() and "T" in d.name
@@ -85,6 +112,7 @@ def main() -> None:
                 {"phase": "auto", "start": parse_epoch_timestamp(d).strftime("%Y-%m-%dT%H-%M-%S")}
                 for d in disk_epochs
             ]
+            epochs_auto = True
             print(f"\n=== {dataset['name']} ({len(epochs)} epochs auto-discovered) ===")
         else:
             print(f"\n=== {dataset['name']} ({len(epochs)} epochs) ===")
@@ -116,8 +144,15 @@ def main() -> None:
                 root, start=start, end=end if end is not None else start + pd.Timedelta(hours=1)
             )
 
+            load_start, load_end = start, end
+            if epochs_auto:
+                derived = derive_epoch_window(Path(root) / start_safe)
+                if derived is not None and derived[0] != start:
+                    load_start, load_end = derived
+                    print(f"    filename-derived window: {load_start.isoformat()} -> {load_end.isoformat()}")
+
             print(f"  [{i + 1}/{len(epochs)}] {stem}")
-            run_epoch(root, schema, start, end, output_dir, stem)
+            run_epoch(root, schema, load_start, load_end, output_dir, stem)
 
 
 if __name__ == "__main__":

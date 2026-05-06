@@ -19,6 +19,8 @@ FRAME_RATE_COLS = (
     "interval_max_ms",
 )
 
+HISTOGRAM_BINS = 200
+
 
 def dropped_frames(
     root: str | PathLike,
@@ -79,7 +81,10 @@ def frame_rate_stability(
     are counted seperately by dropped_frames). Framerate is inferred from the median interval; 
     not read from metadata.
     Returns a single-row DataFrame with interval distribution statistics.
-    Sets attrs["data_found"], attrs["fps_source"], and attrs["clock"].
+    Sets attrs["data_found"], attrs["fps_source"], attrs["clock"], and (when
+    intervals exist) a histogram of inter-frame intervals over [0, 5*median]
+    in attrs["histogram_bin_edges_ms"], attrs["histogram_counts"], and
+    attrs["histogram_n_above"] for intervals above the upper edge.
     """
     data = load(root, reader, start=start, end=end)
 
@@ -118,4 +123,10 @@ def frame_rate_stability(
         },
         index=pd.DatetimeIndex([start], name="time", tz=datetime.UTC),
     )
+    upper = 5.0 * median_ms if median_ms > 0 else float(intervals_ms.max())
+    bin_edges = np.linspace(0.0, upper, HISTOGRAM_BINS + 1)
+    counts, _ = np.histogram(intervals_ms.values, bins=bin_edges)
+    result.attrs["histogram_bin_edges_ms"] = bin_edges
+    result.attrs["histogram_counts"] = counts
+    result.attrs["histogram_n_above"] = int((intervals_ms > upper).sum())
     return _set_attrs(result, True)

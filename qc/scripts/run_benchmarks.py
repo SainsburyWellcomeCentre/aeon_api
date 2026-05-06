@@ -16,7 +16,7 @@ import pandas as pd
 import yaml
 
 from aeon_qc import generate_report, run_qc, save_results
-from aeon_qc.schemas import REGISTRY, normalise_timestamp, parse_epoch_timestamp
+from aeon_qc.schemas import REGISTRY, build_schema, normalise_timestamp, parse_epoch_timestamp
 
 
 def parse_args() -> argparse.Namespace:
@@ -67,16 +67,34 @@ def main() -> None:
         benchmarks = yaml.safe_load(f)
 
     for dataset in benchmarks["datasets"]:
-        if not dataset.get("schema") or not dataset.get("epochs"):
+        root = dataset["root"]
+        if not Path(root).is_dir():
+            print(f"\n=== {dataset['name']} ===  SKIP: root does not exist: {root}")
             continue
 
-        schema = REGISTRY[dataset["schema"]]
-        root = dataset["root"]
-        epochs = dataset["epochs"]
+        schema_key = dataset.get("schema")
+        epochs = dataset.get("epochs") or []
+        if not epochs:
+            disk_epochs = sorted(
+                d for d in Path(root).iterdir() if d.is_dir() and "T" in d.name
+            )
+            if not disk_epochs:
+                print(f"\n=== {dataset['name']} ===  SKIP: no epochs listed and none on disk")
+                continue
+            epochs = [
+                {"phase": "auto", "start": parse_epoch_timestamp(d).strftime("%Y-%m-%dT%H-%M-%S")}
+                for d in disk_epochs
+            ]
+            print(f"\n=== {dataset['name']} ({len(epochs)} epochs auto-discovered) ===")
+        else:
+            print(f"\n=== {dataset['name']} ({len(epochs)} epochs) ===")
+
+        registry_schema = REGISTRY[schema_key] if schema_key and schema_key in REGISTRY else None
+        if schema_key and registry_schema is None:
+            print(f"  WARN: schema {schema_key!r} not in REGISTRY, falling back to build_schema")
+
         output_dir = Path(args.output) / dataset["name"]
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        print(f"\n=== {dataset['name']} ({len(epochs)} epochs) ===")
 
         dataset_end = normalise_timestamp(dataset["end"]) if dataset.get("end") else None
         if dataset_end is not None:
@@ -93,6 +111,10 @@ def main() -> None:
             label = epoch.get("phase") or epoch.get("ssid") or "epoch"
             start_safe = start.strftime("%Y-%m-%dT%H-%M-%S")
             stem = f"{label}_{start_safe}"
+
+            schema = registry_schema if registry_schema is not None else build_schema(
+                root, start=start, end=end if end is not None else start + pd.Timedelta(hours=1)
+            )
 
             print(f"  [{i + 1}/{len(epochs)}] {stem}")
             run_epoch(root, schema, start, end, output_dir, stem)

@@ -16,7 +16,13 @@ import pandas as pd
 import yaml
 
 from aeon_qc import generate_report, run_qc, save_results
-from aeon_qc.schemas import REGISTRY, build_schema, normalise_timestamp, parse_epoch_timestamp
+from aeon_qc.schemas import (
+    REGISTRY,
+    build_schema,
+    derive_epoch_window,
+    normalise_timestamp,
+    parse_epoch_timestamp,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,32 +37,6 @@ def next_epoch_on_disk(root: str, start: pd.Timestamp) -> pd.Timestamp | None:
     epoch_dirs = sorted(d for d in Path(root).iterdir() if d.is_dir() and "T" in d.name)
     later = [parse_epoch_timestamp(d) for d in epoch_dirs if parse_epoch_timestamp(d) > start]
     return later[0] if later else None
-
-
-def derive_epoch_window(epoch_dir: Path) -> tuple[pd.Timestamp, pd.Timestamp] | None:
-    """Return (start, end) for load() based on actual filenames inside epoch_dir.
-
-    For rigs whose Harp hub uses a non-UTC time origin (e.g. Harris-lab's
-    1904-01-01 baseline), the chunk filenames inside an epoch directory
-    won't match the epoch dir's wall-clock name. Walks all files two
-    levels deep, parses the trailing _YYYY-MM-DDTHH-MM-SS portion of every
-    filename, and returns (min, max + 1 hour). Returns None when no
-    parseable filenames are found.
-    """
-    timestamps: list[pd.Timestamp] = []
-    for fname in epoch_dir.glob("*/*"):
-        if not fname.is_file():
-            continue
-        stem_parts = fname.stem.rsplit("_", 1)
-        if len(stem_parts) < 2:
-            continue
-        try:
-            timestamps.append(parse_epoch_timestamp(Path(stem_parts[-1])))
-        except (ValueError, IndexError):
-            continue
-    if not timestamps:
-        return None
-    return min(timestamps), max(timestamps) + pd.Timedelta(hours=1)
 
 
 def run_epoch(

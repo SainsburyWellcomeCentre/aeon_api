@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Pre-flight check for aeon_qc benchmarks.
 
-Walks every (dataset, epoch) pair in the benchmarks YAML and verifies
-the root directory exists, the schema resolves, and the epoch directory
-is present on disk with at least one device of data. Never calls
-``load()`` so the entire pass runs in seconds.
+Replicates the discovery logic of scripts/run_benchmarks.py without calling
+``swc.aeon.io.api.load()``: resolves the schema the same way (REGISTRY or
+build_schema), enumerates epochs the same way (YAML or filesystem),
+derives the load window the same way (filenames for auto-discovered
+epochs), and for each reader in the schema globs the epoch directory to
+confirm at least one matching file exists. Reports readers that would
+return ``data_found=False`` in the real run.
 
 Usage:
     uv run python scripts/dry_run_benchmarks.py [options]
@@ -20,9 +23,11 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+from aeon_qc.report import iter_readers
 from aeon_qc.schemas import (
     REGISTRY,
-    diagnose_devices,
+    build_schema,
+    derive_epoch_window,
     normalise_timestamp,
     parse_epoch_timestamp,
 )
@@ -51,32 +56,24 @@ def list_epoch_dirs(root: str | Path) -> list[tuple[pd.Timestamp, Path]]:
     )
 
 
-def check_epoch(
-    root: str,
-    start: pd.Timestamp,
-    end: pd.Timestamp | None,
-    expected_devices: set[str],
-) -> list[str]:
-    """Return a list of issues for this epoch, or [] if clean."""
-    epoch_dir = Path(root) / start.strftime("%Y-%m-%dT%H-%M-%S")
-    if not epoch_dir.is_dir():
-        return [f"MISSING epoch dir: {epoch_dir.name}"]
-    if end is None:
-        end = start + pd.Timedelta(hours=1)
-    diag = diagnose_devices(root, start=start, end=end)
-    fs = diag["filesystem"]
+def check_readers(epoch_dir: Path, schema: object) -> list[str]:
+    """For each reader in schema, confirm at least one file matches its pattern under epoch_dir.
+
+    Mirrors what ``swc.aeon.io.api.load`` does internally (glob
+    ``<epoch>/**/<reader.pattern>.<reader.extension>``) but without
+    reading any files or applying time-window filtering. Returns one
+    "no files" message per reader that finds nothing.
+    """
     issues: list[str] = []
-    if not fs:
-        issues.append("no devices found in filesystem scan")
-    if expected_devices:
-        missing = expected_devices - fs - {"Metadata"}
-        if missing:
-            issues.append(f"expected devices missing on disk: {sorted(missing)}")
+    for qualified_name, reader in iter_readers(schema):
+        pattern = f"**/{reader.pattern}.{reader.extension}"
+        if not next(epoch_dir.glob(pattern), None):
+            issues.append(f"no files for {qualified_name}: {reader.pattern}.{reader.extension}")
     return issues
 
 
 def main() -> int:
-    """Walk the benchmarks YAML and report any (dataset, epoch) pairs that look broken."""
+    """Walk the benchmarks YAML and report any (dataset, epoch) pairs that would produce no data."""
     args = parse_args()
     with open(args.benchmarks) as f:
         benchmarks = yaml.safe_load(f)
@@ -88,6 +85,7 @@ def main() -> int:
         root = dataset["root"]
         schema_key = dataset.get("schema")
         epochs = dataset.get("epochs") or []
+        epochs_auto = False
         print(f"\n=== {name} ===")
 
         if not Path(root).is_dir():
@@ -95,17 +93,14 @@ def main() -> int:
             total_issues += 1
             continue
 
-        if schema_key and schema_key in REGISTRY:
-            expected = {n for n in REGISTRY[schema_key] if n != "Metadata"}
-            schema_label = f"schema: {schema_key} ({len(expected)} devices)"
-        elif schema_key:
-            print(f"  FAIL: schema {schema_key!r} not in REGISTRY")
-            total_issues += 1
-            continue
+        registry_schema = REGISTRY[schema_key] if schema_key and schema_key in REGISTRY else None
+        if schema_key and registry_schema is None:
+            print(f"  WARN: schema {schema_key!r} not in REGISTRY, will use build_schema")
+        if registry_schema is not None:
+            n_devices = sum(1 for n in registry_schema if n != "Metadata")
+            print(f"  root: OK  schema: {schema_key} ({n_devices} devices)")
         else:
-            expected = set()
-            schema_label = "schema: <auto: build_schema fallback>"
-        print(f"  root: OK  {schema_label}")
+            print("  root: OK  schema: <auto: build_schema fallback>")
 
         if not epochs:
             disk_epochs = list_epoch_dirs(root)
@@ -117,6 +112,7 @@ def main() -> int:
                 {"phase": "auto", "start": ts.strftime("%Y-%m-%dT%H-%M-%S")}
                 for ts, _ in disk_epochs
             ]
+            epochs_auto = True
         else:
             epoch_iter = epochs
 
@@ -132,8 +128,28 @@ def main() -> int:
                 later = [ts for ts, _ in list_epoch_dirs(root) if ts > start]
                 end = later[0] if later else None
 
-            issues = check_epoch(root, start, end, expected)
             label = epoch.get("phase") or epoch.get("ssid") or "epoch"
+            start_safe = start.strftime("%Y-%m-%dT%H-%M-%S")
+            epoch_dir = Path(root) / start_safe
+
+            issues: list[str] = []
+            if not epoch_dir.is_dir():
+                issues.append(f"MISSING epoch dir: {start_safe}")
+            else:
+                if registry_schema is not None:
+                    schema = registry_schema
+                else:
+                    schema = build_schema(
+                        root,
+                        start=start,
+                        end=end if end is not None else start + pd.Timedelta(hours=1),
+                    )
+                if epochs_auto:
+                    derived = derive_epoch_window(epoch_dir)
+                    if derived is None:
+                        issues.append("filename-window derivation failed (no parseable filenames)")
+                issues.extend(check_readers(epoch_dir, schema))
+
             tag = "OK" if not issues else "WARN"
             print(f"  [{i + 1}/{len(epoch_iter)}] {tag} {label} {epoch['start']}")
             for msg in issues:

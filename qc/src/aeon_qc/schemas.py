@@ -221,6 +221,30 @@ def first_epoch_dir(root: Path, start: pd.Timestamp, end: pd.Timestamp) -> Path:
     return epoch_dirs[0]
 
 
+def derive_epoch_window(epoch_dir: Path) -> tuple[pd.Timestamp, pd.Timestamp] | None:
+    """Return (start, end) for load() based on actual filenames inside epoch_dir.
+
+    For rigs whose Harp hub uses a non-UTC time origin (e.g. Harris-lab's
+    1904-01-01 baseline), the chunk filenames inside an epoch directory
+    won't match the epoch dir's wall-clock name. Walks all files two
+    levels deep, parses the trailing _YYYY-MM-DDTHH-MM-SS portion of every
+    filename, and returns (min, max + 1 hour). Returns None when no
+    parseable filenames are found.
+    """
+    timestamps: list[pd.Timestamp] = []
+    for fname in epoch_dir.glob("*/*"):
+        if not fname.is_file() or "_" not in fname.stem:
+            continue
+        last_token = fname.stem.rsplit("_", 1)[-1]
+        try:
+            timestamps.append(parse_epoch_timestamp(Path(last_token)))
+        except (ValueError, IndexError):
+            continue
+    if not timestamps:
+        return None
+    return min(timestamps), max(timestamps) + pd.Timedelta(hours=1)
+
+
 def schema_from_registry(root: str | PathLike) -> DotMap | None:
     """Return the REGISTRY schema for root, or None if no path component matches."""
     key = match_registry(root)

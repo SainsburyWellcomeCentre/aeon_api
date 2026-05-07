@@ -20,6 +20,7 @@ from aeon_qc.schemas import (
     REGISTRY,
     build_schema,
     derive_epoch_window,
+    is_epoch_dir,
     normalise_timestamp,
     parse_epoch_timestamp,
 )
@@ -38,7 +39,7 @@ def parse_args() -> argparse.Namespace:
 
 def next_epoch_on_disk(root: str, start: pd.Timestamp) -> pd.Timestamp | None:
     """Return the start of the first epoch directory after `start`, or None."""
-    epoch_dirs = sorted(d for d in Path(root).iterdir() if d.is_dir() and "T" in d.name)
+    epoch_dirs = sorted(d for d in Path(root).iterdir() if is_epoch_dir(d))
     later = [parse_epoch_timestamp(d) for d in epoch_dirs if parse_epoch_timestamp(d) > start]
     return later[0] if later else None
 
@@ -89,7 +90,7 @@ def main() -> None:
         epochs_auto = False
         if not epochs:
             disk_epochs = sorted(
-                d for d in Path(root).iterdir() if d.is_dir() and "T" in d.name
+                d for d in Path(root).iterdir() if is_epoch_dir(d)
             )
             if not disk_epochs:
                 print(f"\n=== {dataset['name']} ===  SKIP: no epochs listed and none on disk")

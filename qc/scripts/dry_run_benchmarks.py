@@ -28,6 +28,7 @@ from aeon_qc.schemas import (
     REGISTRY,
     build_schema,
     derive_epoch_window,
+    is_epoch_dir,
     normalise_timestamp,
     parse_epoch_timestamp,
 )
@@ -52,7 +53,7 @@ def list_epoch_dirs(root: str | Path) -> list[tuple[pd.Timestamp, Path]]:
     return sorted(
         (parse_epoch_timestamp(d), d)
         for d in Path(root).iterdir()
-        if d.is_dir() and "T" in d.name
+        if is_epoch_dir(d)
     )
 
 

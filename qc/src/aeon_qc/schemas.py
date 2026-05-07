@@ -11,6 +11,7 @@ Each schema is a DotMap mapping device names to stream readers.
 """
 
 import datetime
+import re
 from os import PathLike
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,8 @@ from swc.aeon.io.reader import Metadata as MetadataReader
 from swc.aeon.schema.streams import Device
 
 from aeon_qc import foraging, octagon, social
+
+EPOCH_DIR_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$")
 
 # Foraging experiment (exp0.2). Verified against aeon_mecha/aeon/schema/schemas.py.
 exp02 = DotMap(
@@ -186,6 +189,11 @@ def parse_epoch_timestamp(epoch_dir: Path) -> pd.Timestamp:
     return pd.Timestamp(f"{date}T{time.replace('-', ':')}", tz="UTC")
 
 
+def is_epoch_dir(path: Path) -> bool:
+    """Return True if the path is a directory whose name matches ``YYYY-MM-DDTHH-MM-SS``."""
+    return path.is_dir() and EPOCH_DIR_PATTERN.match(path.name) is not None
+
+
 def normalise_timestamp(ts: str | datetime.datetime) -> pd.Timestamp:
     """Accept either a filesystem epoch name or an ISO 8601 string and return a UTC Timestamp.
 
@@ -218,7 +226,7 @@ def match_registry(root: str | PathLike) -> str | None:
 
 def first_epoch_dir(root: Path, start: pd.Timestamp, end: pd.Timestamp) -> Path:
     """Return the first epoch directory in [start, end)."""
-    epoch_dirs = sorted(d for d in root.iterdir() if d.is_dir() and "T" in d.name)
+    epoch_dirs = sorted(d for d in root.iterdir() if is_epoch_dir(d))
     epoch_dirs = [d for d in epoch_dirs if start <= parse_epoch_timestamp(d) < end]
     if not epoch_dirs:
         raise FileNotFoundError(f"No epoch directories found under {root} in [{start}, {end})")

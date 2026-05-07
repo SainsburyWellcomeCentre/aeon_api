@@ -98,12 +98,16 @@ social03 = DotMap(
         Device("Patch1", stream.Heartbeat, social.Patch),
         Device("Patch2", stream.Heartbeat, social.Patch),
         Device("Patch3", stream.Heartbeat, social.Patch),
-        Device("RfidGate", stream.Heartbeat, social.RfidEvents),
-        Device("RfidNest1", stream.Heartbeat, social.RfidEvents),
-        Device("RfidNest2", stream.Heartbeat, social.RfidEvents),
-        Device("RfidPatch1", stream.Heartbeat, social.RfidEvents),
-        Device("RfidPatch2", stream.Heartbeat, social.RfidEvents),
-        Device("RfidPatch3", stream.Heartbeat, social.RfidEvents),
+        Device("PatchDummy1", stream.Heartbeat, social.Patch),
+        Device("GateRfid", stream.Heartbeat, social.RfidEvents),
+        Device("GateEastRfid", stream.Heartbeat, social.RfidEvents),
+        Device("GateWestRfid", stream.Heartbeat, social.RfidEvents),
+        Device("NestRfid1", stream.Heartbeat, social.RfidEvents),
+        Device("NestRfid2", stream.Heartbeat, social.RfidEvents),
+        Device("Patch1Rfid", stream.Heartbeat, social.RfidEvents),
+        Device("Patch2Rfid", stream.Heartbeat, social.RfidEvents),
+        Device("Patch3Rfid", stream.Heartbeat, social.RfidEvents),
+        Device("PatchDummy1Rfid", stream.Heartbeat, social.RfidEvents),
     ]
 )
 

@@ -105,7 +105,7 @@ def frame_rate_stability(
 
     counter = data["hw_counter"].astype(np.int64)
     consecutive = counter.diff() == 1
-    intervals_ms = data["hw_timestamp"].astype(np.int64).diff()[consecutive] / 1e6
+    intervals_ms = (data["hw_timestamp"].diff()[consecutive] / 1e6).dropna()
 
     if intervals_ms.empty:
         nan_row["n_frames"] = len(data)

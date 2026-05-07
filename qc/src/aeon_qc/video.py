@@ -78,7 +78,7 @@ def frame_rate_stability(
 
     Uses hw_timestamp (FLIR Spinnaker ChunkData.Timestamp, nanoseconds) on consecutive
     frames only (hw_counter.diff() == 1), so dropped-frame intervals are excluded. (these
-    are counted seperately by dropped_frames). Framerate is inferred from the median interval; 
+    are counted separately by dropped_frames). Framerate is inferred from the median interval;
     not read from metadata.
     Returns a single-row DataFrame with interval distribution statistics.
     Sets attrs["data_found"], attrs["fps_source"], attrs["clock"], and (when

@@ -26,7 +26,11 @@ from aeon_qc.schemas import (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--benchmarks", default="benchmarks.yaml", help="Path to benchmarks.yaml")
     parser.add_argument("--output", default="benchmarks_output", help="Output root directory")
     return parser.parse_args()
@@ -47,6 +51,7 @@ def run_epoch(
     output_dir: Path,
     stem: str,
 ) -> None:
+    """Run QC for one epoch and write the YAML report and pickled results."""
     end_str = end.isoformat() if end is not None else "open"
     print(f"    start={start.isoformat()}  end={end_str}")
 
@@ -67,6 +72,7 @@ def run_epoch(
 
 
 def main() -> None:
+    """Iterate every (dataset, epoch) in the benchmarks YAML and run QC."""
     args = parse_args()
 
     with open(args.benchmarks) as f:
@@ -129,7 +135,10 @@ def main() -> None:
                 derived = derive_epoch_window(Path(root) / start_safe)
                 if derived is not None and derived[0] != start:
                     load_start, load_end = derived
-                    print(f"    filename-derived window: {load_start.isoformat()} -> {load_end.isoformat()}")
+                    print(
+                        "    filename-derived window: "
+                        f"{load_start.isoformat()} -> {load_end.isoformat()}"
+                    )
 
             print(f"  [{i + 1}/{len(epochs)}] {stem}")
             run_epoch(root, schema, load_start, load_end, output_dir, stem)

@@ -35,6 +35,7 @@ def dropped_frames(
     ``device``. Sets ``attrs["data_found"]`` and ``attrs["n_frames"]``.
     """
     data = load(root, reader, start=start, end=end)
+    data = data.dropna(subset=["hw_counter"])
 
     if data.empty:
         result = pd.DataFrame(
@@ -87,6 +88,7 @@ def frame_rate_stability(
     attrs["histogram_n_above"] for intervals above the upper edge.
     """
     data = load(root, reader, start=start, end=end)
+    data = data.dropna(subset=["hw_counter"])
 
     nan_row = pd.DataFrame(
         {col: [float("nan")] for col in FRAME_RATE_COLS},

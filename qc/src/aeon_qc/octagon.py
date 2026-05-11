@@ -1,6 +1,8 @@
 """Stream classes for octagon experiment data (octagon01).
 
-Ported from ``aeon_mecha/aeon/schema/octagon.py``.
+Ported from ``aeon_mecha/aeon/schema/octagon.py``. Photodiode and VideoController
+tag their reader with ``expected_hz`` so ``run_qc`` dispatches ``harp_gaps``;
+the rest mirror aeon_mecha for forward compatibility but have no dispatch yet.
 """
 
 from swc.aeon.io import reader
@@ -8,8 +10,25 @@ from swc.aeon.schema.streams import Stream, StreamGroup
 
 
 class Photodiode(Stream):
+    """Photodiode register 44 — continuous 1 kHz ADC.
+
+    Columns: ``adc`` (photodiode voltage, ~10-bit range), ``encoder``
+    (always 0 on the octagon rig - reserved by the Harp register layout).
+    """
+
     def __init__(self, path):
-        super().__init__(reader.Harp(f"{path}_44_*", columns=["adc", "encoder"]))
+        r = reader.Harp(f"{path}_44_*", columns=["adc", "encoder"])
+        r.expected_hz = 1000.0
+        super().__init__(r)
+
+
+class VideoController(Stream):
+    """Camera-trigger output (register 92) - 50 Hz pulse train that fires the cameras."""
+
+    def __init__(self, path):
+        r = reader.Harp(f"{path}_92_*", columns=["trigger"])
+        r.expected_hz = 50.0
+        super().__init__(r)
 
 
 class OSC(StreamGroup):

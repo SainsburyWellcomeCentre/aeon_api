@@ -26,6 +26,7 @@ import yaml
 from aeon_qc.report import iter_readers
 from aeon_qc.schemas import (
     REGISTRY,
+    SELF_CONTAINED_SCHEMAS,
     build_schema,
     derive_epoch_window,
     is_epoch_dir,
@@ -97,11 +98,13 @@ def main() -> int:
         registry_schema = REGISTRY[schema_key] if schema_key and schema_key in REGISTRY else None
         if schema_key and registry_schema is None:
             print(f"  WARN: schema {schema_key!r} not in REGISTRY, will use build_schema")
+        self_contained = schema_key in SELF_CONTAINED_SCHEMAS
+        suffix = " [self-contained]" if self_contained else ""
         if registry_schema is not None:
             n_devices = sum(1 for n in registry_schema if n != "Metadata")
-            print(f"  root: OK  schema: {schema_key} ({n_devices} devices)")
+            print(f"  root: OK  schema: {schema_key} ({n_devices} devices){suffix}")
         else:
-            print("  root: OK  schema: <auto: build_schema fallback>")
+            print(f"  root: OK  schema: <auto: build_schema fallback>{suffix}")
 
         if not epochs:
             disk_epochs = list_epoch_dirs(root)
@@ -121,14 +124,6 @@ def main() -> int:
 
         for i, epoch in enumerate(epoch_iter):
             start = normalise_timestamp(epoch["start"])
-            if i + 1 < len(epoch_iter):
-                end: pd.Timestamp | None = normalise_timestamp(epoch_iter[i + 1]["start"])
-            elif dataset_end is not None:
-                end = dataset_end
-            else:
-                later = [ts for ts, _ in list_epoch_dirs(root) if ts > start]
-                end = later[0] if later else None
-
             label = epoch.get("phase") or epoch.get("ssid") or "epoch"
             start_safe = start.strftime("%Y-%m-%dT%H-%M-%S")
             epoch_dir = Path(root) / start_safe
@@ -136,7 +131,24 @@ def main() -> int:
             issues: list[str] = []
             if not epoch_dir.is_dir():
                 issues.append(f"MISSING epoch dir: {start_safe}")
+            elif self_contained:
+                derived = derive_epoch_window(epoch_dir)
+                if derived is None:
+                    issues.append("filename-window derivation failed (no parseable filenames)")
+                schema = registry_schema if registry_schema is not None else build_schema(
+                    str(epoch_dir),
+                    start=start,
+                    end=derived[1] if derived is not None else start + pd.Timedelta(hours=1),
+                )
+                issues.extend(check_readers(epoch_dir, schema))
             else:
+                if i + 1 < len(epoch_iter):
+                    end: pd.Timestamp | None = normalise_timestamp(epoch_iter[i + 1]["start"])
+                elif dataset_end is not None:
+                    end = dataset_end
+                else:
+                    later = [ts for ts, _ in list_epoch_dirs(root) if ts > start]
+                    end = later[0] if later else None
                 if registry_schema is not None:
                     schema = registry_schema
                 else:

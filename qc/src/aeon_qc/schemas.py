@@ -152,25 +152,18 @@ social04 = DotMap(
     ]
 )
 
-# Octagon 0.1 experiment. Verified against aeon_mecha/aeon/schema/schemas.py (octagon01).
-# Note: no Heartbeat or MessageLog devices — heartbeat_gaps, sync_delta, and
-# harp_sync_alerts will return empty results for this schema.
+# Octagon 0.1 experiment. The Photodiode is a continuous 1 kHz Harp stream
+# (via PhotodiodeReader, a HarpRate subclass) so run_qc dispatches harp_gaps
+# on it. The OSC, TaskLogic, and Wall stream classes live in aeon_qc.octagon
+# for future event-count metrics, but they are intentionally not listed
+# here because run_qc has no dispatch for those reader types yet.
 octagon01 = DotMap(
     [
         Device("Metadata", stream.Metadata),
         Device("CameraTop", stream.Video),
         Device("CameraColorTop", stream.Video),
         Device("Photodiode", octagon.Photodiode),
-        Device("OSC", octagon.OSC),
-        Device("TaskLogic", octagon.TaskLogic),
-        Device("Wall1", octagon.Wall),
-        Device("Wall2", octagon.Wall),
-        Device("Wall3", octagon.Wall),
-        Device("Wall4", octagon.Wall),
-        Device("Wall5", octagon.Wall),
-        Device("Wall6", octagon.Wall),
-        Device("Wall7", octagon.Wall),
-        Device("Wall8", octagon.Wall),
+        Device("VideoController", octagon.VideoController),
     ]
 )
 
@@ -181,6 +174,13 @@ REGISTRY: dict[str, Any] = {
     "social04": social04,
     "octagon01": octagon01,
 }
+
+# Schemas whose epoch directories are standalone sessions, not chunks of a
+# continuous experiment. For these, each epoch directory is the natural QC
+# scope: per-reader loads use the epoch dir as the root (so chunks from
+# neighbouring sessions can't bleed in), and epoch_gaps is skipped because
+# inter-session pauses are expected.
+SELF_CONTAINED_SCHEMAS: set[str] = {"octagon01"}
 
 
 def parse_epoch_timestamp(epoch_dir: Path) -> pd.Timestamp:

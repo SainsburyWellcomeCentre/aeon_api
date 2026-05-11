@@ -10,14 +10,14 @@ from typing import Any
 import pandas as pd
 import yaml
 from swc.aeon.io.api import Reader
-from swc.aeon.io.reader import Encoder, Heartbeat, Video
+from swc.aeon.io.reader import Encoder, Harp, Heartbeat, Video
 
-from aeon_qc.encoder import encoder_gaps
 from aeon_qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
 from aeon_qc.epochs import epoch_gaps
+from aeon_qc.harp import harp_gaps
 from aeon_qc.heartbeat import heartbeat_duplicates, heartbeat_gaps
 from aeon_qc.pellet import pellet_failures
-from aeon_qc.schemas import normalise_timestamp
+from aeon_qc.schemas import is_epoch_dir, normalise_timestamp
 from aeon_qc.sync import MIN_DEVICES, sync_delta
 from aeon_qc.video import dropped_frames, frame_rate_stability
 
@@ -42,7 +42,9 @@ def run_qc(
     """Run all applicable QC checks against every stream in a schema DotMap."""
     start = normalise_timestamp(start)
     end = normalise_timestamp(end) if end is not None else None
-    results: dict[str, pd.DataFrame] = {"epoch_gaps": epoch_gaps(root, start=start, end=end)}
+    results: dict[str, pd.DataFrame] = {}
+    if not is_epoch_dir(Path(root)):
+        results["epoch_gaps"] = epoch_gaps(root, start=start, end=end)
     heartbeat_readers: dict[str, Heartbeat] = {}
     device_streams: dict[str, dict[str, Reader]] = {}
     for qualified_name, reader in iter_readers(schema):
@@ -64,7 +66,10 @@ def run_qc(
                 root, reader, start=start, end=end
             )
         elif isinstance(reader, Encoder):
-            results[qualified_name] = encoder_gaps(root, reader, start=start, end=end)
+            reader.expected_hz = 500.0
+            results[qualified_name] = harp_gaps(root, reader, start=start, end=end)
+        elif isinstance(reader, Harp) and hasattr(reader, "expected_hz"):
+            results[qualified_name] = harp_gaps(root, reader, start=start, end=end)
     if len(heartbeat_readers) >= MIN_DEVICES:
         results["sync_delta"] = sync_delta(root, heartbeat_readers, start=start, end=end)
 
@@ -125,7 +130,7 @@ def generate_report(
         elif "second_before" in df.columns:
             report["devices"][device_name] = heartbeat_section(df)
         elif "n_missed" in df.columns:
-            report["devices"][device_name] = encoder_section(df)
+            report["devices"][device_name] = harp_gaps_section(df)
         elif "duration" in df.columns and "state" in df.columns:
             report["devices"][device_name] = environment_state_section(df)
         elif "outcome" in df.columns:
@@ -290,13 +295,15 @@ def epoch_gaps_section(df: pd.DataFrame) -> dict[str, Any]:
     return {"metric": "epoch_gaps", "summary": summary, "detail": detail}
 
 
-def encoder_section(df: pd.DataFrame) -> dict[str, Any]:
-    """Build the YAML section for an encoder_gaps result."""
+def harp_gaps_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a harp_gaps result on a continuous-rate Harp stream."""
     data_found = df.attrs.get("data_found", True)
     n_samples = df.attrs.get("n_samples", 0)
+    expected_hz = df.attrs.get("expected_hz")
     if df.empty:
         summary: dict[str, Any] = {
             "data_found": data_found,
+            "expected_hz": expected_hz,
             "n_samples": n_samples,
             "n_gap_events": 0,
             "total_missed_samples": 0,
@@ -306,6 +313,7 @@ def encoder_section(df: pd.DataFrame) -> dict[str, Any]:
     else:
         summary = {
             "data_found": data_found,
+            "expected_hz": expected_hz,
             "n_samples": n_samples,
             "n_gap_events": len(df),
             "total_missed_samples": int(df["n_missed"].sum()),
@@ -313,12 +321,13 @@ def encoder_section(df: pd.DataFrame) -> dict[str, Any]:
         }
         detail = [
             {
+                "time": row.Index.isoformat(),
                 "duration_ms": float(row.duration.total_seconds() * 1000),
                 "n_missed": int(row.n_missed),
             }
             for row in df.itertuples()
         ]
-    return {"metric": "encoder_gaps", "summary": summary, "detail": detail}
+    return {"metric": "harp_gaps", "summary": summary, "detail": detail}
 
 
 def pellet_section(df: pd.DataFrame) -> dict[str, Any]:

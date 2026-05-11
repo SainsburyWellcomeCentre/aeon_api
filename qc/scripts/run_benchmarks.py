@@ -18,6 +18,7 @@ import yaml
 from aeon_qc import generate_report, run_qc, save_results
 from aeon_qc.schemas import (
     REGISTRY,
+    SELF_CONTAINED_SCHEMAS,
     build_schema,
     derive_epoch_window,
     is_epoch_dir,
@@ -107,6 +108,7 @@ def main() -> None:
         registry_schema = REGISTRY[schema_key] if schema_key and schema_key in REGISTRY else None
         if schema_key and registry_schema is None:
             print(f"  WARN: schema {schema_key!r} not in REGISTRY, falling back to build_schema")
+        self_contained = schema_key in SELF_CONTAINED_SCHEMAS
 
         output_dir = Path(args.output) / dataset["name"]
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -117,15 +119,34 @@ def main() -> None:
 
         for i, epoch in enumerate(epochs):
             start = normalise_timestamp(epoch["start"])
+            label = epoch.get("phase") or epoch.get("ssid") or "epoch"
+            start_safe = start.strftime("%Y-%m-%dT%H-%M-%S")
+            stem = f"{label}_{start_safe}"
+
+            if self_contained:
+                epoch_root = Path(root) / start_safe
+                if not epoch_root.is_dir():
+                    print(f"  [{i + 1}/{len(epochs)}] {stem}: SKIP (epoch dir not found)")
+                    continue
+                derived = derive_epoch_window(epoch_root)
+                if derived is None:
+                    print(f"  [{i + 1}/{len(epochs)}] {stem}: SKIP (no parseable filenames)")
+                    continue
+                load_start, load_end = start, derived[1]
+                qc_root: str = str(epoch_root)
+                schema = registry_schema if registry_schema is not None else build_schema(
+                    qc_root, start=load_start, end=load_end
+                )
+                print(f"  [{i + 1}/{len(epochs)}] {stem}")
+                run_epoch(qc_root, schema, load_start, load_end, output_dir, stem)
+                continue
+
             if i + 1 < len(epochs):
                 end: pd.Timestamp | None = normalise_timestamp(epochs[i + 1]["start"])
             elif dataset_end is not None:
                 end = dataset_end
             else:
                 end = next_epoch_on_disk(root, start)
-            label = epoch.get("phase") or epoch.get("ssid") or "epoch"
-            start_safe = start.strftime("%Y-%m-%dT%H-%M-%S")
-            stem = f"{label}_{start_safe}"
 
             schema = registry_schema if registry_schema is not None else build_schema(
                 root, start=start, end=end if end is not None else start + pd.Timedelta(hours=1)

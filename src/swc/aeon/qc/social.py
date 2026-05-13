@@ -7,7 +7,7 @@ import swc.aeon.io.reader as _reader
 import swc.aeon.schema.core as _stream
 from swc.aeon.schema.streams import Stream, StreamGroup
 
-from aeon_qc.foraging import Feeder
+from swc.aeon.qc.foraging import Feeder
 
 
 class BlockState(Stream):

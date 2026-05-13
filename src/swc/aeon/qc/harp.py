@@ -2,7 +2,7 @@
 
 A reader is treated as continuous-rate when it has an ``expected_hz`` attribute
 set on the instance. Stream classes tag the reader at construction time (see
-``aeon_qc.octagon.Photodiode`` / ``VideoController``); ``run_qc`` dispatches
+``swc.aeon.qc.octagon.Photodiode`` / ``VideoController``); ``run_qc`` dispatches
 ``harp_gaps`` on any ``Harp`` reader that has that attribute.
 """
 

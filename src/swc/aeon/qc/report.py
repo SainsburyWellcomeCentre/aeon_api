@@ -12,14 +12,14 @@ import yaml
 from swc.aeon.io.api import Reader
 from swc.aeon.io.reader import Encoder, Harp, Heartbeat, Video
 
-from aeon_qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
-from aeon_qc.epochs import epoch_gaps
-from aeon_qc.harp import harp_gaps
-from aeon_qc.heartbeat import heartbeat_duplicates, heartbeat_gaps
-from aeon_qc.pellet import pellet_failures
-from aeon_qc.schemas import is_epoch_dir, normalise_timestamp
-from aeon_qc.sync import MIN_DEVICES, sync_delta
-from aeon_qc.video import dropped_frames, frame_rate_stability
+from swc.aeon.qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
+from swc.aeon.qc.epochs import epoch_gaps
+from swc.aeon.qc.harp import harp_gaps
+from swc.aeon.qc.heartbeat import heartbeat_duplicates, heartbeat_gaps
+from swc.aeon.qc.pellet import pellet_failures
+from swc.aeon.qc.schemas import is_epoch_dir, normalise_timestamp
+from swc.aeon.qc.sync import MIN_DEVICES, sync_delta
+from swc.aeon.qc.video import dropped_frames, frame_rate_stability
 
 
 def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:

@@ -23,7 +23,7 @@ from swc.aeon.io.api import load
 from swc.aeon.io.reader import Metadata as MetadataReader
 from swc.aeon.schema.streams import Device
 
-from aeon_qc import foraging, octagon, social
+from swc.aeon.qc import foraging, octagon, social
 
 EPOCH_DIR_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$")
 
@@ -154,7 +154,7 @@ social04 = DotMap(
 
 # Octagon 0.1 experiment. The Photodiode is a continuous 1 kHz Harp stream
 # (via PhotodiodeReader, a HarpRate subclass) so run_qc dispatches harp_gaps
-# on it. The OSC, TaskLogic, and Wall stream classes live in aeon_qc.octagon
+# on it. The OSC, TaskLogic, and Wall stream classes live in swc.aeon.qc.octagon
 # for future event-count metrics, but they are intentionally not listed
 # here because run_qc has no dispatch for those reader types yet.
 octagon01 = DotMap(

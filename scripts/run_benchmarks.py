@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run aeon_qc over every epoch defined in benchmarks.yaml.
+"""Run swc.aeon.qc over every epoch defined in benchmarks.yaml.
 
 Usage:
     uv run python scripts/run_benchmarks.py [options]
@@ -15,8 +15,8 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from aeon_qc import generate_report, run_qc, save_results
-from aeon_qc.schemas import (
+from swc.aeon.qc import generate_report, run_qc, save_results
+from swc.aeon.qc.schemas import (
     REGISTRY,
     SELF_CONTAINED_SCHEMAS,
     build_schema,

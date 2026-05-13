@@ -161,5 +161,5 @@ print(f"{len(df)} heartbeat gap(s)")
 ## Next steps
 
 - See [Interactive QC on an Aeon dataset](run-qc.md) for exploring results in a notebook.
-- See the [API reference](xref:aeon_qc) for full function signatures.
+- See the [API reference](xref:swc.aeon.qc) for full function signatures.
 - See [aeon_roadmap#40](https://github.com/SainsburyWellcomeCentre/aeon_roadmap/issues/40) for the full list of requested metrics.

@@ -1,8 +1,8 @@
-# Benchmark datasets for aeon_qc.
+# Benchmark datasets for swc.aeon.qc.
 # Usage:
 #   import yaml, pandas as pd
-#   from aeon_qc import run_qc
-#   from aeon_qc.schemas import REGISTRY
+#   from swc.aeon.qc import run_qc
+#   from swc.aeon.qc.schemas import REGISTRY
 #
 #   with open("benchmarks.yaml") as f:
 #       benchmarks = yaml.safe_load(f)

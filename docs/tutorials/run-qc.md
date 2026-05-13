@@ -41,7 +41,7 @@ From the repository root:
 ./deploy.cmd
 ```
 
-This creates a `.venv`, installs all dependencies, and makes the `aeon_qc` package importable within that environment.
+This creates a `.venv`, installs all dependencies, and makes the `swc.aeon.qc` package importable within that environment.
 
 ---
 
@@ -50,8 +50,8 @@ This creates a `.venv`, installs all dependencies, and makes the `aeon_qc` packa
 The fastest way to run all checks on a dataset is to auto-discover the device schema from `Metadata.yml` and pass it to `run_qc`:
 
 ```python
-from aeon_qc import run_qc, generate_report
-from aeon_qc.schemas import schema_from_metadata
+from swc.aeon.qc import run_qc, generate_report
+from swc.aeon.qc.schemas import schema_from_metadata
 
 root = "/ceph/aeon/aeon/data/raw/AEON3/social0.2"
 start = "2024-02-01T22-00-00"   # filesystem format; ISO 8601 strings and pd.Timestamp also accepted
@@ -98,7 +98,7 @@ Predefined schemas for legacy Aeon experiments is recapitulated from aeon_mecha 
 To use a pre-defined schema from the registry:
 
 ```python
-from aeon_qc.schemas import REGISTRY
+from swc.aeon.qc.schemas import REGISTRY
 
 schema = REGISTRY["social02"]   # covers all streams for the social 0.2 experiment
 ```
@@ -223,7 +223,7 @@ df = results["Environment.message_log"]
 `generate_report` writes a structured summary to disk:
 
 ```python
-from aeon_qc import generate_report
+from swc.aeon.qc import generate_report
 
 generate_report(root, results, "reports/social02_aeon3.yaml", start=start, end=end)
 ```
@@ -269,7 +269,7 @@ To avoid re-running QC for downstream analysis, pickle the results dict:
 
 ```python
 import pickle
-from aeon_qc import save_results
+from swc.aeon.qc import save_results
 
 save_results(results, "reports/social02_aeon3.pkl")
 
@@ -283,5 +283,5 @@ with open("reports/social02_aeon3.pkl", "rb") as f:
 ## Next steps
 
 - To run QC systematically across many datasets and epochs, see [Batch QC with benchmarks.yaml](batch-qc.md).
-- See the [API reference](xref:aeon_qc) for full function signatures and return value descriptions.
+- See the [API reference](xref:swc.aeon.qc) for full function signatures and return value descriptions.
 - See [aeon_roadmap#40](https://github.com/SainsburyWellcomeCentre/aeon_roadmap/issues/40) for the full list of requested metrics and their implementation status.

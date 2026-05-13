@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-flight check for aeon_qc benchmarks.
+"""Pre-flight check for swc.aeon.qc benchmarks.
 
 Replicates the discovery logic of scripts/run_benchmarks.py without calling
 ``swc.aeon.io.api.load()``: resolves the schema the same way (REGISTRY or
@@ -23,8 +23,8 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from aeon_qc.report import iter_readers
-from aeon_qc.schemas import (
+from swc.aeon.qc.report import iter_readers
+from swc.aeon.qc.schemas import (
     REGISTRY,
     SELF_CONTAINED_SCHEMAS,
     build_schema,

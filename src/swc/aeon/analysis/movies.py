@@ -55,14 +55,12 @@ def groupframes(frames, n, fun):
     :param callable fun: The function used to process each group of frames.
     :return: An iterable returning the results of applying the function to each group.
     """
-    i = 0
     group = []
     for frame in frames:
         group.append(frame)
         if len(group) >= n:
             yield fun(group)
             group.clear()
-            i = i + 1
 
 
 def triggerclip(data, events, before=None, after=None):

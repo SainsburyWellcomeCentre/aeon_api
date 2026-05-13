@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aeon-qc"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "Data quality control metrics for Project Aeon datasets."
+license = "BSD-3-Clause"
+dependencies = [
+  "swc-aeon==0.2.0",
+  "pyyaml",
+  "numpy>=1.26.4",
+  "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+  "ruff",
+  "pyright",
+  "ipykernel",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+lint.select = [
+  "E",
+  "W",
+  "F",
+  "I",
+  "D",
+  "UP",
+  "S",
+  "B",
+  "A",
+  "C4",
+  "ICN",
+  "PIE",
+  "PT",
+  "SIM",
+  "PL",
+]
+lint.ignore = [
+  "E731",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+]
+line-length = 108
+extend-exclude = [
+  ".git",
+  ".github",
+  ".idea",
+  "*.ipynb",
+  ".vscode",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/aeon_qc/octagon.py"  = ["D101", "D106", "D107"]
+"src/aeon_qc/social.py"   = ["D107", "D401"]
+"src/aeon_qc/foraging.py" = ["D101", "D107"]
+"src/aeon_qc/ephys.py"    = ["D107"]
+
+
+[tool.pyright]
+useLibraryCodeForTypes = false
+reportMissingImports = "none"
+reportImportCycles = "error"
+reportUnusedImport = "error"
+reportUnusedClass = "error"
+reportUnusedFunction = "error"
+reportUnusedVariable = "error"
+reportDuplicateImport = "error"
+reportWildcardImportFromLibrary = "error"
+reportPrivateUsage = "error"
+reportCallInDefaultInitializer = "error"
+reportUnnecessaryIsInstance = "error"
+reportUnnecessaryCast = "error"
+reportUnnecessaryComparison = "error"
+reportUnnecessaryContains = "error"
+reportAssertAlwaysTrue = "error"
+reportSelfClsParameterName = "error"
+reportUnusedExpression = "error"
+reportMatchNotExhaustive = "error"
+# *Note*: we may want to set all 'ReportOptional*' rules to "none", but leaving 'em default for now
+venvPath = "."
+venv = ".venv"
+exclude = [".venv/*"]
+
+[tool.pytest.ini_options]
+markers = ["api"]
+pythonpath = ["src"]
+addopts = [
+  "--cov=src/aeon_qc"
+]

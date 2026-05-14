@@ -96,7 +96,6 @@ def test_gridframes(width, height, shape, n_frames, checks):
         assert result[row, col, 0] == expected
 
 
-@pytest.mark.xfail(reason="np.sum in averageframes has no axis, reduces frames to scalar")
 @pytest.mark.parametrize(
     ("frames", "expected"),
     [
@@ -111,14 +110,7 @@ def test_gridframes(width, height, shape, n_frames, checks):
     ],
 )
 def test_averageframes(frames, expected):
-    """Test averageframes with varying frame inputs.
-
-    This test currently fails as averageframes calls np.sum with no axis,
-    which reduces all pixel values to a scalar before convertScaleAbs,
-    so the output shape does not match the input frame shape.
-    The expected behaviour is described in the test cases, and this failing test
-    serves as a regression test.
-    """
+    """Test averageframes with varying frame inputs."""
     result = movies.averageframes(frames)
     assert result.shape == expected.shape
     np.testing.assert_array_equal(result, expected)

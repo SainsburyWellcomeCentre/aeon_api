@@ -20,7 +20,19 @@ uv pip install swc-aeon
 ```
 git clone https://github.com/SainsburyWellcomeCentre/aeon_api
 cd aeon_api
-uv sync --all-extras
+uv sync
+```
+
+To include dev dependencies:
+
+```
+uv sync --dev
+```
+
+To include all dependency groups:
+
+```
+uv sync --all-groups
 ```
 
 ## Repository Contents

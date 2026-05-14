@@ -156,5 +156,4 @@ def activepatch(wheel, in_patch):
     exit_patch = in_patch.astype(np.int8).diff() < 0
     in_wheel = (wheel.diff().rolling("1s").sum() > 1).reindex(in_patch.index, method="pad")
     epochs = exit_patch.cumsum()
-    # return in_wheel.groupby(epochs).apply(lambda x: x.cumsum()) > 0
-    return in_wheel.groupby(epochs).cummax()
+    return in_wheel.groupby(epochs).apply(lambda x: x.cumsum()) > 0

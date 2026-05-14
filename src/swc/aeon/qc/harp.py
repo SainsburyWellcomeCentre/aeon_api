@@ -10,6 +10,7 @@ import datetime
 from os import PathLike
 
 import pandas as pd
+
 from swc.aeon.io.api import load
 from swc.aeon.io.reader import Harp
 

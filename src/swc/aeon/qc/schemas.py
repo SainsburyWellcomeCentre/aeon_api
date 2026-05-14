@@ -17,13 +17,13 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import swc.aeon.schema.core as stream
 from dotmap import DotMap
+
+import swc.aeon.schema.core as stream
 from swc.aeon.io.api import load
 from swc.aeon.io.reader import Metadata as MetadataReader
-from swc.aeon.schema.streams import Device
-
 from swc.aeon.qc import foraging, octagon, social
+from swc.aeon.schema.streams import Device
 
 EPOCH_DIR_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$")
 

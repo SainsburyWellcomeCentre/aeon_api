@@ -5,6 +5,7 @@ from os import PathLike
 
 import numpy as np
 import pandas as pd
+
 from swc.aeon.io.api import load
 from swc.aeon.io.reader import Heartbeat
 

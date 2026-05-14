@@ -9,9 +9,9 @@ from typing import Any
 
 import pandas as pd
 import yaml
+
 from swc.aeon.io.api import Reader
 from swc.aeon.io.reader import Encoder, Harp, Heartbeat, Video
-
 from swc.aeon.qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
 from swc.aeon.qc.epochs import epoch_gaps
 from swc.aeon.qc.harp import harp_gaps

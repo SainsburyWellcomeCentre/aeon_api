@@ -5,9 +5,8 @@ Ported from ``aeon_mecha/aeon/schema/social_02.py``.
 
 import swc.aeon.io.reader as _reader
 import swc.aeon.schema.core as _stream
-from swc.aeon.schema.streams import Stream, StreamGroup
-
 from swc.aeon.qc.foraging import Feeder
+from swc.aeon.schema.streams import Stream, StreamGroup
 
 
 class BlockState(Stream):

@@ -6,6 +6,7 @@ Ported from ``aeon_mecha/aeon/schema/foraging.py``.
 from enum import Enum
 
 import pandas as pd
+
 import swc.aeon.io.reader as _reader
 import swc.aeon.schema.core as _stream
 from swc.aeon.schema.streams import Stream, StreamGroup

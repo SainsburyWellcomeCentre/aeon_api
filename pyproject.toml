@@ -30,7 +30,7 @@ dependencies = [
   "pydantic-yaml>=1.6.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
   "pandas-stubs",
   "pre-commit",

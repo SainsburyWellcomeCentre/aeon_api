@@ -128,7 +128,7 @@ def frame_rate_stability(
     )
     upper = 5.0 * median_ms if median_ms > 0 else float(intervals_ms.max())
     bin_edges = np.linspace(0.0, upper, HISTOGRAM_BINS + 1)
-    counts, _ = np.histogram(intervals_ms.values, bins=bin_edges)
+    counts, _ = np.histogram(intervals_ms.to_numpy(), bins=bin_edges)
     result.attrs["histogram_bin_edges_ms"] = bin_edges
     result.attrs["histogram_counts"] = counts
     result.attrs["histogram_n_above"] = int((intervals_ms > upper).sum())

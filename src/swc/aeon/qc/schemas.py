@@ -22,7 +22,18 @@ from dotmap import DotMap
 import swc.aeon.schema.core as stream
 from swc.aeon.io.api import load
 from swc.aeon.io.reader import Metadata as MetadataReader
-from swc.aeon.qc import foraging, octagon, social
+from swc.aeon.qc.foraging import Patch as ForagingPatch
+from swc.aeon.qc.foraging import Region, Weight
+from swc.aeon.qc.octagon import Photodiode, VideoController
+from swc.aeon.qc.social import (
+    Environment,
+    Pose,
+    RfidEvents,
+    SubjectData,
+    WeightFiltered,
+    WeightRaw,
+)
+from swc.aeon.qc.social import Patch as SocialPatch
 from swc.aeon.schema.streams import Device
 
 EPOCH_DIR_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$")
@@ -35,7 +46,7 @@ exp02 = DotMap(
         Device("ClockSynchronizer", stream.Heartbeat),
         Device("VideoController", stream.Heartbeat),
         Device("ExperimentalMetadata", stream.Environment, stream.MessageLog),
-        Device("CameraTop", stream.Video, stream.Position, foraging.Region),
+        Device("CameraTop", stream.Video, stream.Position, Region),
         Device("CameraEast", stream.Video),
         Device("CameraNest", stream.Video),
         Device("CameraNorth", stream.Video),
@@ -43,9 +54,9 @@ exp02 = DotMap(
         Device("CameraPatch2", stream.Video),
         Device("CameraSouth", stream.Video),
         Device("CameraWest", stream.Video),
-        Device("Nest", foraging.Weight),
-        Device("Patch1", stream.Heartbeat, foraging.Patch),
-        Device("Patch2", stream.Heartbeat, foraging.Patch),
+        Device("Nest", Weight),
+        Device("Patch1", stream.Heartbeat, ForagingPatch),
+        Device("Patch2", stream.Heartbeat, ForagingPatch),
     ]
 )
 
@@ -56,8 +67,8 @@ social02 = DotMap(
         # Harp timing devices
         Device("ClockSynchronizer", stream.Heartbeat),
         Device("VideoController", stream.Heartbeat),
-        Device("Environment", social.Environment, social.SubjectData),
-        Device("CameraTop", stream.Video, social.Pose),
+        Device("Environment", Environment, SubjectData),
+        Device("CameraTop", stream.Video, Pose),
         Device("CameraNorth", stream.Video),
         Device("CameraSouth", stream.Video),
         Device("CameraEast", stream.Video),
@@ -66,16 +77,16 @@ social02 = DotMap(
         Device("CameraPatch2", stream.Video),
         Device("CameraPatch3", stream.Video),
         Device("CameraNest", stream.Video),
-        Device("Nest", social.WeightRaw, social.WeightFiltered),
-        Device("Patch1", stream.Heartbeat, social.Patch),
-        Device("Patch2", stream.Heartbeat, social.Patch),
-        Device("Patch3", stream.Heartbeat, social.Patch),
-        Device("GateRfid", stream.Heartbeat, social.RfidEvents),
-        Device("NestRfid1", stream.Heartbeat, social.RfidEvents),
-        Device("NestRfid2", stream.Heartbeat, social.RfidEvents),
-        Device("Patch1Rfid", stream.Heartbeat, social.RfidEvents),
-        Device("Patch2Rfid", stream.Heartbeat, social.RfidEvents),
-        Device("Patch3Rfid", stream.Heartbeat, social.RfidEvents),
+        Device("Nest", WeightRaw, WeightFiltered),
+        Device("Patch1", stream.Heartbeat, SocialPatch),
+        Device("Patch2", stream.Heartbeat, SocialPatch),
+        Device("Patch3", stream.Heartbeat, SocialPatch),
+        Device("GateRfid", stream.Heartbeat, RfidEvents),
+        Device("NestRfid1", stream.Heartbeat, RfidEvents),
+        Device("NestRfid2", stream.Heartbeat, RfidEvents),
+        Device("Patch1Rfid", stream.Heartbeat, RfidEvents),
+        Device("Patch2Rfid", stream.Heartbeat, RfidEvents),
+        Device("Patch3Rfid", stream.Heartbeat, RfidEvents),
     ]
 )
 
@@ -87,8 +98,8 @@ social03 = DotMap(
         # Harp timing devices
         Device("ClockSynchronizer", stream.Heartbeat),
         Device("VideoController", stream.Heartbeat),
-        Device("Environment", social.Environment, social.SubjectData),
-        Device("CameraTop", stream.Video, social.Pose),
+        Device("Environment", Environment, SubjectData),
+        Device("CameraTop", stream.Video, Pose),
         Device("CameraNorth", stream.Video),
         Device("CameraSouth", stream.Video),
         Device("CameraEast", stream.Video),
@@ -97,20 +108,20 @@ social03 = DotMap(
         Device("CameraPatch2", stream.Video),
         Device("CameraPatch3", stream.Video),
         Device("CameraNest", stream.Video),
-        Device("Nest", social.WeightRaw, social.WeightFiltered),
-        Device("Patch1", stream.Heartbeat, social.Patch),
-        Device("Patch2", stream.Heartbeat, social.Patch),
-        Device("Patch3", stream.Heartbeat, social.Patch),
-        Device("PatchDummy1", stream.Heartbeat, social.Patch),
-        Device("GateRfid", stream.Heartbeat, social.RfidEvents),
-        Device("GateEastRfid", stream.Heartbeat, social.RfidEvents),
-        Device("GateWestRfid", stream.Heartbeat, social.RfidEvents),
-        Device("NestRfid1", stream.Heartbeat, social.RfidEvents),
-        Device("NestRfid2", stream.Heartbeat, social.RfidEvents),
-        Device("Patch1Rfid", stream.Heartbeat, social.RfidEvents),
-        Device("Patch2Rfid", stream.Heartbeat, social.RfidEvents),
-        Device("Patch3Rfid", stream.Heartbeat, social.RfidEvents),
-        Device("PatchDummy1Rfid", stream.Heartbeat, social.RfidEvents),
+        Device("Nest", WeightRaw, WeightFiltered),
+        Device("Patch1", stream.Heartbeat, SocialPatch),
+        Device("Patch2", stream.Heartbeat, SocialPatch),
+        Device("Patch3", stream.Heartbeat, SocialPatch),
+        Device("PatchDummy1", stream.Heartbeat, SocialPatch),
+        Device("GateRfid", stream.Heartbeat, RfidEvents),
+        Device("GateEastRfid", stream.Heartbeat, RfidEvents),
+        Device("GateWestRfid", stream.Heartbeat, RfidEvents),
+        Device("NestRfid1", stream.Heartbeat, RfidEvents),
+        Device("NestRfid2", stream.Heartbeat, RfidEvents),
+        Device("Patch1Rfid", stream.Heartbeat, RfidEvents),
+        Device("Patch2Rfid", stream.Heartbeat, RfidEvents),
+        Device("Patch3Rfid", stream.Heartbeat, RfidEvents),
+        Device("PatchDummy1Rfid", stream.Heartbeat, RfidEvents),
     ]
 )
 
@@ -122,22 +133,22 @@ social04 = DotMap(
         Device("ClockSynchronizer", stream.Heartbeat),
         Device("VideoController", stream.Heartbeat),
         # Patches (UndergroundFeeder — same type as social02)
-        Device("Patch1", stream.Heartbeat, social.Patch),
-        Device("Patch2", stream.Heartbeat, social.Patch),
-        Device("Patch3", stream.Heartbeat, social.Patch),
-        Device("PatchDummy1", stream.Heartbeat, social.Patch),
+        Device("Patch1", stream.Heartbeat, SocialPatch),
+        Device("Patch2", stream.Heartbeat, SocialPatch),
+        Device("Patch3", stream.Heartbeat, SocialPatch),
+        Device("PatchDummy1", stream.Heartbeat, SocialPatch),
         # Nest weight scale (registers 200, 202 confirmed on disk)
-        Device("Nest", social.WeightRaw, social.WeightFiltered),
+        Device("Nest", WeightRaw, WeightFiltered),
         # RFID readers (register 32, same as social02)
-        Device("NestRfid1", social.RfidEvents),
-        Device("NestRfid2", social.RfidEvents),
-        Device("GateRfid", social.RfidEvents),
-        Device("GateEastRfid", stream.Heartbeat, social.RfidEvents),
-        Device("GateWestRfid", stream.Heartbeat, social.RfidEvents),
-        Device("Patch1Rfid", social.RfidEvents),
-        Device("Patch2Rfid", social.RfidEvents),
-        Device("Patch3Rfid", social.RfidEvents),
-        Device("PatchDummy1Rfid", stream.Heartbeat, social.RfidEvents),
+        Device("NestRfid1", RfidEvents),
+        Device("NestRfid2", RfidEvents),
+        Device("GateRfid", RfidEvents),
+        Device("GateEastRfid", stream.Heartbeat, RfidEvents),
+        Device("GateWestRfid", stream.Heartbeat, RfidEvents),
+        Device("Patch1Rfid", RfidEvents),
+        Device("Patch2Rfid", RfidEvents),
+        Device("Patch3Rfid", RfidEvents),
+        Device("PatchDummy1Rfid", stream.Heartbeat, RfidEvents),
         # Cameras (SpinnakerVideoSource)
         Device("CameraTop", stream.Video),
         Device("CameraWest", stream.Video),
@@ -162,8 +173,8 @@ octagon01 = DotMap(
         Device("Metadata", stream.Metadata),
         Device("CameraTop", stream.Video),
         Device("CameraColorTop", stream.Video),
-        Device("Photodiode", octagon.Photodiode),
-        Device("VideoController", octagon.VideoController),
+        Device("Photodiode", Photodiode),
+        Device("VideoController", VideoController),
     ]
 )
 

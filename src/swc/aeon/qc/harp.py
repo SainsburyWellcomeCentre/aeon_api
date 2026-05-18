@@ -31,7 +31,7 @@ def harp_gaps(
     ``threshold`` (default 1 s) are flagged. Returns columns ``duration``,
     ``n_missed``, ``device``.
     """
-    expected_hz: float = reader.expected_hz
+    expected_hz: float = reader.expected_hz  # pyright: ignore[reportAttributeAccessIssue]
     expected_interval = pd.Timedelta(seconds=1.0 / expected_hz)
 
     data = load(root, reader, start=start, end=end)
@@ -52,7 +52,7 @@ def harp_gaps(
     gap_ends = data.index[gap_mask]
     gap_starts = gap_ends - deltas[gap_mask]
     durations = deltas[gap_mask]
-    n_missed = (durations / expected_interval).round().astype(int)
+    n_missed = (durations / expected_interval).round().astype(int)  # pyright: ignore[reportOperatorIssue]
 
     result = pd.DataFrame(
         {

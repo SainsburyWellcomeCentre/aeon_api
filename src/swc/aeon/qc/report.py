@@ -1,5 +1,14 @@
 """High-level run_qc orchestration and YAML report generation."""
 
+# This file uses a file-wide pyright directive because the row-iteration
+# pattern (df.itertuples() / df.iloc[0]) appears in 10+ helpers below and
+# pandas-stubs returns broad unions for row attributes (Scalar, Properties).
+# Suppressing per-line would mean ~170 ignores; suppressing per-rule once is
+# cleaner. Other QC files (octagon.py, harp.py) suppress the same rule with
+# per-line `# pyright: ignore[reportAttributeAccessIssue]` markers because
+# they have only 2-3 isolated sites - point ignores are clearer there.
+# pyright: reportAttributeAccessIssue=false, reportArgumentType=false
+
 import datetime
 import pickle
 from collections.abc import Iterator

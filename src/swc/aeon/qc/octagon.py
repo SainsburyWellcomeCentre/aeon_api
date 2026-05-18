@@ -18,7 +18,7 @@ class Photodiode(Stream):
 
     def __init__(self, path):
         r = reader.Harp(f"{path}_44_*", columns=["adc", "encoder"])
-        r.expected_hz = 1000.0
+        r.expected_hz = 1000.0  # pyright: ignore[reportAttributeAccessIssue]
         super().__init__(r)
 
 
@@ -27,7 +27,7 @@ class VideoController(Stream):
 
     def __init__(self, path):
         r = reader.Harp(f"{path}_92_*", columns=["trigger"])
-        r.expected_hz = 50.0
+        r.expected_hz = 50.0  # pyright: ignore[reportAttributeAccessIssue]
         super().__init__(r)
 
 

@@ -178,19 +178,11 @@ def _filter_time_range(
     Returns:
         The filtered DataFrame.
     """
-    result = frame.loc[start:end]
-    if inclusive == "both" or len(result) == 0:
-        return result
-    first_idx_equals_start = result.index[0] == start
-    last_idx_equals_end = result.index[-1] == end
-    if inclusive == "left":  # drop final row if the index is equal to end
-        return result.iloc[:-1] if last_idx_equals_end else result
-    elif inclusive == "right":  # drop first row if the index is equal to start
-        return result.iloc[1:] if first_idx_equals_start else result
-    else:
-        result = result.iloc[1:] if first_idx_equals_start else result
-        result = result.iloc[:-1] if last_idx_equals_end else result
-        return result
+    idx = frame.index
+    lo = (idx >= start if inclusive in ("both", "left") else idx > start) if start is not None else None
+    hi = (idx <= end if inclusive in ("both", "right") else idx < end) if end is not None else None
+    mask = lo if hi is None else hi if lo is None else lo & hi
+    return frame[mask] if mask is not None else frame
 
 
 class Reader:
@@ -238,7 +230,7 @@ def load(
 
     Reads all chunk data using the specified data stream reader. A subset of the data can be loaded
     by specifying an optional time range, or a list of timestamps used to index the data on file.
-    Returned data will be sorted chronologically.
+    Returned data preserves the original row order from the source files.
 
     Note:
         Any timezone-naive values in `start`, `end`, and `time` will be treated as UTC.
@@ -258,7 +250,7 @@ def load(
         **kwargs: Optional keyword arguments to forward to `reader` when reading chunk data.
 
     Returns:
-        A DataFrame containing extracted chunk data, sorted by time.
+        A DataFrame containing extracted chunk data.
 
     """
     if isinstance(root, str):
@@ -328,15 +320,8 @@ def load(
 
     data = pd.concat([reader.read(file, **kwargs) for _, file in files])
     _set_index(data)
+    if not data.index.is_monotonic_increasing:
+        warnings.warn(f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2)
     if start is not None or end is not None:
-        try:
-            return _filter_time_range(data, start, end, inclusive)
-        except KeyError:
-            if not data.index.is_monotonic_increasing:
-                warnings.warn(
-                    f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2
-                )
-                data = data.sort_index()
-            else:  # pragma: no cover
-                raise
+        return _filter_time_range(data, start, end, inclusive)
     return data

@@ -336,7 +336,11 @@ def load(
                 warnings.warn(
                     f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2
                 )
-                data = data.sort_index()
+                idx = data.index
+                lo = (idx >= start if inclusive in ("both", "left") else idx > start) if start is not None else None
+                hi = (idx <= end if inclusive in ("both", "right") else idx < end) if end is not None else None
+                mask = lo if hi is None else hi if lo is None else lo & hi
+                return data[mask]
             else:  # pragma: no cover
                 raise
     return data

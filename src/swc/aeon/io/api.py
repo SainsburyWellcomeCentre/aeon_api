@@ -178,10 +178,13 @@ def _filter_time_range(
     Returns:
         The filtered DataFrame.
     """
+    mask = None
     idx = frame.index
-    lo = (idx >= start if inclusive in ("both", "left") else idx > start) if start is not None else None
-    hi = (idx <= end if inclusive in ("both", "right") else idx < end) if end is not None else None
-    mask = lo if hi is None else hi if lo is None else lo & hi
+    if start is not None:
+        mask = idx >= start if inclusive in ("both", "left") else idx > start
+    if end is not None:
+        upper = idx <= end if inclusive in ("both", "right") else idx < end
+        mask = upper if mask is None else mask & upper
     return frame[mask] if mask is not None else frame
 
 

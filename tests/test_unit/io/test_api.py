@@ -108,6 +108,19 @@ def test_chunk_key(data, expected, request):
     assert result == expected
 
 
+@pytest.fixture(params=["monotonic", "nonmonotonic"], ids=["monotonic", "nonmonotonic"])
+def filter_df(request) -> pd.DataFrame:
+    """DataFrame with 10 one-minute timestamps.
+
+    The nonmonotonic variant swaps positions 3 and 4:
+    00:00, 00:01, 00:02, 00:04, 00:03, 00:05, ...
+    """
+    idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
+    if request.param == "nonmonotonic":
+        idx_list[3], idx_list[4] = idx_list[4], idx_list[3]
+    return pd.DataFrame({"value": range(10)}, index=idx_list)
+
+
 @pytest.mark.parametrize(
     "inclusive",
     ["both", "left", "right", "neither"],
@@ -150,17 +163,9 @@ def test_chunk_key(data, expected, request):
         "end not in index",
     ],
 )
-def test_filter_time_range(start, end, inclusive, expected):
-    """Test `_filter_time_range` with a DataFrame with out-of-order DatetimeIndex.
-
-    The DataFrame has timestamps in this order (positions 3 and 4 are out-of-order):
-    00:00:00, 00:01:00, 00:02:00, 00:04:00, 00:03:00, 00:05:00, ...
-    """
-    # Create a DataFrame with out-of-order DatetimeIndex
-    idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
-    idx_list[3], idx_list[4] = idx_list[4], idx_list[3]
-    df = pd.DataFrame({"value": range(10)}, index=idx_list)
-    result = _filter_time_range(df, start, end, inclusive=inclusive)
+def test_filter_time_range(filter_df, start, end, inclusive, expected):
+    """Test `_filter_time_range` with both monotonic and non-monotonic DatetimeIndex."""
+    result = _filter_time_range(filter_df, start, end, inclusive=inclusive)
     assert len(result) == expected[inclusive]
 
 

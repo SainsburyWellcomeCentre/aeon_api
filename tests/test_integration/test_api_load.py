@@ -62,6 +62,7 @@ def test_load_start_end_boundary_inclusivity(
     assert end in data.index if expect_end_included else end not in data.index
 
 
+@pytest.mark.parametrize("sort", [True, False], ids=["sort=True", "sort=False"])
 @pytest.mark.parametrize(
     ("start", "end", "expected_len"),
     [
@@ -73,14 +74,17 @@ def test_load_start_end_boundary_inclusivity(
         "end only: all data after end, returns empty",
     ],
 )
-def test_load_nonmonotonic_with_nonexistent_time_index(nonmonotonic_dir, start, end, expected_len):
+def test_load_nonmonotonic_with_nonexistent_time_index(nonmonotonic_dir, start, end, expected_len, sort):
     """Test that filtering non-monotonic data with start/end index values that
     are not present in the data index (20 rows at 2024-07-03 10:50:xx) correctly
-    returns filtered results, but also emits a warning about out-of-order timestamps.
+    returns filtered results, emits a warning about out-of-order timestamps, and
+    respects the `sort` parameter.
     """
     with pytest.warns(UserWarning, match="out-of-order timestamps"):
-        data = load(nonmonotonic_dir, social03.CameraTop.Pose, start=start, end=end)
+        data = load(nonmonotonic_dir, social03.CameraTop.Pose, start=start, end=end, sort=sort)
     assert len(data) == expected_len
+    if expected_len > 0:
+        assert data.index.is_monotonic_increasing == sort
 
 
 @pytest.mark.parametrize(

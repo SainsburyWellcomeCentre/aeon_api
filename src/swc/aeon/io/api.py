@@ -178,6 +178,20 @@ def _filter_time_range(
     Returns:
         The filtered DataFrame.
     """
+    if frame.index.is_monotonic_increasing:
+        result = frame.loc[start:end]
+        if inclusive == "both" or len(result) == 0:
+            return result
+        if inclusive in ("left", "neither") and end is not None and result.index[-1] == end:
+            result = result.iloc[:-1]
+        if (
+            inclusive in ("right", "neither")
+            and start is not None
+            and len(result) > 0
+            and result.index[0] == start
+        ):
+            result = result.iloc[1:]
+        return result
     mask = None
     idx = frame.index
     if start is not None:

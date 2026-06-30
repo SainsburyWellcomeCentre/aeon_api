@@ -36,6 +36,7 @@ dev = [
   "pre-commit",
   "pyright",
   "pytest",
+  "pytest-benchmark",
   "pytest-cov",
   "pytest-mock",
   "ruff",
@@ -130,4 +131,5 @@ markers = ["api"]
 pythonpath = ["src"]
 addopts = [
   "--cov=src/swc/aeon",    # Enable pytest-cov for the aeon package
+  "--benchmark-skip",      # Skip benchmarks unless explicitly requested with --benchmark-enable
 ]

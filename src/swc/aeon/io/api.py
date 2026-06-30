@@ -241,13 +241,16 @@ def load(
     time: datetime.datetime | list[datetime.datetime] | pd.DatetimeIndex | pd.DataFrame | None = None,
     tolerance: pd.Timedelta | None = None,
     epoch: str | None = None,
+    sort: bool = True,
     **kwargs,
 ) -> pd.DataFrame:
     """Extracts chunk data from the root path of an Aeon dataset.
 
     Reads all chunk data using the specified data stream reader. A subset of the data can be loaded
     by specifying an optional time range, or a list of timestamps used to index the data on file.
-    Returned data preserves the original row order from the source files.
+    Returned data is sorted chronologically by default. Set ``sort=False`` to preserve
+    the original row order from the source files. A warning is emitted when the source data contains
+    out-of-order timestamps.
 
     Note:
         Any timezone-naive values in `start`, `end`, and `time` will be treated as UTC.
@@ -264,6 +267,8 @@ def load(
             DatetimeIndex specifying the timestamps to extract.
         tolerance: The maximum distance between original and new timestamps for inexact matches.
         epoch: A wildcard pattern to use when searching epoch data.
+        sort: If ``True`` (default), sort the returned data chronologically when out-of-order
+            timestamps are detected. If ``False``, preserve the original row order.
         **kwargs: Optional keyword arguments to forward to `reader` when reading chunk data.
 
     Returns:
@@ -339,6 +344,8 @@ def load(
     _set_index(data)
     if not data.index.is_monotonic_increasing:
         warnings.warn(f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2)
+        if sort:
+            data = data.sort_index()
     if start is not None or end is not None:
         return _filter_time_range(data, start, end, inclusive)
     return data

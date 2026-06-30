@@ -174,9 +174,9 @@ def test_filter_time_range(filter_df, start, end, inclusive, expected):
     ("root", "to_str", "expect_monotonic"),
     [
         ("monotonic_dir", False, True),
-        ("nonmonotonic_dir", True, False),
+        ("nonmonotonic_dir", True, True),
         (["nonmonotonic_dir", "monotonic_dir"], False, True),
-        (["monotonic_dir", "nonmonotonic_dir"], True, False),
+        (["monotonic_dir", "nonmonotonic_dir"], True, True),
     ],
     ids=[
         "PathLike",
@@ -280,6 +280,7 @@ def test_load_start_end_args(data_dir, start, end, request):
     )
     with context:
         result = load(root_dir, Encoder("Patch2_90_*"), start=start, end=end)
+    assert result.index.is_monotonic_increasing
     if start is not None:
         assert (result.index >= pd.to_datetime(start, utc=True)).all(), (
             f"Start filter failed: min index {result.index.min()} < {start}"
@@ -288,3 +289,15 @@ def test_load_start_end_args(data_dir, start, end, request):
         assert (result.index <= pd.to_datetime(end, utc=True)).all(), (
             f"End filter failed: max index {result.index.max()} > {end}"
         )
+
+
+@pytest.mark.parametrize(
+    ("sort", "expect_monotonic"),
+    [(True, True), (False, False)],
+    ids=["sort=True", "sort=False"],
+)
+def test_load_sort_arg(nonmonotonic_dir, sort, expect_monotonic):
+    """Test that `sort` controls output order for non-monotonic data, and warning is always emitted."""
+    with pytest.warns(UserWarning, match="out-of-order timestamps"):
+        result = load(nonmonotonic_dir, Encoder("Patch2_90_*"), sort=sort)
+    assert result.index.is_monotonic_increasing == expect_monotonic

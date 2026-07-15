@@ -178,19 +178,28 @@ def _filter_time_range(
     Returns:
         The filtered DataFrame.
     """
-    result = frame.loc[start:end]
-    if inclusive == "both" or len(result) == 0:
+    if frame.index.is_monotonic_increasing:
+        result = frame.loc[start:end]
+        if inclusive == "both" or len(result) == 0:
+            return result
+        if inclusive in ("left", "neither") and end is not None and result.index[-1] == end:
+            result = result.iloc[:-1]
+        if (
+            inclusive in ("right", "neither")
+            and start is not None
+            and len(result) > 0
+            and result.index[0] == start
+        ):
+            result = result.iloc[1:]
         return result
-    first_idx_equals_start = result.index[0] == start
-    last_idx_equals_end = result.index[-1] == end
-    if inclusive == "left":  # drop final row if the index is equal to end
-        return result.iloc[:-1] if last_idx_equals_end else result
-    elif inclusive == "right":  # drop first row if the index is equal to start
-        return result.iloc[1:] if first_idx_equals_start else result
-    else:
-        result = result.iloc[1:] if first_idx_equals_start else result
-        result = result.iloc[:-1] if last_idx_equals_end else result
-        return result
+    mask = None
+    idx = frame.index
+    if start is not None:
+        mask = idx >= start if inclusive in ("both", "left") else idx > start
+    if end is not None:
+        upper = idx <= end if inclusive in ("both", "right") else idx < end
+        mask = upper if mask is None else mask & upper
+    return frame[mask] if mask is not None else frame
 
 
 class Reader:
@@ -232,13 +241,16 @@ def load(
     time: datetime.datetime | list[datetime.datetime] | pd.DatetimeIndex | pd.DataFrame | None = None,
     tolerance: pd.Timedelta | None = None,
     epoch: str | None = None,
+    sort: bool = True,
     **kwargs,
 ) -> pd.DataFrame:
     """Extracts chunk data from the root path of an Aeon dataset.
 
     Reads all chunk data using the specified data stream reader. A subset of the data can be loaded
     by specifying an optional time range, or a list of timestamps used to index the data on file.
-    Returned data will be sorted chronologically.
+    Returned data is sorted chronologically by default. Set ``sort=False`` to preserve
+    the original row order from the source files. A warning is emitted when the source data contains
+    out-of-order timestamps.
 
     Note:
         Any timezone-naive values in `start`, `end`, and `time` will be treated as UTC.
@@ -255,10 +267,12 @@ def load(
             DatetimeIndex specifying the timestamps to extract.
         tolerance: The maximum distance between original and new timestamps for inexact matches.
         epoch: A wildcard pattern to use when searching epoch data.
+        sort: If ``True`` (default), sort the returned data chronologically when out-of-order
+            timestamps are detected. If ``False``, preserve the original row order.
         **kwargs: Optional keyword arguments to forward to `reader` when reading chunk data.
 
     Returns:
-        A DataFrame containing extracted chunk data, sorted by time.
+        A DataFrame containing extracted chunk data.
 
     """
     if isinstance(root, str):
@@ -328,15 +342,10 @@ def load(
 
     data = pd.concat([reader.read(file, **kwargs) for _, file in files])
     _set_index(data)
+    if not data.index.is_monotonic_increasing:
+        warnings.warn(f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2)
+        if sort:
+            data = data.sort_index()
     if start is not None or end is not None:
-        try:
-            return _filter_time_range(data, start, end, inclusive)
-        except KeyError:
-            if not data.index.is_monotonic_increasing:
-                warnings.warn(
-                    f"data index for {reader.pattern} contains out-of-order timestamps!", stacklevel=2
-                )
-                data = data.sort_index()
-            else:  # pragma: no cover
-                raise
+        return _filter_time_range(data, start, end, inclusive)
     return data

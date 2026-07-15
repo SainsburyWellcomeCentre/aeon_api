@@ -10,31 +10,32 @@ from swc.aeon.io import load
 from tests.schema import exp02, social02, social03
 
 
+@pytest.mark.filterwarnings("ignore:.*out-of-order timestamps")
 @pytest.mark.parametrize(
-    ("fixture_name", "device", "start", "end", "expected_sorted"),
+    ("fixture_name", "device", "start", "end"),
     [
-        ("nonmonotonic_dir", exp02.Patch2.Encoder, pd.Timestamp("2022-06-06T13:00:49"), None, False),
-        ("nonmonotonic_dir", exp02.Patch2.Encoder, None, pd.Timestamp("2022-06-06T13:00:49"), True),
-        ("nonmonotonic_dir", exp02.Metadata, pd.Timestamp("2022-06-06T09:00:00"), None, True),
-        ("monotonic_dir", exp02.Patch2.Encoder, None, None, True),
-        ("nonmonotonic_dir", exp02.Patch2.Encoder, None, None, False),
+        ("nonmonotonic_dir", exp02.Patch2.Encoder, pd.Timestamp("2022-06-06T13:00:49"), None),
+        ("nonmonotonic_dir", exp02.Patch2.Encoder, None, pd.Timestamp("2022-06-06T13:00:49")),
+        ("nonmonotonic_dir", exp02.Metadata, pd.Timestamp("2022-06-06T09:00:00"), None),
+        ("monotonic_dir", exp02.Patch2.Encoder, None, None),
+        ("nonmonotonic_dir", exp02.Patch2.Encoder, None, None),
     ],
     ids=[
         "non-monotonic data: start only",
         "non-monotonic data: end only",
         "non-chunked data: start only",
         "monotonic data: both start and end unspecified",
-        "nonmonotonic data: both start and end unspecified",
+        "non-monotonic data: both start and end unspecified",
     ],
 )
-def test_load_with_start_and_end_filters(fixture_name, device, start, end, expected_sorted, request):
+def test_load_with_start_and_end_filters(fixture_name, device, start, end, request):
     """Test `load` with `start` and `end` filters on monotonic, non-monotonic, and non-chunked data."""
     data_dir = request.getfixturevalue(fixture_name)
     data = load(data_dir, device, start=start, end=end)
     assert len(data) > 0
-    assert data.index.is_monotonic_increasing == expected_sorted
 
 
+@pytest.mark.filterwarnings("ignore:.*out-of-order timestamps")
 @pytest.mark.parametrize(
     ("inclusive", "expect_start_included", "expect_end_included"),
     [
@@ -61,24 +62,29 @@ def test_load_start_end_boundary_inclusivity(
     assert end in data.index if expect_end_included else end not in data.index
 
 
+@pytest.mark.parametrize("sort", [True, False], ids=["sort=True", "sort=False"])
 @pytest.mark.parametrize(
-    ("start", "end"),
+    ("start", "end", "expected_len"),
     [
-        (pd.Timestamp("2024-07-03T10:00:00"), None),
-        (None, pd.Timestamp("2024-07-03T10:00:00")),
+        (pd.Timestamp("2024-07-03T10:00:00"), None, 20),
+        (None, pd.Timestamp("2024-07-03T10:00:00"), 0),
     ],
     ids=[
-        "start only",
-        "end only",
+        "start only: all data after start, returns all rows",
+        "end only: all data after end, returns empty",
     ],
 )
-def test_load_nonmonotonic_with_nonexistent_time_index(nonmonotonic_dir, start, end):
-    """Test that filtering non-monotonic data with start/end index values
-    not in the data emits a warning and returns the full sorted dataframe.
+def test_load_nonmonotonic_with_nonexistent_time_index(nonmonotonic_dir, start, end, expected_len, sort):
+    """Test that filtering non-monotonic data with start/end index values that
+    are not present in the data index (20 rows at 2024-07-03 10:50:xx) correctly
+    returns filtered results, emits a warning about out-of-order timestamps, and
+    respects the `sort` parameter.
     """
     with pytest.warns(UserWarning, match="out-of-order timestamps"):
-        data = load(nonmonotonic_dir, social03.CameraTop.Pose, start=start, end=end)
-    assert data.index.is_monotonic_increasing
+        data = load(nonmonotonic_dir, social03.CameraTop.Pose, start=start, end=end, sort=sort)
+    assert len(data) == expected_len
+    if expected_len > 0:
+        assert data.index.is_monotonic_increasing == sort
 
 
 @pytest.mark.parametrize(

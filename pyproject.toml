@@ -22,12 +22,14 @@ readme = "README.md"
 dependencies = [
   "dotmap",
   "harp-python>=0.3.0",
+  "ipykernel",
   "matplotlib",
   "numpy>=1.26.4",
   "opencv-python",
   "pandas>=2.2",
   "pydantic>=2.12.4",
   "pydantic-yaml>=1.6.0",
+  "pyyaml",
 ]
 
 [project.optional-dependencies]
@@ -96,6 +98,9 @@ extend-exclude = [
   "D101",    # skip adding docstrings for schema classes
   "D106",    # skip adding docstrings for nested streams
 ]
+"src/swc/aeon/qc/octagon.py"  = ["D101", "D106", "D107"]
+"src/swc/aeon/qc/social.py"   = ["D107", "D401"]
+"src/swc/aeon/qc/foraging.py" = ["D101", "D107"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

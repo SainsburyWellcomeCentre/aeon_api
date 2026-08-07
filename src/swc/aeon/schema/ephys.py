@@ -72,10 +72,12 @@ class NeuropixelsV2QuadShankProbeConfiguration(BaseSchema):
         default=True, description="Whether to invert the polarity of the recorded signal."
     )
     gain_calibration_file_name: str = Field(
+        default="",
         examples=["NP2_gain_calibration.csv"],
         description="Path to the gain calibration file supplied with the probe.",
     )
     probe_interface_file_name: str = Field(
+        default="",
         examples=["NP2_probe_interface.json"],
         description="Path to the ProbeInterface file describing the probe geometry.",
     )
@@ -86,7 +88,7 @@ class NeuropixelsV2QuadShankProbeConfiguration(BaseSchema):
 class NeuropixelsV2Probe(BaseSchema):
     """One of the two probes addressed by a Neuropixels 2.0e headstage."""
 
-    enable: bool = Field(default=True, description="Whether to acquire data from this probe.")
+    enable: bool = Field(default=False, description="Whether to acquire data from this probe.")
     probe_configuration: NeuropixelsV2QuadShankProbeConfiguration = Field(
         description="Calibration and reference settings for this probe."
     )

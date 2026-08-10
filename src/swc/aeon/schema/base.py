@@ -5,13 +5,39 @@ import os
 from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
-from typing import Self, TypeVar
+from typing import Literal, Self, TypeVar
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 from pydantic.alias_generators import to_camel, to_pascal
+from pydantic.json_schema import JsonSchemaValue
 
 from swc.aeon.io.reader import Reader
+
+
+def bind_typename(schema: JsonSchemaValue, typename: str) -> JsonSchemaValue:
+    """Applies the `x-sgen-typename` tag, binding a definition to an existing type.
+
+    Args:
+        schema: The JSON schema definition to tag, modified in place.
+        typename: Fully qualified name of the type to bind.
+
+    Returns:
+        The same schema, so it can be used inline in a `model_config` declaration.
+    """
+    schema["x-sgen-typename"] = typename
+    return schema
+
+
+class DiscriminatorTypeMixin:
+    """Sets `discriminator_type` to the subclass name, for types in a discriminated union."""
+
+    def __init_subclass__(cls, **kwargs):
+        """Injects `discriminator_type` as a Literal of the subclass name."""
+        super().__init_subclass__(**kwargs)
+        name = cls.__name__
+        cls.__annotations__["discriminator_type"] = Literal[name]
+        cls.discriminator_type = name
 
 
 class BaseSchema(BaseModel):

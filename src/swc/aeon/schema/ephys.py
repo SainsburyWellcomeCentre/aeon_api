@@ -362,6 +362,15 @@ class HarpSyncInput(EphysSchema):
         description="The hardware source of the synchronisation signal.",
     )
 
+    device_name: str = Field(
+        default="BreakoutBoard/HarpSyncInput",
+        description="Device name, qualified by the breakout board name.",
+    )
+    device_address: int = Field(
+        default=12,
+        description="Fixed hardware address of the Harp sync input on the breakout board.",
+    )
+
 
 class EphysConfiguration(EphysSchema):
     """Top-level ONIX electrophysiology configuration loaded from YAML."""

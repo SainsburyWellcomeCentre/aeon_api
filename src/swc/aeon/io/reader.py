@@ -4,12 +4,13 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
 
 import harp
 import numpy as np
 import pandas as pd
 from dotmap import DotMap
+from numpy.typing import DTypeLike, NDArray
 from pandas._typing import DtypeArg, SequenceNotStr
 
 from swc.aeon.io.api import Reader, chunk_key
@@ -123,6 +124,150 @@ class Csv(Reader):
             dtype=self.dtype,
             index_col=0 if path.stat().st_size else None,
         )
+
+
+class Binary(Reader):
+    """Extracts data from raw flat binary files without timestamp information.
+
+    Each record is a fixed sequence of values, one per column, stored contiguously
+    with no header. The file carries no Aeon timestamp, so the returned DataFrame
+    uses a default integer index.
+    """
+
+    def __init__(self, pattern: str, columns: SequenceNotStr[str], dtype: DTypeLike, extension="bin"):
+        """Initialize the object with the specified pattern, columns, and data type."""
+        super().__init__(pattern, columns, extension)
+        self.dtype = dtype
+
+    def read(self, path: Path) -> pd.DataFrame:
+        """Reads data from the specified flat binary file.
+
+        Args:
+            path: Path to the flat binary file.
+
+        Returns:
+            A DataFrame representing the data extracted from the flat binary file.
+        """
+        data = np.fromfile(path, dtype=self.dtype).reshape((-1, len(self.columns)))
+        return pd.DataFrame(data, columns=self.columns)
+
+
+class HarpSyncAlignment(Reader):
+    """Fits the linear correspondence between a source acquisition clock and Harp time.
+
+    Some acquisition systems do not implement the Harp clock synchronization protocol but
+    record a correspondence between their own clock and Harp time; electrophysiology hardware
+    is the motivating case. This reader fits a degree-1 model to that correspondence so data
+    from such a clock can be placed on the canonical Harp time basis shared by every other
+    stream. The reference Harp time is taken from the file index, in seconds, following the
+    Aeon convention that the first column is the Aeon timestamp; the source clock is taken from
+    the first non-index column, whatever its header. Apply the fit with the `estimate_harp_seconds`
+    method.
+
+    Columns:
+
+    - clock_start (float): First clock measurement in the chunk.
+    - clock_end (float): Last clock measurement in the chunk.
+    - harp_start (float): First Harp timestamp in the chunk, in seconds.
+    - harp_end (float): Last Harp timestamp in the chunk, in seconds.
+    - n_samples (int): Number of correspondence samples used for the fit.
+    - slope (float): Slope of the fitted source clock to Harp time correspondence.
+    - intercept (float): Intercept of the fitted correspondence, in Harp seconds.
+    - r2 (float): Coefficient of determination of the fit.
+    """
+
+    def __init__(self, pattern: str, extension="csv"):
+        """Initialize the object with a specified pattern."""
+        super().__init__(
+            pattern,
+            columns=(
+                "clock_start",
+                "clock_end",
+                "harp_start",
+                "harp_end",
+                "n_samples",
+                "slope",
+                "intercept",
+                "r2",
+            ),
+            extension=extension,
+        )
+
+    def read(self, path: Path) -> pd.DataFrame:
+        """Fits the source clock to Harp time correspondence stored in the specified file.
+
+        The source clock is read from the first non-index column and the reference Harp time
+        from the index, both in seconds.
+
+        Args:
+            path: Path to the correspondence CSV file.
+
+        Returns:
+            A single-row DataFrame, indexed by the acquisition chunk time, describing the
+            fitted correspondence between the source clock and Harp time.
+        """
+        clock = pd.read_csv(path, index_col=0).iloc[:, 0].dropna()
+        source = clock.to_numpy(dtype=float)
+        harp = clock.index.to_numpy(dtype=float)
+        slope, intercept, r2 = self._fit_line(source, harp)
+        return pd.DataFrame(
+            index=[chunk_key(path)[1]],
+            data={
+                "clock_start": source[0],
+                "clock_end": source[-1],
+                "harp_start": harp[0],
+                "harp_end": harp[-1],
+                "n_samples": len(source),
+                "slope": slope,
+                "intercept": intercept,
+                "r2": r2,
+            },
+        )
+
+    @overload
+    @staticmethod
+    def estimate_harp_seconds(clock: float, slope: float, intercept: float) -> float: ...
+    @overload
+    @staticmethod
+    def estimate_harp_seconds(clock: np.ndarray, slope: float, intercept: float) -> np.ndarray: ...
+    @overload
+    @staticmethod
+    def estimate_harp_seconds(clock: pd.Index, slope: float, intercept: float) -> pd.Index: ...
+    @overload
+    @staticmethod
+    def estimate_harp_seconds(clock: pd.Series, slope: float, intercept: float) -> pd.Series: ...
+    @staticmethod
+    def estimate_harp_seconds(
+        clock: float | np.ndarray | pd.Index | pd.Series,
+        slope: float,
+        intercept: float,
+    ) -> float | np.ndarray | pd.Index | pd.Series:
+        """Estimates Harp time, in seconds, for clock measurements from a fitted correspondence.
+
+        Applies the linear fit produced by this reader, described by the `slope` and `intercept`
+        of a result row, to one or more source clock measurements. Compose with
+        `swc.aeon.io.api.to_datetime` to obtain a datetime.
+
+        Args:
+            clock: The source clock measurement, or measurements, to convert.
+            slope: The slope of the fitted correspondence, from the `slope` result column.
+            intercept: The intercept of the fitted correspondence, in Harp seconds, from the
+                `intercept` result column.
+
+        Returns:
+            The corresponding Harp time, in fractional seconds. Return type matches `clock`.
+        """
+        return slope * clock + intercept
+
+    @staticmethod
+    def _fit_line(x: NDArray[np.float64], y: NDArray[np.float64]) -> tuple[float, float, float]:
+        dx = x - x.mean()
+        dy = y - y.mean()
+        slope = np.dot(dx, dy) / np.dot(dx, dx)
+        intercept = y.mean() - slope * x.mean()
+        residuals = dy - slope * dx
+        r2 = 1.0 - np.dot(residuals, residuals) / np.dot(dy, dy)
+        return float(slope), float(intercept), float(r2)
 
 
 class JsonList(Reader):

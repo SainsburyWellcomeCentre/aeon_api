@@ -4,18 +4,21 @@ import datetime
 from contextlib import nullcontext
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 from dotmap import DotMap
 from pandas import testing as tm
 
 from swc.aeon.io.reader import (
+    Binary,
     BitmaskEvent,
     Chunk,
     Csv,
     DigitalBitmask,
     Encoder,
     Harp,
+    HarpSyncAlignment,
     Heartbeat,
     JsonList,
     Log,
@@ -152,6 +155,18 @@ def test_csv_read(file, request):
         assert not df.empty
         assert set(df.columns) == {"col2", "col3"}  # col1 becomes index
         assert pd.api.types.is_float_dtype(df.index)
+
+
+def test_binary_read(tmp_path):
+    """Test that Binary `read` returns a DataFrame of the flat binary records with a default index."""
+    data = np.arange(12, dtype=np.float32).reshape(-1, 3)
+    file = tmp_path / "records.bin"
+    file.write_bytes(data.tobytes())
+    reader = Binary("pattern", columns=["x", "y", "z"], dtype=np.float32)
+    df = reader.read(file)
+    assert set(df.columns) == {"x", "y", "z"}
+    assert isinstance(df.index, pd.RangeIndex)
+    assert np.array_equal(df.to_numpy(), data)
 
 
 @pytest.mark.parametrize(
@@ -346,3 +361,107 @@ class TestPose:
         with expected as expected_file_name:
             config_file = Pose.get_config_file(config_dir, config_name)
             assert config_file == config_dir / expected_file_name
+
+
+@pytest.fixture
+def harpsync_file(tmp_path):
+    """Writes a synthetic HarpSync correspondence file with a known linear source-to-Harp mapping.
+
+    Three trailing rows carry a missing clock measurement to exercise the reader `dropna`.
+    """
+    rng = np.random.default_rng(0)
+    slope, intercept = 4e-9, 3.85e9
+    clock = np.sort(rng.integers(0, 900_000_000_000, size=500)) + 5_000_000_000
+    harp = slope * clock + intercept
+    frame = pd.DataFrame(
+        {"Seconds": harp, "Value.Clock": clock, "Value.HubClock": 0, "Value.HarpTime": harp - 1.0}
+    )
+    missing = pd.DataFrame(
+        {
+            "Seconds": [intercept] * 3,
+            "Value.Clock": [np.nan] * 3,
+            "Value.HubClock": 0,
+            "Value.HarpTime": 0.0,
+        }
+    )
+    file = tmp_path / "NeuropixelsV2Beta_HarpSync_2026-04-20T10-00-00.csv"
+    pd.concat([frame, missing]).to_csv(file, index=False)
+    return file, slope, intercept
+
+
+@pytest.fixture
+def harpsync_real_file(test_data_dir):
+    """Returns the path to the recorded HarpSync correspondence file used for the accuracy check."""
+    return test_data_dir / "ephys" / "NeuropixelsV2_HarpSync_2026-06-28T100000Z.csv"
+
+
+def test_harpsyncalignment_read(harpsync_file):
+    """Test that HarpSyncAlignment fits the source-to-Harp correspondence into a single summary row."""
+    file, slope, intercept = harpsync_file
+    df = HarpSyncAlignment("NeuropixelsV2Beta_HarpSync_*").read(file)
+    assert list(df.columns) == [
+        "clock_start",
+        "clock_end",
+        "harp_start",
+        "harp_end",
+        "n_samples",
+        "slope",
+        "intercept",
+        "r2",
+    ]
+    assert df.index[0] == pd.Timestamp("2026-04-20 10:00:00", tz="UTC")
+    row = df.iloc[0]
+    assert row["n_samples"] == 500
+    assert row["r2"] == pytest.approx(1.0)
+    assert row["slope"] == pytest.approx(slope, rel=1e-6)
+    assert row["intercept"] == pytest.approx(intercept, rel=1e-9)
+
+
+def test_harpsyncalignment_parameters_reconstruct_harp_time(harpsync_file):
+    """Test that the fitted slope and intercept recover Harp time from the source clock."""
+    file, _, _ = harpsync_file
+    row = HarpSyncAlignment("NeuropixelsV2Beta_HarpSync_*").read(file).iloc[0]
+    predicted = HarpSyncAlignment.estimate_harp_seconds(
+        np.array([row["clock_start"], row["clock_end"]]), row["slope"], row["intercept"]
+    )
+    assert predicted == pytest.approx([row["harp_start"], row["harp_end"]])
+
+
+def test_harpsyncalignment_real_data_accuracy(harpsync_real_file):
+    """Test that the fit reproduces Harp time from recorded ONIX data to sub-millisecond accuracy.
+
+    The mean-centered numpy fit was verified to match the original scikit-learn LinearRegression on
+    this dataset to within floating-point precision; this guards that numerical result without a
+    scikit-learn dependency. The ISO8601 chunk time in the file name also confirms the UTC index.
+    """
+    df = HarpSyncAlignment("NeuropixelsV2_HarpSync_*").read(harpsync_real_file)
+    assert df.index[0] == pd.Timestamp("2026-06-28 10:00:00", tz="UTC")
+    row = df.iloc[0]
+    assert row["r2"] == pytest.approx(1.0)
+    raw = pd.read_csv(harpsync_real_file)
+    predicted = HarpSyncAlignment.estimate_harp_seconds(
+        raw["Value.Clock"].to_numpy(dtype=float), row["slope"], row["intercept"]
+    )
+    assert np.max(np.abs(predicted - raw["Seconds"].to_numpy(dtype=float))) < 1e-4
+
+
+def test_harpsyncalignment_fits_seconds_index_not_harptime(harpsync_real_file):
+    """Test that the fit uses the Seconds index for Harp time, not the Value.HarpTime column.
+
+    In the recorded data the Value.HarpTime column reports the second about to elapse and so lags the
+    true Harp time, held in the Seconds index, by one second. Fitting against it would bias the model.
+    """
+    row = HarpSyncAlignment("NeuropixelsV2_HarpSync_*").read(harpsync_real_file).iloc[0]
+    raw = pd.read_csv(harpsync_real_file)
+    assert row["harp_start"] == raw["Seconds"].iloc[0]
+    assert row["harp_start"] - raw["Value.HarpTime"].iloc[0] == pytest.approx(1.0)
+
+
+def test_estimate_harp_seconds_applies_linear_model():
+    """Test that estimate_harp_seconds applies the slope and intercept across scalar and vector inputs."""
+    assert HarpSyncAlignment.estimate_harp_seconds(20.0, slope=2.0, intercept=5.0) == 45.0
+    array = HarpSyncAlignment.estimate_harp_seconds(np.array([0.0, 10.0, 20.0]), slope=2.0, intercept=5.0)
+    assert np.array_equal(array, np.array([5.0, 25.0, 45.0]))
+    series = HarpSyncAlignment.estimate_harp_seconds(pd.Series([0.0, 10.0, 20.0]), slope=2.0, intercept=5.0)
+    assert isinstance(series, pd.Series)
+    assert series.tolist() == [5.0, 25.0, 45.0]

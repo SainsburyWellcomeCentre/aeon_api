@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
 
 
@@ -209,3 +211,50 @@ def jsonl_file(monotonic_dir):
 def bitmaskevent_file(monotonic_dir, monotonic_epoch):
     """Returns path to monotonic bitmask event file."""
     return monotonic_dir / monotonic_epoch / "Patch2" / "Patch2_32_2022-06-13T12-00-00.bin"
+
+
+# ========================= Ephys Fixtures =========================
+@pytest.fixture
+def harpsync_file(tmp_path):
+    """Writes a synthetic HarpSync correspondence file with a known linear source-to-Harp mapping.
+
+    Three trailing rows carry a missing clock measurement to exercise the reader `dropna`. Returns
+    the file path and the single-row summary DataFrame the reader is expected to produce.
+    """
+    rng = np.random.default_rng(0)
+    slope, intercept = 4e-9, 3.85e9
+    clock = (np.sort(rng.integers(0, 900_000_000_000, size=500)) + 5_000_000_000).astype(float)
+    harp = slope * clock + intercept
+    frame = pd.DataFrame(
+        {"Seconds": harp, "Value.Clock": clock, "Value.HubClock": 0, "Value.HarpTime": harp - 1.0}
+    )
+    missing = pd.DataFrame(
+        {
+            "Seconds": [intercept] * 3,
+            "Value.Clock": [np.nan] * 3,
+            "Value.HubClock": 0,
+            "Value.HarpTime": 0.0,
+        }
+    )
+    file = tmp_path / "NeuropixelsV2Beta_HarpSync_2026-04-20T10-00-00.csv"
+    pd.concat([frame, missing]).to_csv(file, index=False)
+    expected = pd.DataFrame(
+        index=[pd.Timestamp("2026-04-20 10:00:00", tz="UTC")],
+        data={
+            "clock_start": clock[0],
+            "clock_end": clock[-1],
+            "harp_start": harp[0],
+            "harp_end": harp[-1],
+            "n_samples": 500,
+            "slope": slope,
+            "intercept": intercept,
+            "r2": 1.0,
+        },
+    )
+    return file, expected
+
+
+@pytest.fixture
+def harpsync_real_file(test_data_dir):
+    """Returns the path to the recorded HarpSync correspondence file used for the accuracy check."""
+    return test_data_dir / "ephys" / "NeuropixelsV2_HarpSync_2026-06-28T100000Z.csv"

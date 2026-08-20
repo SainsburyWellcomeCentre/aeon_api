@@ -363,68 +363,21 @@ class TestPose:
             assert config_file == config_dir / expected_file_name
 
 
-@pytest.fixture
-def harpsync_file(tmp_path):
-    """Writes a synthetic HarpSync correspondence file with a known linear source-to-Harp mapping.
-
-    Three trailing rows carry a missing clock measurement to exercise the reader `dropna`.
-    """
-    rng = np.random.default_rng(0)
-    slope, intercept = 4e-9, 3.85e9
-    clock = np.sort(rng.integers(0, 900_000_000_000, size=500)) + 5_000_000_000
-    harp = slope * clock + intercept
-    frame = pd.DataFrame(
-        {"Seconds": harp, "Value.Clock": clock, "Value.HubClock": 0, "Value.HarpTime": harp - 1.0}
-    )
-    missing = pd.DataFrame(
-        {
-            "Seconds": [intercept] * 3,
-            "Value.Clock": [np.nan] * 3,
-            "Value.HubClock": 0,
-            "Value.HarpTime": 0.0,
-        }
-    )
-    file = tmp_path / "NeuropixelsV2Beta_HarpSync_2026-04-20T10-00-00.csv"
-    pd.concat([frame, missing]).to_csv(file, index=False)
-    return file, slope, intercept
-
-
-@pytest.fixture
-def harpsync_real_file(test_data_dir):
-    """Returns the path to the recorded HarpSync correspondence file used for the accuracy check."""
-    return test_data_dir / "ephys" / "NeuropixelsV2_HarpSync_2026-06-28T100000Z.csv"
-
-
 def test_harpsyncalignment_read(harpsync_file):
     """Test that HarpSyncAlignment fits the source-to-Harp correspondence into a single summary row."""
-    file, slope, intercept = harpsync_file
+    file, expected = harpsync_file
     df = HarpSyncAlignment("NeuropixelsV2Beta_HarpSync_*").read(file)
-    assert list(df.columns) == [
-        "clock_start",
-        "clock_end",
-        "harp_start",
-        "harp_end",
-        "n_samples",
-        "slope",
-        "intercept",
-        "r2",
-    ]
-    assert df.index[0] == pd.Timestamp("2026-04-20 10:00:00", tz="UTC")
-    row = df.iloc[0]
-    assert row["n_samples"] == 500
-    assert row["r2"] == pytest.approx(1.0)
-    assert row["slope"] == pytest.approx(slope, rel=1e-6)
-    assert row["intercept"] == pytest.approx(intercept, rel=1e-9)
+    pd.testing.assert_frame_equal(df, expected, rtol=1e-6)
 
 
 def test_harpsyncalignment_parameters_reconstruct_harp_time(harpsync_file):
     """Test that the fitted slope and intercept recover Harp time from the source clock."""
-    file, _, _ = harpsync_file
+    file, _ = harpsync_file
     row = HarpSyncAlignment("NeuropixelsV2Beta_HarpSync_*").read(file).iloc[0]
     predicted = HarpSyncAlignment.estimate_harp_seconds(
         np.array([row["clock_start"], row["clock_end"]]), row["slope"], row["intercept"]
     )
-    assert predicted == pytest.approx([row["harp_start"], row["harp_end"]])
+    np.testing.assert_allclose(predicted, [row["harp_start"], row["harp_end"]])
 
 
 def test_harpsyncalignment_real_data_accuracy(harpsync_real_file):
@@ -442,7 +395,7 @@ def test_harpsyncalignment_real_data_accuracy(harpsync_real_file):
     predicted = HarpSyncAlignment.estimate_harp_seconds(
         raw["Value.Clock"].to_numpy(dtype=float), row["slope"], row["intercept"]
     )
-    assert np.max(np.abs(predicted - raw["Seconds"].to_numpy(dtype=float))) < 1e-4
+    np.testing.assert_allclose(predicted, raw["Seconds"].to_numpy(dtype=float), rtol=0, atol=1e-4)
 
 
 def test_harpsyncalignment_fits_seconds_index_not_harptime(harpsync_real_file):
@@ -452,16 +405,21 @@ def test_harpsyncalignment_fits_seconds_index_not_harptime(harpsync_real_file):
     true Harp time, held in the Seconds index, by one second. Fitting against it would bias the model.
     """
     row = HarpSyncAlignment("NeuropixelsV2_HarpSync_*").read(harpsync_real_file).iloc[0]
-    raw = pd.read_csv(harpsync_real_file)
-    assert row["harp_start"] == raw["Seconds"].iloc[0]
-    assert row["harp_start"] - raw["Value.HarpTime"].iloc[0] == pytest.approx(1.0)
+    raw = pd.read_csv(harpsync_real_file).iloc[0]
+    assert row["harp_start"] == raw["Seconds"]
+    assert row["harp_start"] - raw["Value.HarpTime"] == pytest.approx(1.0)
 
 
-def test_estimate_harp_seconds_applies_linear_model():
-    """Test that estimate_harp_seconds applies the slope and intercept across scalar and vector inputs."""
-    assert HarpSyncAlignment.estimate_harp_seconds(20.0, slope=2.0, intercept=5.0) == 45.0
-    array = HarpSyncAlignment.estimate_harp_seconds(np.array([0.0, 10.0, 20.0]), slope=2.0, intercept=5.0)
-    assert np.array_equal(array, np.array([5.0, 25.0, 45.0]))
-    series = HarpSyncAlignment.estimate_harp_seconds(pd.Series([0.0, 10.0, 20.0]), slope=2.0, intercept=5.0)
-    assert isinstance(series, pd.Series)
-    assert series.tolist() == [5.0, 25.0, 45.0]
+@pytest.mark.parametrize(
+    ("clock", "expected"),
+    [
+        (20.0, 45.0),
+        (np.array([0.0, 10.0, 20.0]), np.array([5.0, 25.0, 45.0])),
+        (pd.Series([0.0, 10.0, 20.0]), pd.Series([5.0, 25.0, 45.0])),
+    ],
+)
+def test_estimate_harp_seconds_applies_linear_model(clock, expected):
+    """Test that estimate_harp_seconds applies the slope and intercept and preserves the input type."""
+    result = HarpSyncAlignment.estimate_harp_seconds(clock, slope=2.0, intercept=5.0)
+    assert type(result) is type(expected)
+    assert np.array_equal(np.asarray(result), np.asarray(expected))

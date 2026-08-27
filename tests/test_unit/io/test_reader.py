@@ -97,6 +97,7 @@ def test_chunk_init(reader_arg, expected_pattern, expected_extension):
 
 
 def test_chunk_init_defaults():
+    """Test that `Chunk` raises a ValueError when initialised without a reader, pattern or extension."""
     with pytest.raises(ValueError, match="reader must be specified if pattern or extension are None."):
         Chunk()
 

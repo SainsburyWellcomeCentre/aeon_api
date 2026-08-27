@@ -78,7 +78,7 @@ ModelT = TypeVar("ModelT", bound=BaseSchema)
 class Metadata(Reader):
     """Extracts metadata information from all epochs in the dataset."""
 
-    def __init__(self, type: type[ModelT], pattern="Metadata"):  # noqa: A002
+    def __init__(self, type: type[ModelT], pattern="Metadata"):
         """Initialize the reader object with the specified model type and optional pattern."""
         super().__init__(pattern, columns=["metadata", "epoch"], extension="json")
         self.type = TypeAdapter(type)

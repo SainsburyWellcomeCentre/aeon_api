@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8"]
+requires = ["setuptools>=77", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -19,6 +19,14 @@ authors = [
 license = "BSD-3-Clause"
 license-files = ["LICENSE.md"]
 readme = "README.md"
+keywords = ["aeon", "behavior", "electrophysiology", "harp", "neuroscience"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
 dependencies = [
   "dotmap",
   "harp-python>=0.3.0",
@@ -42,9 +50,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://sainsburywellcomecentre.github.io/aeon_docs/"
+Homepage = "https://aeon.swc.ucl.ac.uk"
 Repository = "https://github.com/SainsburyWellcomeCentre/aeon_api"
-Documentation = "https://sainsburywellcomecentre.github.io/aeon_docs/"
 
 [tool.setuptools_scm]
 version_file = "src/swc/aeon/_version.py"
@@ -54,29 +61,7 @@ where = ["src"]
 include = ["swc*"]
 
 [tool.ruff]
-lint.select = [
-  "E",
-  "W",
-  "F",
-  "I",
-  "D",
-  "UP",
-  "S",
-  "B",
-  "A",
-  "C4",
-  "ICN",
-  "PIE",
-  "PT",
-  "SIM",
-  "PL",
-]
-lint.ignore = [
-  "E731",
-  "PLR0912",
-  "PLR0913",
-  "PLR0915",
-]
+lint.select = ["E", "F", "I", "D", "UP", "S", "B"]
 line-length = 108
 extend-exclude = [
   ".git",
@@ -87,14 +72,8 @@ extend-exclude = [
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
-  "D103",    # skip adding docstrings for public functions
   "D205",    # skip checking for blank line between summary and description
   "S101",    # skip using assert
-  "PLR2004", # skip checking for "magic" values
-]
-"src/aeon/schema/*" = [
-  "D101",    # skip adding docstrings for schema classes
-  "D106",    # skip adding docstrings for nested streams
 ]
 
 [tool.ruff.lint.pydocstyle]

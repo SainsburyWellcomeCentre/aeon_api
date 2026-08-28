@@ -15,7 +15,13 @@ We recommend [uv](https://docs.astral.sh/uv/) for python version, environment, a
 uv pip install swc-aeon
 ```
 
-### Install from source
+### Install from GitHub
+
+```
+uv pip install git+https://github.com/SainsburyWellcomeCentre/aeon_api
+```
+
+### Set up a development environment
 
 ```
 git clone https://github.com/SainsburyWellcomeCentre/aeon_api
@@ -23,16 +29,13 @@ cd aeon_api
 uv sync
 ```
 
-To include dev dependencies:
+This creates a `.venv` with the required runtime dependencies and the development tools, including the test runner, the linter, and the type checker.
+Because running commands with `uv run` (e.g. `uv run pytest`) keeps the environment synchronised automatically, `uv sync` is only needed once during the initial setup.
+
+To set up the pre-commit hooks:
 
 ```
-uv sync --dev
-```
-
-To include all dependency groups:
-
-```
-uv sync --all-groups
+uv run pre-commit install
 ```
 
 ## Repository Contents

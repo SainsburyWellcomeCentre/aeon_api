@@ -396,19 +396,20 @@ def test_harpsyncalignment_real_data_accuracy(harpsync_real_file):
     predicted = HarpSyncAlignment.estimate_harp_seconds(
         raw["Value.Clock"].to_numpy(dtype=float), row["slope"], row["intercept"]
     )
-    np.testing.assert_allclose(predicted, raw["Seconds"].to_numpy(dtype=float), rtol=0, atol=1e-4)
+    np.testing.assert_allclose(predicted, raw["Value.HarpTime"].to_numpy(dtype=float), rtol=0, atol=1e-4)
 
 
-def test_harpsyncalignment_fits_seconds_index_not_harptime(harpsync_real_file):
-    """Test that the fit uses the Seconds index for Harp time, not the Value.HarpTime column.
+def test_harpsyncalignment_fits_harptime_column_not_seconds_index(harpsync_real_file):
+    """Test that the fit uses the Value.HarpTime column for Harp time, not the Seconds index.
 
-    In the recorded data the Value.HarpTime column reports the second about to elapse and so lags the
-    true Harp time, held in the Seconds index, by one second. Fitting against it would bias the model.
+    The recorded data comes from a workflow that added the protocol second a second time, so its
+    Seconds index is one second later than the Value.HarpTime column, which is the Harp time of
+    the sync pulse. Fitting against the index would place the data one second late.
     """
     row = HarpSyncAlignment("NeuropixelsV2_HarpSync_*").read(harpsync_real_file).iloc[0]
     raw = pd.read_csv(harpsync_real_file).iloc[0]
-    assert row["harp_start"] == raw["Seconds"]
-    assert row["harp_start"] - raw["Value.HarpTime"] == pytest.approx(1.0)
+    assert row["harp_start"] == raw["Value.HarpTime"]
+    assert raw["Seconds"] - row["harp_start"] == pytest.approx(1.0)
 
 
 @pytest.mark.parametrize(

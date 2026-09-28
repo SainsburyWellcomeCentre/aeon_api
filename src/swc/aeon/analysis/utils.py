@@ -1,17 +1,22 @@
 """Helper functions for data analysis and visualization."""
 
+import datetime
+
 import numpy as np
 import pandas as pd
 
 
-def distancetravelled(angle, radius=4.0):
-    """Calculates the total distance travelled on the wheel.
+def distancetravelled(angle: pd.Series, radius: float = 4.0) -> pd.Series:
+    """Calculate the total distance travelled on the wheel.
 
     Takes into account the wheel radius and the total number of turns in both directions across time.
 
-    :param Series angle: A series of magnetic encoder measurements.
-    :param float radius: The radius of the wheel, in metric units.
-    :return: The total distance travelled on the wheel, in metric units.
+    Args:
+        angle: A series of magnetic encoder measurements.
+        radius: The radius of the wheel, in metric units.
+
+    Returns:
+        The total distance travelled on the wheel, in metric units.
     """
     maxvalue = int(np.iinfo(np.uint16).max >> 2)
     jumpthreshold = maxvalue // 2
@@ -24,17 +29,20 @@ def distancetravelled(angle, radius=4.0):
     return distance
 
 
-def visits(data, onset="Enter", offset="Exit"):
-    """Computes duration, onset and offset times from paired events.
+def visits(data: pd.DataFrame, onset: str = "Enter", offset: str = "Exit") -> pd.DataFrame:
+    """Compute duration, onset and offset times from paired events.
 
     Allows for missing data by trying to match event onset times with subsequent offset times.
     If the match fails, event offset metadata is filled with NaN. Any additional metadata columns
-    in the data frame will be paired and included in the output.
+    in the DataFrame will be paired and included in the output.
 
-    :param DataFrame data: A pandas data frame containing visit onset and offset events.
-    :param str, optional onset: The label used to identify event onsets.
-    :param str, optional offset: The label used to identify event offsets.
-    :return: A pandas data frame containing duration and metadata for each visit.
+    Args:
+        data: A DataFrame containing visit onset and offset events.
+        onset: The label used to identify event onsets.
+        offset: The label used to identify event offsets.
+
+    Returns:
+        A DataFrame containing duration and metadata for each visit.
     """
     lonset = onset.lower()
     loffset = offset.lower()
@@ -71,28 +79,38 @@ def visits(data, onset="Enter", offset="Exit"):
     return data
 
 
-def rate(events, window, frequency, weight=1, start=None, end=None, smooth=None, center=False):
-    """Computes the continuous event rate from a discrete event sequence.
+def rate(
+    events: pd.Series,
+    window: pd.DateOffset | pd.Timedelta | str,
+    frequency: float,
+    weight: float = 1.0,
+    start: datetime.datetime | None = None,
+    end: datetime.datetime | None = None,
+    smooth: pd.DateOffset | pd.Timedelta | str | None = None,
+    center: bool = False,
+) -> pd.Series:
+    """Compute the continuous event rate from a discrete event sequence.
 
     The window size and sampling frequency can be specified.
 
-    :param Series events: The discrete sequence of events.
-    :param offset window: The time period of each window used to compute the rate.
-    :param DateOffset, Timedelta or str frequency: The sampling frequency for the continuous rate.
-    :param number, optional weight: A weight used to scale the continuous rate of each window.
-    :param datetime, optional start: The left bound of the time range for the continuous rate.
-    :param datetime, optional end: The right bound of the time range for the continuous rate.
-    :param datetime, optional smooth: The size of the smoothing kernel applied to the rate output.
-    :param DateOffset, Timedelta or str, optional smooth:
-      The size of the smoothing kernel applied to the continuous rate output.
-    :param bool, optional center: Specifies whether to center the convolution kernels.
-    :return: A Series containing the continuous event rate over time.
+    Args:
+        events: The discrete sequence of events.
+        window: The time period of each window used to compute the rate.
+        frequency: The sampling frequency for the continuous rate.
+        weight: A weight used to scale the continuous rate of each window.
+        start: The left bound of the time range for the continuous rate.
+        end: The right bound of the time range for the continuous rate.
+        smooth: The size of the smoothing kernel applied to the continuous rate output.
+        center: Specifies whether to center the convolution kernels.
+
+    Returns:
+        A Series containing the continuous event rate over time.
     """
     counts = pd.Series(weight, events.index)
     if start is not None and start < events.index[0]:
-        counts.loc[start] = 0
+        counts.loc[start] = 0  # type: ignore[index]
     if end is not None and end > events.index[-1]:
-        counts.loc[end] = 0
+        counts.loc[end] = 0  # type: ignore[index]
     counts.sort_index(inplace=True)
     counts = counts.resample(pd.Timedelta(1 / frequency, "s")).sum()
     rate = counts.rolling(window, center=center).sum()
@@ -100,19 +118,29 @@ def rate(events, window, frequency, weight=1, start=None, end=None, smooth=None,
 
 
 def get_events_rates(
-    events, window_len_sec, frequency, unit_len_sec=60, start=None, end=None, smooth=None, center=False
-):
-    """Computes the event rate from a sequence of events over a specified window.
+    events: pd.Series,
+    window_len_sec: int,
+    frequency: str | pd.DateOffset | pd.Timedelta,
+    unit_len_sec: int = 60,
+    start: datetime.datetime | None = None,
+    end: datetime.datetime | None = None,
+    smooth: str | pd.Timedelta | None = None,
+    center: bool = False,
+) -> pd.Series:
+    """Compute the event rate from a sequence of events over a specified window.
 
-    :param Series events: The discrete sequence of events, with timestamps in seconds as index.
-    :param int window_len_sec: The length of the window over which the event rate is estimated.
-    :param DateOffset, Timedelta or str frequency: The sampling frequency for the continuous rate.
-    :param int, optional unit_len_sec: The length of one sample point. Default is 60 seconds.
-    :param datetime, optional start: The left bound of the time range for the continuous rate.
-    :param datetime, optional end: The right bound of the time range for the continuous rate.
-    :param int, optional smooth: The size of the smoothing kernel applied to the continuous rate output.
-    :param bool, optional center: Specifies whether to center the convolution kernels.
-    :return: A Series containing the continuous event rate over time.
+    Args:
+        events: The discrete sequence of events, with timestamps in seconds as index.
+        window_len_sec: The length of the window over which the event rate is estimated.
+        frequency: The sampling frequency for the continuous rate.
+        unit_len_sec: The length of one sample point. Default is 60 seconds.
+        start: The left bound of the time range for the continuous rate.
+        end: The right bound of the time range for the continuous rate.
+        smooth: The size of the smoothing kernel applied to the continuous rate output.
+        center: Specifies whether to center the convolution kernels.
+
+    Returns:
+        A Series containing the continuous event rate over time.
     """
     # events is an array with the time (in seconds) of event occurence
     # window_len_sec is the size of the window over which the event rate is estimated
@@ -120,9 +148,9 @@ def get_events_rates(
     window_len_sec_str = f"{window_len_sec:d}S"
     counts = pd.Series(1.0, events.index)
     if start is not None and start < events.index[0]:
-        counts.loc[start] = 0
+        counts.loc[start] = 0  # type: ignore[index]
     if end is not None and end > events.index[-1]:
-        counts.loc[end] = 0
+        counts.loc[end] = 0  # type: ignore[index]
     counts.sort_index(inplace=True)
     counts_resampled = counts.resample(frequency).sum()
     counts_rolled = (
@@ -134,26 +162,48 @@ def get_events_rates(
     return counts_rolled_smoothed
 
 
-def sessiontime(index, start=None):
-    """Converts absolute to relative time, with optional reference starting time."""
+def sessiontime(index: pd.DatetimeIndex, start: datetime.datetime | None = None) -> pd.Index:
+    """Convert absolute timestamps to elapsed minutes from a reference start time.
+
+    Args:
+        index: Absolute timestamps to convert.
+        start: Reference timestamp. If omitted, the first value in ``index`` is used.
+
+    Returns:
+        Relative time in minutes from ``start`` for each timestamp in ``index``.
+    """
     if start is None:
         start = index[0]
     return (index - start).total_seconds() / 60
 
 
-def distance(position, target):
-    """Computes the euclidean distance to a specified target."""
+def distance(position: pd.DataFrame, target) -> pd.Series:
+    """Compute the euclidean distance to a specified target.
+
+    Args:
+        position: A DataFrame with 'x' and 'y' columns for position coordinates.
+        target: The target coordinates to compute distance from.
+
+    Returns:
+        Euclidean distance from each position to the target.
+    """
     return np.sqrt(np.square(position[["x", "y"]] - target).sum(axis=1))
 
 
-def activepatch(wheel, in_patch):
-    """Computes a decision boundary for when a patch is active based on wheel movement.
+def activepatch(wheel: pd.Series, in_patch: pd.Series) -> pd.Series:
+    """Infer patch activity from wheel movement within candidate patch intervals.
 
-    :param Series wheel: A pandas Series containing the cumulative distance travelled on the wheel.
-    :param Series in_patch: A Series of type bool containing whether the specified patch may be active.
-    :return: A pandas Series specifying for each timepoint whether the patch is active.
+    Args:
+        wheel: Cumulative wheel distance over time.
+        in_patch: Boolean mask indicating periods when the patch may be active
+            (e.g. when the subject is in the patch area).
+
+    Returns:
+        Boolean Series aligned to ``in_patch`` indicating whether the patch is active
+        at each timestamp. True once wheel displacement exceeds 1 unit within a 1-second
+        rolling window, remaining true until the next patch exit.
     """
     exit_patch = in_patch.astype(np.int8).diff() < 0
     in_wheel = (wheel.diff().rolling("1s").sum() > 1).reindex(in_patch.index, method="pad")
     epochs = exit_patch.cumsum()
-    return in_wheel.groupby(epochs).apply(lambda x: x.cumsum()) > 0
+    return in_wheel.groupby(epochs).cummax()

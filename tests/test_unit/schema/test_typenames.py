@@ -5,7 +5,7 @@ from enum import IntEnum, StrEnum
 from typing import Annotated, Literal
 
 import pytest
-from pydantic import Field, TypeAdapter
+from pydantic import Field, TypeAdapter, ValidationError
 
 from swc.aeon.schema import BaseSchema, DiscriminatorTypeMixin, SchemaEnum, bind_typename
 
@@ -19,6 +19,14 @@ def namespaced(monkeypatch):
     return monkeypatch
 
 
+@pytest.fixture(params=[NAMESPACE, None], ids=["namespace", "no namespace"])
+def module_namespace(request, monkeypatch):
+    """Declares a namespace on this module for the duration of a test, or leaves it absent."""
+    if request.param is not None:
+        monkeypatch.setattr(sys.modules[__name__], "SGEN_NAMESPACE", request.param, raising=False)
+    return request.param
+
+
 def typename(schema_type):
     """Returns the type name bound to a model or enumeration, if any."""
     return TypeAdapter(schema_type).json_schema().get("x-sgen-typename")
@@ -29,117 +37,70 @@ def member_names(schema_type):
     return TypeAdapter(schema_type).json_schema().get("x-enumNames")
 
 
-def test_bind_typename_tags_in_place():
-    """Test that `bind_typename` tags in place and returns the schema it was given."""
+def test_bind_typename_annotates_in_place():
+    """Test that `bind_typename` annotates in place and returns the schema it was given."""
     schema = {"type": "object"}
     result = bind_typename(schema, "Aeon.Test.Thing")
     assert result is schema
     assert schema["x-sgen-typename"] == "Aeon.Test.Thing"
 
 
-def test_typename_derived_from_module_namespace(namespaced):
-    """Test that a model is named in the namespace declared by its module."""
-
-    class Derived(BaseSchema):
-        """A model in a namespaced module."""
-
-    assert typename(Derived) == f"{NAMESPACE}.Derived"
-
-
-def test_typename_absent_without_module_namespace():
-    """Test that a model in a module declaring no namespace is left untagged."""
-
-    class Untagged(BaseSchema):
-        """A model in a module with no namespace."""
-
-    assert typename(Untagged) is None
-
-
-def test_typename_recomputed_for_subclass(namespaced):
-    """Test that a subclass takes its own name rather than the name of its base."""
-
-    class Base(BaseSchema):
-        """The base."""
-
-    class Sub(Base):
-        """The subclass."""
-
-    assert typename(Base) == f"{NAMESPACE}.Base"
-    assert typename(Sub) == f"{NAMESPACE}.Sub"
-
-
-def test_typename_overridden_by_class_keyword():
-    """Test that `sgen_namespace` names a model owned by another package."""
-
-    class Foreign(BaseSchema, sgen_namespace="OpenEphys.Onix1"):
-        """A model describing a type owned elsewhere."""
-
-    assert typename(Foreign) == "OpenEphys.Onix1.Foreign"
-
-
-def test_class_keyword_overrides_module_namespace(namespaced):
-    """Test that `sgen_namespace` wins over the namespace declared by the module."""
-
-    class Foreign(BaseSchema, sgen_namespace="OpenEphys.Onix1"):
-        """A model describing a type owned elsewhere."""
-
-    assert typename(Foreign) == "OpenEphys.Onix1.Foreign"
-
-
-def test_inherited_typename_dropped_without_namespace(namespaced):
-    """Test that a subclass declaring no namespace does not claim the name of its base."""
-
-    class Base(BaseSchema):
-        """Defined while the module declares a namespace."""
-
-    namespaced.undo()
-
-    class Naive(Base):
-        """Defined after the namespace is gone, as a consumer module would be."""
-
-    assert typename(Base) == f"{NAMESPACE}.Base"
-    assert typename(Naive) is None
-
-
-def test_explicit_typename_survives_without_namespace(namespaced):
-    """Test that a name written into the model config is kept rather than dropped."""
-
-    class Base(BaseSchema):
-        """Defined while the module declares a namespace."""
-
-    namespaced.undo()
-
-    class Explicit(Base):
-        """Names itself, as `bind_typename` documents."""
-
-        model_config = {"json_schema_extra": bind_typename({}, "Third.Party.Explicit")}
-
-    assert typename(Explicit) == "Third.Party.Explicit"
-
-
-@pytest.mark.parametrize("subclass_namespace", [True, False], ids=["tagged", "untagged"])
-def test_base_typename_unchanged_by_subclass(namespaced, subclass_namespace):
-    """Test that defining a subclass leaves the name of its base alone.
-
-    Pydantic shares the `json_schema_extra` dictionary between a model and its base, so
-    both branches have to copy it before writing.
+def test_typename_derived_from_module_namespace(module_namespace):
+    """Test that models are named in the namespace declared by their module, if any,
+    and that a subclass takes its own name rather than the name of its base.
     """
 
     class Base(BaseSchema):
-        """The base."""
-
-    if not subclass_namespace:
-        namespaced.undo()
+        """The base model."""
 
     class Sub(Base):
         """The subclass."""
 
-    assert typename(Sub) == (f"{NAMESPACE}.Sub" if subclass_namespace else None)
+    assert typename(Base) == (f"{NAMESPACE}.Base" if module_namespace else None)
+    assert typename(Sub) == (f"{NAMESPACE}.Sub" if module_namespace else None)
+
+
+@pytest.mark.usefixtures("module_namespace")
+def test_class_keyword_overrides_module_namespace():
+    """Test that `sgen_namespace` names a model owned by another package regardless of
+    whether the module declares a namespace.
+    """
+
+    class Foreign(BaseSchema, sgen_namespace="OpenEphys.Onix1"):
+        """A model describing a type owned elsewhere."""
+
+    assert typename(Foreign) == "OpenEphys.Onix1.Foreign"
+
+
+@pytest.mark.parametrize(
+    ("extra", "expected"),
+    [(None, None), (bind_typename({}, "Third.Party.Explicit"), "Third.Party.Explicit")],
+    ids=["inherited", "explicit"],
+)
+def test_subclass_typename_without_namespace(namespaced, extra, expected):
+    """Test that a subclass drops the name of its base unless it names itself explicitly.
+
+    The name of the base is checked too, since pydantic shares `json_schema_extra` between
+    a model and its base, so a subclass writing to it without a copy would rename its base.
+    """
+
+    class Base(BaseSchema):
+        """Defined while the module declares a namespace."""
+
+    namespaced.undo()
+
+    class Sub(Base):
+        """Defined after the namespace is gone, as a consumer module would be."""
+
+        if extra is not None:
+            model_config = {"json_schema_extra": extra}
+
     assert typename(Base) == f"{NAMESPACE}.Base"
+    assert typename(Sub) == expected
 
 
-def test_generated_schema_extension_preserved(namespaced):
-    """Test that a model generating its own schema extension keeps it and stays untagged."""
+def test_generated_schema_annotations_preserved(namespaced):
+    """Test that a model keeps the schema annotations it generates and carries no type name."""
 
     def generate(schema):
         schema["x-generated"] = True
@@ -151,42 +112,31 @@ def test_generated_schema_extension_preserved(namespaced):
 
     schema = TypeAdapter(Generated).json_schema()
     assert schema["x-generated"] is True
-    assert "x-sgen-typename" not in schema
+    assert typename(Generated) is None
 
 
-def test_sibling_extension_keys_preserved(namespaced):
-    """Test that binding a name leaves other schema extension entries in place."""
+def test_sibling_annotations_preserved(namespaced):
+    """Test that binding a name leaves other schema annotations in place."""
 
-    class Annotated(BaseSchema):
-        """Carries an unrelated extension entry."""
+    class Sibling(BaseSchema):
+        """Carries an unrelated annotation."""
 
         model_config = {"json_schema_extra": {"x-unrelated": "kept"}}
 
-    schema = TypeAdapter(Annotated).json_schema()
-    assert schema["x-sgen-typename"] == f"{NAMESPACE}.Annotated"
+    schema = TypeAdapter(Sibling).json_schema()
+    assert schema["x-sgen-typename"] == f"{NAMESPACE}.Sibling"
     assert schema["x-unrelated"] == "kept"
 
 
-def test_enum_typename_derived_from_module_namespace(namespaced):
-    """Test that an enumeration is named in the namespace declared by its module."""
+def test_enum_typename_derived_from_module_namespace(module_namespace):
+    """Test that an enumeration is named in the namespace declared by its module, if any."""
 
     class Colour(SchemaEnum):
-        """An enumeration in a namespaced module."""
+        """An enumeration in a module."""
 
         RED = "Red"
 
-    assert typename(Colour) == f"{NAMESPACE}.Colour"
-
-
-def test_enum_typename_absent_without_module_namespace():
-    """Test that an enumeration in a module declaring no namespace is left untagged."""
-
-    class Colour(SchemaEnum):
-        """An enumeration in a module with no namespace."""
-
-        RED = "Red"
-
-    assert typename(Colour) is None
+    assert typename(Colour) == (f"{NAMESPACE}.Colour" if module_namespace else None)
 
 
 def test_enum_typename_overridden_by_class_keyword():
@@ -198,18 +148,6 @@ def test_enum_typename_overridden_by_class_keyword():
         A = 1
 
     assert typename(Foreign) == "OpenEphys.Onix1.Foreign"
-
-
-def test_member_names_supplied_for_integer_values():
-    """Test that an integer enumeration carries its member names in Pascal case."""
-
-    class Colour(SchemaEnum, IntEnum):
-        """Members an integer value cannot name."""
-
-        RED = 0
-        DARK_BLUE = 1
-
-    assert member_names(Colour) == ["Red", "DarkBlue"]
 
 
 def test_member_names_absent_for_string_values():
@@ -228,38 +166,31 @@ def test_member_names_absent_for_string_values():
     assert member_names(Colour) is None
 
 
-def test_aliased_member_names_align_with_values():
-    """Test that an alias does not shift the member names onto the wrong values.
+def test_member_names_supplied_for_integer_values():
+    """Test that an integer enumeration carries its member names in Pascal case.
 
-    An alias appears in the values but not when iterating the class, so the names have to
-    come from `__members__`.
+    A name outside the upper case convention is passed through, and an alias does not
+    shift the names onto the wrong values. An alias appears in the values but not when
+    iterating the class, so the names have to come from `__members__`.
     """
 
     class Colour(SchemaEnum, IntEnum):
-        """Carries an alias for its first member."""
+        """Members an integer value cannot name, including an alias and a Pascal case name."""
 
         RED = 0
         CRIMSON = 0
-        BLUE = 1
+        DARK_BLUE = 1
+        DarkGreen = 2
 
     schema = TypeAdapter(Colour).json_schema()
-    assert schema["x-enumNames"] == ["Red", "Crimson", "Blue"]
+    assert member_names(Colour) == ["Red", "Crimson", "DarkBlue", "DarkGreen"]
     assert len(schema["x-enumNames"]) == len(schema["enum"])
 
 
-def test_pascal_case_member_name_unchanged():
-    """Test that a name outside the upper case convention is passed through."""
-
-    class Colour(SchemaEnum, IntEnum):
-        """Names its members in Pascal case rather than upper case."""
-
-        DarkBlue = 0
-
-    assert member_names(Colour) == ["DarkBlue"]
-
-
 def test_discriminator_type_selects_union_member():
-    """Test that `DiscriminatorTypeMixin` gives each type the literal a union selects on."""
+    """Test that `DiscriminatorTypeMixin` gives each type a literal of its own name, so that a
+    union selects the matching member and rejects a type outside it.
+    """
 
     class Headstage(BaseSchema):
         """The common base."""
@@ -270,8 +201,13 @@ def test_discriminator_type_selects_union_member():
     class Beta(DiscriminatorTypeMixin, Headstage):
         """Another member of the union."""
 
+    class NotInUnion(DiscriminatorTypeMixin, Headstage):
+        """A subclass that is not a member of the union."""
+
     assert Alpha.model_fields["discriminator_type"].annotation == Literal["Alpha"]
     assert Beta().discriminator_type == "Beta"
 
     union = TypeAdapter(Annotated[Alpha | Beta, Field(discriminator="discriminator_type")])
     assert isinstance(union.validate_python({"discriminatorType": "Beta"}), Beta)
+    with pytest.raises(ValidationError):
+        union.validate_python(NotInUnion())

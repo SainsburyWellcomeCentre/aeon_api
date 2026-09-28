@@ -18,13 +18,14 @@ from pydantic_core import CoreSchema
 from swc.aeon.io.reader import Reader
 
 _TYPENAME_KEY = "x-sgen-typename"
+"""Bonsai.Sgen annotation that binds schema definitions to fully qualified C# type names."""
 
 
 def bind_typename(schema: JsonSchemaValue, typename: str) -> JsonSchemaValue:
-    """Applies the `x-sgen-typename` tag, binding a definition to an existing type.
+    """Applies the `x-sgen-typename` annotation, which binds a definition to an existing type.
 
     Args:
-        schema: The JSON schema definition to tag, modified in place.
+        schema: The JSON schema definition to annotate, modified in place.
         typename: Fully qualified name of the type to bind.
 
     Returns:
@@ -114,9 +115,9 @@ class BaseSchema(BaseModel):
 
         The namespace is the `SGEN_NAMESPACE` of the declaring module, or `sgen_namespace`
         for a model describing a type owned elsewhere. A module declaring neither leaves
-        its models untagged, dropping any name inherited from a base so that a subclass
-        never claims to be the type of its parent. A model generating its schema
-        extension itself is left alone.
+        its models without a type name, dropping any name inherited from a base so that a
+        subclass never claims to be the type of its parent. A model that generates its own
+        schema annotations is left unmodified.
         """
         super().__pydantic_init_subclass__(**kwargs)
         extra = cls.model_config.get("json_schema_extra")
@@ -177,13 +178,13 @@ class Dataset(BaseSchema):
         return os.path.join(self._container_prefix, pattern_prefix)
 
 
-ModelT = TypeVar("ModelT", bound=BaseSchema)
+_ModelT = TypeVar("_ModelT", bound=BaseSchema)
 
 
 class Metadata(Reader):
     """Extracts metadata information from all epochs in the dataset."""
 
-    def __init__(self, type: type[ModelT], pattern="Metadata"):
+    def __init__(self, type: type[_ModelT], pattern="Metadata"):
         """Initialize the reader object with the specified model type and optional pattern."""
         super().__init__(pattern, columns=["metadata", "epoch"], extension="json")
         self.type = TypeAdapter(type)

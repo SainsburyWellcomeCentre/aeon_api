@@ -159,10 +159,17 @@ class HarpSyncAlignment(Reader):
     record a correspondence between their own clock and Harp time; electrophysiology hardware
     is the motivating case. This reader fits a degree-1 model to that correspondence so data
     from such a clock can be placed on the canonical Harp time basis shared by every other
-    stream. The reference Harp time is taken from the file index, in seconds, following the
-    Aeon convention that the first column is the Aeon timestamp; the source clock is taken from
-    the first non-index column, whatever its header. Apply the fit with the `estimate_harp_seconds`
-    method.
+    stream. The source clock is taken from the first non-index column and the reference Harp
+    time from the last column, whatever their headers; the index, following the Aeon
+    convention that the first column is the Aeon timestamp, only places the chunk in time.
+    Apply the fit with the `estimate_harp_seconds` method.
+
+    The reference Harp time is the whole second reported by the Harp synchronization clock
+    for each pulse, which OpenEphys.Onix1 0.4.0 and later already correct by the one second
+    the protocol requires. Recordings whose workflow added that second again carry an index
+    one second later than the reference column; fitting on the reference keeps those
+    recordings and later ones on the same time basis. Data acquired with OpenEphys.Onix1
+    0.3.0 or earlier, where the library exposed the uncorrected value, is not supported.
 
     Columns:
 
@@ -197,7 +204,7 @@ class HarpSyncAlignment(Reader):
         """Fits the source clock to Harp time correspondence stored in the specified file.
 
         The source clock is read from the first non-index column and the reference Harp time
-        from the index, both in seconds.
+        from the last column, both in seconds.
 
         Args:
             path: Path to the correspondence CSV file.
@@ -206,9 +213,9 @@ class HarpSyncAlignment(Reader):
             A single-row DataFrame, indexed by the acquisition chunk time, describing the
             fitted correspondence between the source clock and Harp time.
         """
-        clock = pd.read_csv(path, index_col=0).iloc[:, 0].dropna()
-        source = clock.to_numpy(dtype=float)
-        harp = clock.index.to_numpy(dtype=float)
+        clock = pd.read_csv(path, index_col=0).iloc[:, [0, -1]].dropna()
+        source = clock.iloc[:, 0].to_numpy(dtype=float)
+        harp = clock.iloc[:, -1].to_numpy(dtype=float)
         slope, intercept, r2 = self._fit_line(source, harp)
         return pd.DataFrame(
             index=[chunk_key(path)[1]],

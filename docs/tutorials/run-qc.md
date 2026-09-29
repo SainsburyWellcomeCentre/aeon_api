@@ -5,9 +5,9 @@ title: Interactive QC on an Aeon dataset
 
 # Interactive QC on an Aeon dataset
 
-`aeon-qc` inspects Project Aeon raw datasets and reports on data quality across all acquisition devices. It reads directly from the dataset directory structure using the `swc-aeon` API. Please note that successful use of this and other tools depend on data being logge din the AEON standard format. 
+`swc.aeon.qc` inspects Project Aeon raw datasets and reports on data quality across all acquisition devices. It reads directly from the dataset directory structure using the `swc-aeon` API. Please note that successful use of this and other tools depend on data being logged in the AEON standard format.
 
-This tutorial covers interactive use — running QC from a Python script or notebook on a single dataset window. For running QC across many datasets and epochs automatically, see [Batch QC with benchmarks.yaml](batch-qc.md).
+This tutorial covers interactive use: running QC from a Python script or notebook on a single dataset window. For running QC across many datasets and epochs automatically, see [Batch QC with benchmarks.yaml](batch-qc.md).
 
 ## What it checks
 
@@ -19,29 +19,22 @@ This tutorial covers interactive use — running QC from a Python script or note
 | Sync delta | Timestamp drift between Harp devices relative to the clock synchroniser |
 | Harp sync alerts | HarpSync alert entries parsed from the Bonsai message log |
 | Dropped video frames | Jumps in the camera hardware frame counter |
-| Encoder gaps | Dropped samples in the wheel encoder stream |
+| Continuous-stream gaps | Missing samples in fixed-rate Harp streams (encoder, photodiode, camera trigger) |
 | Pellet failures | Hardware-reported missed and retried pellet deliveries |
 | Message log errors | Warning and Error entries from the Bonsai message log |
 | Environment state durations | Time spent in Running vs Maintenance states |
 
 ---
 
-## Prerequisites
-
-- Python ≥ 3.11
-- [`uv`](https://docs.astral.sh/uv/) (installed automatically by `deploy.cmd` if missing)
-
----
-
 ## Installation
 
-From the repository root:
+The QC module ships with `swc-aeon`. From a clone of this repository:
 
-```cmd
-./deploy.cmd
+```bash
+uv sync
 ```
 
-This creates a `.venv`, installs all dependencies, and makes the `swc.aeon.qc` package importable within that environment.
+This creates a `.venv` with every dependency and makes `swc.aeon.qc` importable within it.
 
 ---
 
@@ -68,7 +61,7 @@ generate_report(root, results, "qc_report.yaml", start=start, end=end)
 ```
 
 > [!TIP]
-> `end` is optional. Omitting it runs QC across all epochs that begin after `start`, which may take a long time for long experiments.
+> `end` is optional. Omitting it runs QC across all epochs that begin after `start`. That may take a long time for long experiments.
 
 ---
 
@@ -119,7 +112,7 @@ Available registry keys:
 
 ## Reading the results
 
-`run_qc` returns a `dict[str, pd.DataFrame]`. Each key identifies a device stream or metric; each value is a tidy DataFrame with a UTC `DatetimeIndex`.
+`run_qc` returns a `dict[str, pd.DataFrame]`. Each key identifies a device stream or metric. Each value is a tidy DataFrame with a UTC `DatetimeIndex`.
 
 ```python
 results["epoch_gaps"]                              # one row per Bonsai session start
@@ -136,6 +129,8 @@ results["Environment.message_log"]                 # non-Info Bonsai log entries
 results["Environment.environment_state"]           # time in Running / Maintenance states
 ```
 
+`run_qc` accepts a list of roots as well as a single path. Every stream is loaded once and the loaded frame feeds every metric for that stream.
+
 Each DataFrame carries metadata in `.attrs`:
 
 ```python
@@ -144,7 +139,7 @@ df.attrs["data_found"]   # False if no files were found on disk for this device
 df.attrs["n_frames"]     # total frames counted (including dropped)
 ```
 
-An empty DataFrame with `data_found=False` means the device was in the schema but produced no data files — this is expected for `WeightScale` devices which do not emit heartbeats.
+An empty DataFrame with `data_found=False` means the device was in the schema but produced no data files. This is expected for `WeightScale` devices which do not emit heartbeats.
 
 ---
 

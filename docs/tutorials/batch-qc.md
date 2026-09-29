@@ -13,9 +13,9 @@ For interactive use on a single dataset window, see [Interactive QC on an Aeon d
 
 ## How it works
 
-`benchmarks.yaml` lists datasets and the epochs that you want to QC. The script `scripts/run_benchmarks.py` iterates every epoch, runs `run_qc` over the epoch's time window, and saves a YAML report and a pickled results dict for each one.
+`scripts/benchmarks.yaml` lists datasets and the epochs that you want to QC. The script `scripts/run_benchmarks.py` iterates every epoch, runs `run_qc` over the epoch's time window, and saves a YAML report and a pickled results dict for each one.
 
-**Time window per epoch:** `start` comes from the manifest; `end` is the next epoch's `start`. For the last epoch in a dataset, `end` is determined by scanning epoch directories on disk to find the next one after `start`. If no subsequent epoch exists on disk, `end` is `None` and the window is open-ended. If an `end` is given in the manifest, it is used instead: only epochs whose `start` precedes it are included. Epoch gaps are reported as part of the QC, indicating Bonsai had crashed and restarted, automatically or manually.
+**Time window per epoch:** `start` comes from the manifest. `end` is the next epoch's `start`. For the last epoch in a dataset, `end` is determined by scanning epoch directories on disk to find the next one after `start`. If no subsequent epoch exists on disk, `end` is `None` and the window is open-ended. If an `end` is given in the manifest, it is used instead: only epochs whose `start` precedes it are included. Epoch gaps are reported as part of the QC. They indicate Bonsai had crashed and restarted, automatically or manually.
 
 ---
 
@@ -40,7 +40,7 @@ datasets:
       - {ssid: 24997, start: "2024-03-25T12-16-27"}
       - {ssid: 25010, start: "2024-03-25T12-41-07"}
 
-  - name: harris-ses-043                              # schema: null skips this dataset, only placeholder
+  - name: harris-ses-043                              # no registry schema: built from the data
     root: /ceph/aeon/aeon/data/raw/aeon/test2/harris_benchmark_rawdata/ses-043_date-20251223
     schema: null
     epochs: []
@@ -50,12 +50,13 @@ datasets:
 
 | Field | Required | Description |
 |---|---|---|
-| `name` | yes | Unique identifier; used as the output subdirectory name |
-| `root` | yes | Absolute path to the dataset root on the SWC cluster |
-| `schema` | yes | REGISTRY key, or `null` to skip this dataset |
-| `end` | no | UTC ISO 8601 timestamp capping the dataset; only epochs whose `start` precedes this are processed, and the final epoch's window closes here. Without it, the final epoch's `end` is found by scanning epoch directories on disk; if no subsequent epoch exists, the window is open-ended. |
-| `epochs` | yes | List of epoch entries; empty list `[]` skips the dataset |
-| `epochs[].start` | yes | Epoch start timestamp — filesystem format (`2024-01-31T11-28-39`) or ISO 8601 (`2024-01-31T11:28:39+00:00`); naive strings are assumed UTC |
+| `name` | yes | Unique identifier, used as the output subdirectory name |
+| `root` | one of `root`/`roots` | Absolute path to the dataset root |
+| `roots` | one of `root`/`roots` | List of roots searched together, main dataset first. Epoch discovery and epoch gaps use the first root. |
+| `schema` | no | REGISTRY key. Omit it (or set `null`) to build the schema automatically: registry match on the root path, then `Metadata.yml` (Harp and camera devices), then filesystem discovery. A missing `schema` does not skip the dataset. |
+| `end` | no | UTC ISO 8601 timestamp capping the dataset. Only epochs whose `start` precedes this are processed. The final epoch's window closes here. Without it, the final epoch's `end` is found by scanning epoch directories on disk. If no subsequent epoch exists, the window is open-ended. |
+| `epochs` | yes | List of epoch entries. An empty list `[]` does not skip the dataset: every epoch directory under the first root is discovered and run, with the load window derived from the chunk filenames. Only a missing root skips a dataset. |
+| `epochs[].start` | yes | Epoch start timestamp in filesystem format (`2024-01-31T11-28-39`) or ISO 8601 (`2024-01-31T11:28:39+00:00`). Naive strings are assumed UTC |
 | `epochs[].phase` | no | Label used in output filenames (e.g. `presocial`, `social`) |
 | `epochs[].ssid` | no | Session ID label used in output filenames (alternative to `phase`) |
 
@@ -78,7 +79,7 @@ ls /ceph/aeon/aeon/data/raw/AEON3/social0.2/
 # 2024-01-31T11-28-39  2024-02-01T22-36-47  2024-02-02T00-15-00  ...
 ```
 
-Paste the directory name directly as the `start` value — no conversion needed:
+Paste the directory name directly as the `start` value. No conversion is needed:
 
 ```yaml
 - {phase: presocial, start: "2024-01-31T11-28-39"}
@@ -98,8 +99,10 @@ uv run python scripts/run_benchmarks.py [options]
 
 | Option | Default | Description |
 |---|---|---|
-| `--benchmarks PATH` | `benchmarks.yaml` | Path to the benchmarks manifest |
+| `--benchmarks PATH` | `scripts/benchmarks.yaml` | Path to the benchmarks manifest |
 | `--output DIR` | `benchmarks_output/` | Root directory for output files |
+
+Before a long run, `scripts/dry_run_benchmarks.py --benchmarks PATH` checks that every root exists and that every reader in the schema has at least one file per epoch, without loading anything.
 
 ### Run
 
@@ -128,7 +131,7 @@ benchmarks_output/
     ...
 ```
 
-The filename stem is `{label}_{start}` where `label` is the `phase` or `ssid` field from the epoch entry. The YAML report format is described in [Interactive QC — Generating a YAML report](run-qc.md#generating-a-yaml-report).
+The filename stem is `{label}_{start}` where `label` is the `phase` or `ssid` field from the epoch entry. The YAML report format is described in [Interactive QC, generating a YAML report](run-qc.md#generating-a-yaml-report). The console prints one verdict line per epoch (heartbeat gaps, frames dropped, streams with no data) so a run can be followed without opening the reports.
 
 ---
 
@@ -151,10 +154,10 @@ print(f"{len(df)} heartbeat gap(s)")
 
 ## Adding a new dataset
 
-1. Find the dataset root on the cluster and identify which `schema` key applies.
-2. List the epoch directories to get start timestamps.
-3. Add an entry to `benchmarks.yaml` — use `schema: null` and `epochs: []` as a placeholder if the schema is not yet ported.
-4. Run the script to produce results.
+1. Find the dataset root on the cluster.
+2. Add an entry to `scripts/benchmarks.yaml`. Leave out `schema` unless the dataset needs a bespoke registry entry (octagon). Leave `epochs: []` to run every epoch on disk, or list the epochs you want with their phase labels.
+3. Run `scripts/dry_run_benchmarks.py` to confirm the roots and files are visible, then `scripts/run_benchmarks.py`.
+4. Read the YAML reports under the output directory.
 
 ---
 

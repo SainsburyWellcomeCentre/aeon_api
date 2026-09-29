@@ -13,7 +13,7 @@ Usage:
     uv run python scripts/dry_run_benchmarks.py [options]
 
 Options:
-    --benchmarks PATH   Path to benchmarks YAML (default: real_benchmarks.yaml)
+    --benchmarks PATH   Path to benchmarks YAML (default: scripts/benchmarks.yaml)
 """
 
 import argparse
@@ -43,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--benchmarks",
-        default="real_benchmarks.yaml",
+        default="scripts/benchmarks.yaml",
         help="Path to benchmarks YAML",
     )
     return parser.parse_args()
@@ -51,26 +51,26 @@ def parse_args() -> argparse.Namespace:
 
 def list_epoch_dirs(root: str | Path) -> list[tuple[pd.Timestamp, Path]]:
     """Return [(start_ts, dir_path), ...] sorted by start, for filesystem-driven epoch discovery."""
-    return sorted(
-        (parse_epoch_timestamp(d), d)
-        for d in Path(root).iterdir()
-        if is_epoch_dir(d)
-    )
+    return sorted((parse_epoch_timestamp(d), d) for d in Path(root).iterdir() if is_epoch_dir(d))
 
 
-def check_readers(epoch_dir: Path, schema: object) -> list[str]:
+def check_readers(epoch_dir: Path, schema: object, extra_roots: list[str] | None = None) -> list[str]:
     """For each reader in schema, confirm at least one file matches its pattern under epoch_dir.
 
     Mirrors what ``swc.aeon.io.api.load`` does internally (glob
     ``<epoch>/**/<reader.pattern>.<reader.extension>``) but without
-    reading any files or applying time-window filtering. Returns one
-    "no files" message per reader that finds nothing.
+    reading any files or applying time-window filtering. Readers with no
+    file under ``epoch_dir`` are also looked up under ``extra_roots`` (any
+    epoch). Returns one "no files" message per reader that finds nothing.
     """
     issues: list[str] = []
     for qualified_name, reader in iter_readers(schema):
         pattern = f"**/{reader.pattern}.{reader.extension}"
-        if not next(epoch_dir.glob(pattern), None):
-            issues.append(f"no files for {qualified_name}: {reader.pattern}.{reader.extension}")
+        if next(epoch_dir.glob(pattern), None):
+            continue
+        if any(next(Path(r).glob(f"*/{pattern}"), None) for r in extra_roots or []):
+            continue
+        issues.append(f"no files for {qualified_name}: {reader.pattern}.{reader.extension}")
     return issues
 
 
@@ -84,14 +84,17 @@ def main() -> int:
 
     for dataset in benchmarks["datasets"]:
         name = dataset["name"]
-        root = dataset["root"]
+        roots = dataset.get("roots") or dataset.get("root") or []
+        roots = [roots] if isinstance(roots, str) else list(roots)
+        root = roots[0] if roots else ""
         schema_key = dataset.get("schema")
         epochs = dataset.get("epochs") or []
         epochs_auto = False
         print(f"\n=== {name} ===")
 
-        if not Path(root).is_dir():
-            print(f"  FAIL: root does not exist: {root}")
+        missing_roots = [r for r in roots if not Path(r).is_dir()]
+        if not roots or missing_roots:
+            print(f"  FAIL: root does not exist: {missing_roots[0] if missing_roots else '<none>'}")
             total_issues += 1
             continue
 
@@ -113,8 +116,7 @@ def main() -> int:
                 continue
             print(f"  (no epochs listed - discovered {len(disk_epochs)} on disk)")
             epoch_iter = [
-                {"phase": "auto", "start": ts.strftime("%Y-%m-%dT%H-%M-%S")}
-                for ts, _ in disk_epochs
+                {"phase": "auto", "start": ts.strftime("%Y-%m-%dT%H-%M-%S")} for ts, _ in disk_epochs
             ]
             epochs_auto = True
         else:
@@ -135,10 +137,14 @@ def main() -> int:
                 derived = derive_epoch_window(epoch_dir)
                 if derived is None:
                     issues.append("filename-window derivation failed (no parseable filenames)")
-                schema = registry_schema if registry_schema is not None else build_schema(
-                    str(epoch_dir),
-                    start=start,
-                    end=derived[1] if derived is not None else start + pd.Timedelta(hours=1),
+                schema = (
+                    registry_schema
+                    if registry_schema is not None
+                    else build_schema(
+                        str(epoch_dir),
+                        start=start,
+                        end=derived[1] if derived is not None else start + pd.Timedelta(hours=1),
+                    )
                 )
                 issues.extend(check_readers(epoch_dir, schema))
             else:
@@ -149,11 +155,11 @@ def main() -> int:
                 else:
                     later = [ts for ts, _ in list_epoch_dirs(root) if ts > start]
                     end = later[0] if later else None
-                if registry_schema is not None:
+                if registry_schema is not None and len(roots) == 1:
                     schema = registry_schema
                 else:
                     schema = build_schema(
-                        root,
+                        roots,
                         start=start,
                         end=end if end is not None else start + pd.Timedelta(hours=1),
                     )
@@ -161,7 +167,7 @@ def main() -> int:
                     derived = derive_epoch_window(epoch_dir)
                     if derived is None:
                         issues.append("filename-window derivation failed (no parseable filenames)")
-                issues.extend(check_readers(epoch_dir, schema))
+                issues.extend(check_readers(epoch_dir, schema, roots[1:]))
 
             tag = "OK" if not issues else "WARN"
             print(f"  [{i + 1}/{len(epoch_iter)}] {tag} {label} {epoch['start']}")

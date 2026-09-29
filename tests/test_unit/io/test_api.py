@@ -108,6 +108,19 @@ def test_chunk_key(data, expected, request):
     assert result == expected
 
 
+@pytest.fixture(params=["monotonic", "nonmonotonic"], ids=["monotonic", "nonmonotonic"])
+def filter_df(request) -> pd.DataFrame:
+    """DataFrame with 10 one-minute timestamps.
+
+    The nonmonotonic variant swaps positions 3 and 4:
+    00:00, 00:01, 00:02, 00:04, 00:03, 00:05, ...
+    """
+    idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
+    if request.param == "nonmonotonic":
+        idx_list[3], idx_list[4] = idx_list[4], idx_list[3]
+    return pd.DataFrame({"value": range(10)}, index=idx_list)
+
+
 @pytest.mark.parametrize(
     "inclusive",
     ["both", "left", "right", "neither"],
@@ -119,62 +132,51 @@ def test_chunk_key(data, expected, request):
         (
             pd.Timestamp("2022-01-01 00:02:00"),
             None,
-            nullcontext({"both": 8, "left": 8, "right": 7, "neither": 7}),
+            {"both": 8, "left": 8, "right": 7, "neither": 7},
         ),
         (
             None,
             pd.Timestamp("2022-01-01 00:04:00"),
-            nullcontext({"both": 4, "left": 3, "right": 4, "neither": 3}),
+            {"both": 5, "left": 4, "right": 5, "neither": 4},
         ),
         (
             pd.Timestamp("2022-01-01 00:02:00"),
             pd.Timestamp("2022-01-01 00:04:00"),
-            nullcontext({"both": 2, "left": 1, "right": 1, "neither": 0}),
+            {"both": 3, "left": 2, "right": 2, "neither": 1},
         ),
         (
             pd.Timestamp("2022-01-01 00:02:30"),
             None,
-            pytest.raises(KeyError),
+            {"both": 7, "left": 7, "right": 7, "neither": 7},
         ),
         (
             None,
             pd.Timestamp("2022-01-01 00:04:30"),
-            pytest.raises(KeyError),
+            {"both": 5, "left": 5, "right": 5, "neither": 5},
         ),
     ],
     ids=[
         "start only",
         "end only",
         "both provided",
-        "start key not present",
-        "end key not present",
+        "start not in index",
+        "end not in index",
     ],
 )
-def test_filter_time_range(start, end, inclusive, expected):
-    """Test `_filter_time_range` with a DataFrame with out-of-order DatetimeIndex.
-
-    The DataFrame has timestamps in this order (positions 3 and 4 are out-of-order):
-    00:00:00, 00:01:00, 00:02:00, 00:04:00, 00:03:00, 00:05:00, ...
-    The function should throw a KeyError if any of the start or end keys are not
-    present in the DataFrame. Otherwise, it should return a DataFrame with the
-    expected length.
-    """
-    # Create a DataFrame with out-of-order DatetimeIndex
-    idx_list = pd.date_range("2022-01-01 00:00:00", periods=10, freq="min").tolist()
-    idx_list[3], idx_list[4] = idx_list[4], idx_list[3]
-    df = pd.DataFrame({"value": range(10)}, index=idx_list)
-    with expected as expected_lengths:
-        result = _filter_time_range(df, start, end, inclusive=inclusive)
-        assert len(result) == expected_lengths[inclusive]
+def test_filter_time_range(filter_df, start, end, inclusive, expected):
+    """Test `_filter_time_range` with both monotonic and non-monotonic DatetimeIndex."""
+    result = _filter_time_range(filter_df, start, end, inclusive=inclusive)
+    assert len(result) == expected[inclusive]
 
 
+@pytest.mark.filterwarnings("ignore:.*out-of-order timestamps")
 @pytest.mark.parametrize(
     ("root", "to_str", "expect_monotonic"),
     [
         ("monotonic_dir", False, True),
-        ("nonmonotonic_dir", True, False),
+        ("nonmonotonic_dir", True, True),
         (["nonmonotonic_dir", "monotonic_dir"], False, True),
-        (["monotonic_dir", "nonmonotonic_dir"], True, False),
+        (["monotonic_dir", "nonmonotonic_dir"], True, True),
     ],
     ids=[
         "PathLike",
@@ -268,8 +270,8 @@ def test_load_start_end_args(data_dir, start, end, request):
     """Test `load` handling of `start` and `end` with both monotonic and non-monotonic data.
 
     Ensures:
-    - Filtering respects `start` and `end` bounds when monotonic
-    - Non-monotonic data triggers warning and returns the full dataframe with sorted indices
+    - Filtering respects `start` and `end` bounds
+    - Non-monotonic data additionally triggers warning
     """
     root_dir = request.getfixturevalue(data_dir)
     is_monotonic = data_dir == "monotonic_dir"
@@ -278,14 +280,24 @@ def test_load_start_end_args(data_dir, start, end, request):
     )
     with context:
         result = load(root_dir, Encoder("Patch2_90_*"), start=start, end=end)
-    # Monotonic filtering assertions
-    if is_monotonic:
-        if start is not None:
-            assert (result.index >= pd.to_datetime(start, utc=True)).all(), (
-                f"Start filter failed: min index {result.index.min()} < {start}"
-            )
-        if end is not None:
-            assert (result.index <= pd.to_datetime(end, utc=True)).all(), (
-                f"End filter failed: max index {result.index.max()} > {end}"
-            )
     assert result.index.is_monotonic_increasing
+    if start is not None:
+        assert (result.index >= pd.to_datetime(start, utc=True)).all(), (
+            f"Start filter failed: min index {result.index.min()} < {start}"
+        )
+    if end is not None:
+        assert (result.index <= pd.to_datetime(end, utc=True)).all(), (
+            f"End filter failed: max index {result.index.max()} > {end}"
+        )
+
+
+@pytest.mark.parametrize(
+    ("sort", "expect_monotonic"),
+    [(True, True), (False, False)],
+    ids=["sort=True", "sort=False"],
+)
+def test_load_sort_arg(nonmonotonic_dir, sort, expect_monotonic):
+    """Test that `sort` controls output order for non-monotonic data, and warning is always emitted."""
+    with pytest.warns(UserWarning, match="out-of-order timestamps"):
+        result = load(nonmonotonic_dir, Encoder("Patch2_90_*"), sort=sort)
+    assert result.index.is_monotonic_increasing == expect_monotonic

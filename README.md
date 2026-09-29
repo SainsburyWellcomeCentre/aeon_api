@@ -15,25 +15,41 @@ We recommend [uv](https://docs.astral.sh/uv/) for python version, environment, a
 uv pip install swc-aeon
 ```
 
-### Install from source
+### Install from GitHub
+
+```
+uv pip install git+https://github.com/SainsburyWellcomeCentre/aeon_api
+```
+
+### Set up a development environment
 
 ```
 git clone https://github.com/SainsburyWellcomeCentre/aeon_api
 cd aeon_api
-uv sync --all-extras
+uv sync
+```
+
+This creates a `.venv` with the required runtime dependencies and the development tools, including the test runner, the linter, and the type checker.
+Because running commands with `uv run` (e.g. `uv run pytest`) keeps the environment synchronised automatically, `uv sync` is only needed once during the initial setup.
+
+To set up the pre-commit hooks:
+
+```
+uv run pre-commit install
 ```
 
 ## Repository Contents
 
 - `.github/workflows/` : GitHub actions workflows for building the environment and running tests
-- `aeon/` : Source code for the Aeon Python package
-    - `aeon/analysis`: Source code for processing and plotting the raw data
-    - `aeon/io`: Source code for loading raw data
-    - `aeon/schema`: Core modules for defining data schemas used to load raw data from particular experiments
-- `tests/` : API unit tests
+- `src/swc/aeon/` : Source code for the Aeon Python package
+    - `src/swc/aeon/analysis`: Source code for processing and plotting the raw data
+    - `src/swc/aeon/io`: Source code for loading raw data
+    - `src/swc/aeon/schema`: Core modules for defining data schemas used to load raw data from experiments
+- `tests/` : Tests for the Aeon Python package
     - `tests/data` : Data used by tests
-    - `tests/io` : Unit tests for the low-level raw data access API.
-    - `tests/schema` : Schemas used to load sample data in test functions.
+    - `tests/schema` : Schemas used to load sample data in tests
+    - `tests/test_integration` : Integration tests
+    - `tests/test_unit` : Unit tests, mirroring `src/swc/aeon/` package structure
 
 ## Citation Policy
 

@@ -4,18 +4,21 @@ import datetime
 from contextlib import nullcontext
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 from dotmap import DotMap
 from pandas import testing as tm
 
 from swc.aeon.io.reader import (
+    Binary,
     BitmaskEvent,
     Chunk,
     Csv,
     DigitalBitmask,
     Encoder,
     Harp,
+    HarpSyncAlignment,
     Heartbeat,
     JsonList,
     Log,
@@ -94,6 +97,7 @@ def test_chunk_init(reader_arg, expected_pattern, expected_extension):
 
 
 def test_chunk_init_defaults():
+    """Test that `Chunk` raises a ValueError when initialised without a reader, pattern or extension."""
     with pytest.raises(ValueError, match="reader must be specified if pattern or extension are None."):
         Chunk()
 
@@ -152,6 +156,18 @@ def test_csv_read(file, request):
         assert not df.empty
         assert set(df.columns) == {"col2", "col3"}  # col1 becomes index
         assert pd.api.types.is_float_dtype(df.index)
+
+
+def test_binary_read(tmp_path):
+    """Test that Binary `read` returns a DataFrame of the flat binary records with a default index."""
+    data = np.arange(12, dtype=np.float32).reshape(-1, 3)
+    file = tmp_path / "records.bin"
+    file.write_bytes(data.tobytes())
+    reader = Binary("pattern", columns=["x", "y", "z"], dtype=np.float32)
+    df = reader.read(file)
+    assert set(df.columns) == {"x", "y", "z"}
+    assert isinstance(df.index, pd.RangeIndex)
+    assert np.array_equal(df.to_numpy(), data)
 
 
 @pytest.mark.parametrize(
@@ -346,3 +362,65 @@ class TestPose:
         with expected as expected_file_name:
             config_file = Pose.get_config_file(config_dir, config_name)
             assert config_file == config_dir / expected_file_name
+
+
+def test_harpsyncalignment_read(harpsync_file):
+    """Test that HarpSyncAlignment fits the source-to-Harp correspondence into a single summary row."""
+    file, expected = harpsync_file
+    df = HarpSyncAlignment("NeuropixelsV2Beta_HarpSync_*").read(file)
+    pd.testing.assert_frame_equal(df, expected, rtol=1e-6)
+
+
+def test_harpsyncalignment_parameters_reconstruct_harp_time(harpsync_file):
+    """Test that the fitted slope and intercept recover Harp time from the source clock."""
+    file, _ = harpsync_file
+    row = HarpSyncAlignment("NeuropixelsV2Beta_HarpSync_*").read(file).iloc[0]
+    predicted = HarpSyncAlignment.estimate_harp_seconds(
+        np.array([row["clock_start"], row["clock_end"]]), row["slope"], row["intercept"]
+    )
+    np.testing.assert_allclose(predicted, [row["harp_start"], row["harp_end"]])
+
+
+def test_harpsyncalignment_real_data_accuracy(harpsync_real_file):
+    """Test that the fit reproduces Harp time from recorded ONIX data to sub-millisecond accuracy.
+
+    The mean-centered numpy fit was verified to match the original scikit-learn LinearRegression on
+    this dataset to within floating-point precision; this guards that numerical result without a
+    scikit-learn dependency. The ISO8601 chunk time in the file name also confirms the UTC index.
+    """
+    df = HarpSyncAlignment("NeuropixelsV2_HarpSync_*").read(harpsync_real_file)
+    assert df.index[0] == pd.Timestamp("2026-06-28 10:00:00", tz="UTC")
+    row = df.iloc[0]
+    assert row["r2"] == pytest.approx(1.0)
+    raw = pd.read_csv(harpsync_real_file)
+    predicted = HarpSyncAlignment.estimate_harp_seconds(
+        raw["Value.Clock"].to_numpy(dtype=float), row["slope"], row["intercept"]
+    )
+    np.testing.assert_allclose(predicted, raw["Seconds"].to_numpy(dtype=float), rtol=0, atol=1e-4)
+
+
+def test_harpsyncalignment_fits_seconds_index_not_harptime(harpsync_real_file):
+    """Test that the fit uses the Seconds index for Harp time, not the Value.HarpTime column.
+
+    In the recorded data the Value.HarpTime column reports the second about to elapse and so lags the
+    true Harp time, held in the Seconds index, by one second. Fitting against it would bias the model.
+    """
+    row = HarpSyncAlignment("NeuropixelsV2_HarpSync_*").read(harpsync_real_file).iloc[0]
+    raw = pd.read_csv(harpsync_real_file).iloc[0]
+    assert row["harp_start"] == raw["Seconds"]
+    assert row["harp_start"] - raw["Value.HarpTime"] == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize(
+    ("clock", "expected"),
+    [
+        (20.0, 45.0),
+        (np.array([0.0, 10.0, 20.0]), np.array([5.0, 25.0, 45.0])),
+        (pd.Series([0.0, 10.0, 20.0]), pd.Series([5.0, 25.0, 45.0])),
+    ],
+)
+def test_estimate_harp_seconds_applies_linear_model(clock, expected):
+    """Test that estimate_harp_seconds applies the slope and intercept and preserves the input type."""
+    result = HarpSyncAlignment.estimate_harp_seconds(clock, slope=2.0, intercept=5.0)
+    assert type(result) is type(expected)
+    assert np.array_equal(np.asarray(result), np.asarray(expected))

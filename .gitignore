@@ -25,5 +25,4 @@ scratch*.py
 .venv/
 
 # QC outputs
-notebooks/qc_results/
 devdata/

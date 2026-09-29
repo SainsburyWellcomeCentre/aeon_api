@@ -30,7 +30,6 @@ classifiers = [
 dependencies = [
   "dotmap",
   "harp-python>=0.3.0",
-  "ipykernel",
   "matplotlib",
   "numpy>=1.26.4",
   "opencv-python",

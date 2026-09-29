@@ -1,12 +1,7 @@
 """High-level run_qc orchestration and YAML report generation."""
 
-# This file uses a file-wide pyright directive because the row-iteration
-# pattern (df.itertuples() / df.iloc[0]) appears in 10+ helpers below and
-# pandas-stubs returns broad unions for row attributes (Scalar, Properties).
-# Suppressing per-line would mean ~170 ignores; suppressing per-rule once is
-# cleaner. Other QC files (octagon.py, harp.py) suppress the same rule with
-# per-line `# pyright: ignore[reportAttributeAccessIssue]` markers because
-# they have only 2-3 isolated sites - point ignores are clearer there.
+# pandas-stubs types row attributes from itertuples() and iloc as broad unions, which
+# the report helpers below hit in over a hundred places. Suppress those two rules once here.
 # pyright: reportAttributeAccessIssue=false, reportArgumentType=false
 
 import datetime
@@ -19,8 +14,8 @@ from typing import Any
 import pandas as pd
 import yaml
 
-from swc.aeon.io.api import Reader
-from swc.aeon.io.reader import Encoder, Harp, Heartbeat, Video
+from swc.aeon.io.api import Reader, load
+from swc.aeon.io.reader import Csv, Encoder, Harp, Heartbeat, Pose, Video
 from swc.aeon.qc.environment import environment_state_durations, harp_sync_alerts, message_log_errors
 from swc.aeon.qc.epochs import epoch_gaps
 from swc.aeon.qc.harp import harp_gaps
@@ -29,6 +24,9 @@ from swc.aeon.qc.pellet import pellet_failures
 from swc.aeon.qc.schemas import is_epoch_dir, normalise_timestamp
 from swc.aeon.qc.sync import MIN_DEVICES, sync_delta
 from swc.aeon.qc.video import dropped_frames, frame_rate_stability
+
+DETAIL_ROW_CAP = 100
+"""Maximum number of detail rows written to the YAML report for high-volume metrics."""
 
 
 def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:
@@ -43,67 +41,108 @@ def iter_readers(schema: Any) -> Iterator[tuple[str, Reader]]:
 
 
 def run_qc(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     schema: Any,
     start: str | datetime.datetime,
     end: str | datetime.datetime | None = None,
 ) -> dict[str, pd.DataFrame]:
-    """Run all applicable QC checks against every stream in a schema DotMap."""
-    start = normalise_timestamp(start)
-    end = normalise_timestamp(end) if end is not None else None
+    """Run all applicable QC checks against every stream in a schema DotMap.
+
+    Every Harp and CSV stream is loaded once and the loaded frame feeds every metric for
+    the stream, so no stream is read twice. SLEAP pose streams are not loaded: they need
+    the model configuration and carry several rows per frame by design.
+
+    Args:
+        root: Dataset root path, or a list of roots searched together. Epoch gaps are
+            computed on the first root only.
+        schema: DotMap of devices to stream readers.
+        start: Left bound of the time range.
+        end: Optional right bound of the time range.
+
+    Returns:
+        Mapping of result key to metric DataFrame.
+
+    """
+    start_ts: datetime.datetime = normalise_timestamp(start)
+    end_ts: datetime.datetime | None = normalise_timestamp(end) if end is not None else None
     results: dict[str, pd.DataFrame] = {}
-    if not is_epoch_dir(Path(root)):
-        results["epoch_gaps"] = epoch_gaps(root, start=start, end=end)
+    first_root = Path(root[0]) if isinstance(root, list) else Path(root)
+    if not is_epoch_dir(first_root):
+        results["epoch_gaps"] = epoch_gaps(first_root, start=start_ts, end=end_ts)
     heartbeat_readers: dict[str, Heartbeat] = {}
     device_streams: dict[str, dict[str, Reader]] = {}
+    frames: dict[str, pd.DataFrame] = {}
+    device_frames: dict[str, dict[str, pd.DataFrame]] = {}
     for qualified_name, reader in iter_readers(schema):
         device, _, stream_name = qualified_name.partition(".")
         device_streams.setdefault(device, {})[stream_name or device] = reader
+        if not isinstance(reader, Harp | Csv) or isinstance(reader, Pose):
+            continue
+        data = load(root, reader, start=start_ts, end=end_ts)
+        frames[qualified_name] = data
+        device_frames.setdefault(device, {})[stream_name or device] = data
         if isinstance(reader, Heartbeat):
-            results[qualified_name] = heartbeat_gaps(
-                root, reader, start=start, end=end
-            )
+            results[qualified_name] = heartbeat_gaps(root, reader, start=start_ts, end=end_ts, data=data)
             if "rfid" not in device.lower():
                 results[f"{qualified_name}.duplicates"] = heartbeat_duplicates(
-                    root, reader, start=start, end=end
+                    root, reader, start=start_ts, end=end_ts, data=data
                 )
             heartbeat_readers[qualified_name] = reader
         elif isinstance(reader, Video):
-            results[qualified_name] = dropped_frames(root, reader, start=start, end=end)
-            device = qualified_name.rpartition(".")[0] or qualified_name
+            results[qualified_name] = dropped_frames(root, reader, start=start_ts, end=end_ts, data=data)
             results[f"{device}.frame_rate"] = frame_rate_stability(
-                root, reader, start=start, end=end
+                root, reader, start=start_ts, end=end_ts, data=data
             )
         elif isinstance(reader, Encoder):
             reader.expected_hz = 500.0
-            results[qualified_name] = harp_gaps(root, reader, start=start, end=end)
+            results[qualified_name] = harp_gaps(root, reader, start=start_ts, end=end_ts, data=data)
         elif isinstance(reader, Harp) and hasattr(reader, "expected_hz"):
-            results[qualified_name] = harp_gaps(root, reader, start=start, end=end)
+            results[qualified_name] = harp_gaps(root, reader, start=start_ts, end=end_ts, data=data)
     if len(heartbeat_readers) >= MIN_DEVICES:
-        results["sync_delta"] = sync_delta(root, heartbeat_readers, start=start, end=end)
+        results["sync_delta"] = sync_delta(
+            root,
+            heartbeat_readers,
+            start=start_ts,
+            end=end_ts,
+            data={name: frames[name] for name in heartbeat_readers},
+        )
 
     for device_name, streams in device_streams.items():
+        loaded = device_frames.get(device_name, {})
         if "DeliverPellet" in streams:
+            pellet_frames = {
+                key: loaded[stream]
+                for key, stream in (
+                    ("deliver", "DeliverPellet"),
+                    ("missed", "MissedPellet"),
+                    ("retried", "RetriedDelivery"),
+                )
+                if stream in loaded
+            }
             results[f"{device_name}.pellet_stats"] = pellet_failures(
                 root,
                 deliver_reader=streams["DeliverPellet"],
                 missed_reader=streams.get("MissedPellet"),
                 retried_reader=streams.get("RetriedDelivery"),
-                start=start,
-                end=end,
+                start=start_ts,
+                end=end_ts,
+                data=pellet_frames,
             )
         if "MessageLog" in streams:
             results[f"{device_name}.message_log"] = message_log_errors(
-                root, streams["MessageLog"], start=start, end=end
+                root, streams["MessageLog"], start=start_ts, end=end_ts, data=loaded.get("MessageLog")
             )
             results[f"{device_name}.harp_sync_alerts"] = harp_sync_alerts(
-                root, streams["MessageLog"], start=start, end=end
+                root, streams["MessageLog"], start=start_ts, end=end_ts, data=loaded.get("MessageLog")
             )
         if "EnvironmentState" in streams:
             results[f"{device_name}.environment_state"] = environment_state_durations(
-                root, streams["EnvironmentState"], start=start, end=end
+                root,
+                streams["EnvironmentState"],
+                start=start_ts,
+                end=end_ts,
+                data=loaded.get("EnvironmentState"),
             )
-
     return results
 
 
@@ -116,15 +155,15 @@ def generate_report(
 ) -> Path:
     """Write a human-readable YAML QC summary from QC metric DataFrames."""
     output_path = Path(output_path)
-    start = normalise_timestamp(start)
-    end = normalise_timestamp(end) if end is not None else None
+    start_ts: datetime.datetime = normalise_timestamp(start)
+    end_ts: datetime.datetime | None = normalise_timestamp(end) if end is not None else None
 
     report: dict[str, Any] = {
         "generated_at": datetime.datetime.now(tz=datetime.UTC).isoformat(),
         "dataset_root": str(root),
         "time_range": {
-            "start": start.isoformat(),
-            "end": end.isoformat() if end is not None else None,
+            "start": start_ts.isoformat(),
+            "end": end_ts.isoformat() if end_ts is not None else None,
         },
         "devices": {},
     }
@@ -352,8 +391,7 @@ def pellet_section(df: pd.DataFrame) -> dict[str, Any]:
         "n_missed": n_missed,
     }
     detail: list[dict[str, Any]] = [
-        {"time": row.Index.isoformat(), "outcome": row.outcome}
-        for row in df.itertuples()
+        {"time": row.Index.isoformat(), "outcome": row.outcome} for row in df.itertuples()
     ]
     return {"metric": "pellet_failures", "summary": summary, "detail": detail}
 
@@ -489,13 +527,7 @@ def environment_state_section(df: pd.DataFrame) -> dict[str, Any]:
         }
         detail: list[dict[str, Any]] = []
     else:
-        totals = (
-            df.groupby("state")["duration"]
-            .sum()
-            .dt.total_seconds()
-            .round(1)
-            .to_dict()
-        )
+        totals = df.groupby("state")["duration"].sum().dt.total_seconds().round(1).to_dict()
         summary = {
             "data_found": data_found,
             "n_transitions": len(df),

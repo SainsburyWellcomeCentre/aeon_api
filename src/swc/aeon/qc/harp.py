@@ -19,11 +19,12 @@ DEFAULT_THRESHOLD = pd.Timedelta(seconds=1)
 
 
 def harp_gaps(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     reader: Harp,
     start: datetime.datetime,
     end: datetime.datetime | None = None,
     threshold: pd.Timedelta = DEFAULT_THRESHOLD,
+    data: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Detect dropped samples in a continuous-rate Harp stream.
 
@@ -34,7 +35,8 @@ def harp_gaps(
     expected_hz: float = reader.expected_hz  # pyright: ignore[reportAttributeAccessIssue]
     expected_interval = pd.Timedelta(seconds=1.0 / expected_hz)
 
-    data = load(root, reader, start=start, end=end)
+    if data is None:
+        data = load(root, reader, start=start, end=end)
 
     if data.empty:
         result = pd.DataFrame(

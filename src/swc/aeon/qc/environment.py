@@ -1,22 +1,38 @@
-"""Environment QC metrics — message log errors and state duration analysis."""
+"""Message log and environment state metrics for the Environment device."""
 
 import datetime
 from os import PathLike
 
 import pandas as pd
 
-from swc.aeon.io.api import load
-from swc.aeon.io.reader import Reader
+from swc.aeon.io.api import Reader, load
 
 
 def message_log_errors(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     reader: Reader,
     start: datetime.datetime,
     end: datetime.datetime | None = None,
+    data: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Extract non-Info entries from a MessageLog stream."""
-    data = load(root, reader, start=start, end=end)
+    """Extract non-Info entries from a MessageLog stream.
+
+    Args:
+        root: Dataset root path or paths.
+        reader: The ``MessageLog`` reader.
+        start: Left bound of the time range.
+        end: Optional right bound of the time range.
+        data: The stream, already loaded and sorted; loaded here when not given.
+
+    Returns:
+        A DataFrame with one row per non-Info entry, indexed by time.
+
+        - priority (str), type (str), message (str): The entry as logged.
+
+        ``attrs`` hold ``data_found`` and ``n_total``, the entries of any priority.
+    """
+    if data is None:
+        data = load(root, reader, start=start, end=end)
 
     if data.empty:
         result = pd.DataFrame(
@@ -36,28 +52,47 @@ def message_log_errors(
 
 
 def harp_sync_alerts(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     reader: Reader,
     start: datetime.datetime,
     end: datetime.datetime | None = None,
+    data: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Extract and parse HarpSynch alert entries from a MessageLog stream.
 
-    Returns one row per alert with structured columns parsed from the
-    Bonsai SynchronizerMonitor log message body. The Bonsai alert fires
-    when any of: DeviceCount != ExpectedDeviceCount, MaxDifference > 0,
-    or Abs(MeanUtcTimestamp - UtcNow) > 30 minutes.
+    The Bonsai SynchronizerMonitor raises the alert when the device count differs from
+    the expected count, when the maximum timestamp difference is above zero, or when the
+    mean UTC timestamp is more than 30 minutes from the current time.
+
+    Args:
+        root: Dataset root path or paths.
+        reader: The ``MessageLog`` reader.
+        start: Left bound of the time range.
+        end: Optional right bound of the time range.
+        data: The stream, already loaded and sorted; loaded here when not given.
+
+    Returns:
+        A DataFrame with one row per alert, indexed by time.
+
+        - mean_timestamp (float), mean_utc_timestamp (float): Parsed from the message body.
+        - expected_device_count (int), device_count (int), max_difference (float): Likewise.
+
+        ``attrs`` hold ``data_found`` and ``n_total_messages``.
     """
     cols = [
-        "mean_timestamp", "mean_utc_timestamp",
-        "expected_device_count", "device_count", "max_difference",
+        "mean_timestamp",
+        "mean_utc_timestamp",
+        "expected_device_count",
+        "device_count",
+        "max_difference",
     ]
     empty_result = pd.DataFrame(
         columns=cols,
         index=pd.DatetimeIndex([], name="time", tz=datetime.UTC),
     ).astype({"expected_device_count": "Int64", "device_count": "Int64", "max_difference": float})
 
-    data = load(root, reader, start=start, end=end)
+    if data is None:
+        data = load(root, reader, start=start, end=end)
     if data.empty:
         empty_result.attrs["data_found"] = False
         empty_result.attrs["n_total_messages"] = 0
@@ -83,13 +118,32 @@ def harp_sync_alerts(
 
 
 def environment_state_durations(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     reader: Reader,
     start: datetime.datetime,
     end: datetime.datetime | None = None,
+    data: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Compute time spent in each environment state from state-transition events."""
-    data = load(root, reader, start=start, end=end)
+    """Compute time spent in each environment state from state-transition events.
+
+    Args:
+        root: Dataset root path or paths.
+        reader: The ``EnvironmentState`` reader.
+        start: Left bound of the time range.
+        end: Optional right bound of the time range; closes the final state.
+        data: The stream, already loaded and sorted; loaded here when not given.
+
+    Returns:
+        A DataFrame with one row per state period, indexed by its start.
+
+        - state (str): The environment state.
+        - duration (Timedelta): Time until the next transition, or until ``end``.
+
+        Without ``end`` the final period has no known end and is omitted. ``attrs`` hold
+        ``data_found``.
+    """
+    if data is None:
+        data = load(root, reader, start=start, end=end)
 
     if data.empty:
         result = pd.DataFrame(
@@ -103,7 +157,7 @@ def environment_state_durations(
     states = data.loc[times, "state"]
 
     if len(times) == 1 and end is None:
-        # Single transition with no known end — cannot compute any duration
+        # A single transition with no known end has no duration to compute
         result = pd.DataFrame(
             columns=["state", "duration"],
             index=pd.DatetimeIndex([], name="time", tz=datetime.UTC),
@@ -114,8 +168,9 @@ def environment_state_durations(
     # Build end-times for each period
     if end is not None:
         end_ts = pd.Timestamp(end)
-        end_ts = end_ts.tz_localize(datetime.UTC) if end_ts.tzinfo is None \
-            else end_ts.tz_convert(datetime.UTC)
+        end_ts = (
+            end_ts.tz_localize(datetime.UTC) if end_ts.tzinfo is None else end_ts.tz_convert(datetime.UTC)
+        )
         end_times = list(times[1:]) + [end_ts]
     else:
         end_times = list(times[1:])

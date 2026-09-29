@@ -62,9 +62,7 @@ class SubjectWeight(Stream):
     def __init__(self, path):
         """Initializes the SubjectWeight stream."""
         super().__init__(
-            _reader.Csv(
-                f"{path}_SubjectWeight_*", columns=["weight", "confidence", "subject_id", "int_id"]
-            )
+            _reader.Csv(f"{path}_SubjectWeight_*", columns=["weight", "confidence", "subject_id", "int_id"])
         )
 
 

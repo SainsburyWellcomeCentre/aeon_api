@@ -14,20 +14,34 @@ DUPLICATE_COLS = ("second", "count", "device")
 
 
 def heartbeat_gaps(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     reader: Heartbeat,
     start: datetime.datetime,
     end: datetime.datetime | None = None,
+    data: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Detect gaps where a Harp device stops sending heartbeats.
 
     A gap is any row where ``second`` increments by more than 1.
 
-    Returns a DataFrame (UTC DatetimeIndex ``"time"``) with ``data_found``
-    attr and columns: ``duration``, ``n_missed``, ``second_before``,
-    ``second_after``, ``device``.
+    Args:
+        root: Dataset root path or paths.
+        reader: The ``Heartbeat`` reader.
+        start: Left bound of the time range.
+        end: Optional right bound of the time range.
+        data: The stream, already loaded and sorted; loaded here when not given.
+
+    Returns:
+        A DataFrame with one row per gap, indexed by the time of the last heartbeat before it.
+
+        - duration (Timedelta), n_missed (int): Length of the gap and heartbeats missed.
+        - second_before (int), second_after (int): The counter either side of the gap.
+        - device (str): The reader pattern.
+
+        ``attrs`` hold ``data_found`` and ``n_heartbeats``.
     """
-    data = load(root, reader, start=start, end=end)
+    if data is None:
+        data = load(root, reader, start=start, end=end)
 
     if data.empty:
         result = pd.DataFrame(
@@ -62,18 +76,34 @@ def heartbeat_gaps(
 
 
 def heartbeat_duplicates(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     reader: Heartbeat,
     start: datetime.datetime,
     end: datetime.datetime | None = None,
+    data: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Detect seconds where a Harp device emits more than one heartbeat.
 
-    Duplicates inflate ``device_count`` vs ``expected_device_count`` and trigger a
-    HarpSynch alert. Returns columns ``second``, ``count``, ``device``; index is the
-    timestamp of the first duplicate occurrence.
+    Duplicates inflate ``device_count`` against ``expected_device_count`` and trigger a
+    HarpSynch alert.
+
+    Args:
+        root: Dataset root path or paths.
+        reader: The ``Heartbeat`` reader.
+        start: Left bound of the time range.
+        end: Optional right bound of the time range.
+        data: The stream, already loaded and sorted; loaded here when not given.
+
+    Returns:
+        A DataFrame with one row per repeated second, indexed by its first occurrence.
+
+        - second (int), count (int): The counter value and how often it appeared.
+        - device (str): The reader pattern.
+
+        ``attrs`` hold ``data_found`` and ``n_heartbeats``.
     """
-    data = load(root, reader, start=start, end=end)
+    if data is None:
+        data = load(root, reader, start=start, end=end)
 
     empty = pd.DataFrame(
         columns=list(DUPLICATE_COLS),

@@ -19,17 +19,18 @@ def make_empty() -> pd.DataFrame:
 
 
 def sync_delta(
-    root: str | PathLike,
+    root: str | PathLike | list[str] | list[PathLike],
     readers: dict[str, Heartbeat],
     start: datetime.datetime,
     end: datetime.datetime | None = None,
     reference: str | None = None,
+    data: dict[str, pd.DataFrame] | None = None,
 ) -> pd.DataFrame:
     """Compare heartbeat timestamps across Harp devices to detect sync drift.
 
     All Harp devices emit a heartbeat once per second via the ClockSynchronizer.
-    Their timestamps are decoded from each device's own hardware clock, so any
-    non-zero delta between devices reflects a genuine hardware clock difference.
+    Their timestamps are decoded from each device's own hardware clock. Any non-zero
+    delta between devices therefore reflects a genuine hardware clock difference.
     This function loads all provided Heartbeat streams, aligns them on the ``second``
     counter (the shared logical clock), and returns per-second timestamp deltas
     relative to a reference device (A ClockSynchronizer).
@@ -42,23 +43,23 @@ def sync_delta(
         reference: Name of the device to use as reference. Defaults to
             ``"ClockSynchronizer"`` (or a key starting with that prefix) if
             present, otherwise the first key in ``readers``.
+        data: Optional preloaded, sorted heartbeat frames keyed like ``readers``; readers
+            without a frame here are loaded from ``root``.
 
     Returns:
-        DataFrame indexed by UTC reference timestamp (``name="time"``) with
-        columns:
+        A DataFrame with one row per second per non-reference device, indexed by the
+        reference device's timestamp. Empty when fewer than two devices have data.
 
-        - ``second`` (int): shared logical clock value used for alignment.
-        - ``device`` (str): device name.
-        - ``delta_seconds`` (float): signed offset vs. reference in seconds
-          (positive = device timestamp is ahead of reference).
-
-        Returns an empty DataFrame if fewer than two devices have data.
-
+        - second (int): Shared logical clock value used for alignment.
+        - device (str): Device name.
+        - delta_seconds (float): Signed offset against the reference, positive when the
+          device timestamp is ahead.
     """
-    data: dict[str, pd.DataFrame] = {
-        name: load(root, reader, start=start, end=end) for name, reader in readers.items()
-    }
-    data = {name: df for name, df in data.items() if not df.empty}
+    frames: dict[str, pd.DataFrame] = dict(data or {})
+    for name, reader in readers.items():
+        if name not in frames:
+            frames[name] = load(root, reader, start=start, end=end)
+    data = {name: df for name, df in frames.items() if not df.empty}
 
     if len(data) < MIN_DEVICES:
         return make_empty()

@@ -1,4 +1,4 @@
-"""Epoch gap detection — identifies periods where data collection was interrupted."""
+"""Epoch gap detection for periods where data collection was interrupted."""
 
 import datetime
 from os import PathLike

@@ -135,6 +135,33 @@ The filename stem is `{label}_{start}` where `label` is the `phase` or `ssid` fi
 
 ---
 
+## Summarising a run
+
+```bash
+uv run python scripts/summarise_benchmarks.py --input benchmarks_output/
+```
+
+writes `summary.csv` and `summary.md` in the output directory with one row per epoch: dataset, label, window, hours, epoch count, heartbeat gaps and dropout, worst sync delta, HarpSynch alerts, dropped frame events and frames, continuous-stream gap events, missing samples, irregular runs, sample count and largest interval ratio, timestamp order violations, pellet failures, log errors, HarpSync `Seconds` offset and faults, the worst HarpSync step deviation, the worst hourly fit residual, ONIX clock rate in ppm, ONIX clock events, the largest hub clock deviation and streams with no data. This table is the first thing to look at after a run and the one to paste into an issue.
+
+### Judging a run against thresholds
+
+`thresholds.yaml` maps summary columns to the largest acceptable value. The summary script flags every epoch with a value above its threshold. It adds an `n_flags` count and a `flags` column (for example `fit_worst_chunk_ms=0.31>0.1`) and prints the flagged epochs. Thresholds only flag: every measured value stays in the table and the reports. To test against a different threshold, edit the file and rerun the summary script. QC does not need to run again.
+
+```bash
+# default: thresholds.yaml in the repository root
+uv run python scripts/summarise_benchmarks.py --input benchmarks_output/
+
+# your own thresholds. --strict exits with status 1 if any epoch is flagged
+uv run python scripts/summarise_benchmarks.py --input benchmarks_output/ --thresholds my_thresholds.yaml --strict
+
+# no judging
+uv run python scripts/summarise_benchmarks.py --input benchmarks_output/ --no-thresholds
+```
+
+A key that is not a summary column is rejected with the list of valid names. A typo cannot silently disable a check. The shipped values are starting points to review. They cover measured ONIX timing values only. Counts of faults that should never happen, such as heartbeat gaps, dropped frames or out-of-order timestamps, are not judged: any nonzero count in the table is itself the error report. Other measured columns such as sync delta are reported without judging. Any summary column can be added to the file.
+
+---
+
 ## Loading saved results
 
 ```python
@@ -157,7 +184,7 @@ print(f"{len(df)} heartbeat gap(s)")
 1. Find the dataset root on the cluster.
 2. Add an entry to `scripts/benchmarks.yaml`. Leave out `schema` unless the dataset needs a bespoke registry entry (octagon). Leave `epochs: []` to run every epoch on disk, or list the epochs you want with their phase labels.
 3. Run `scripts/dry_run_benchmarks.py` to confirm the roots and files are visible, then `scripts/run_benchmarks.py`.
-4. Read the YAML reports under the output directory.
+4. Run `scripts/summarise_benchmarks.py` and read `summary.md`.
 
 ---
 

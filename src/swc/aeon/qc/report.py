@@ -22,6 +22,7 @@ from swc.aeon.qc.harp import harp_gaps
 from swc.aeon.qc.heartbeat import heartbeat_duplicates, heartbeat_gaps
 from swc.aeon.qc.pellet import pellet_failures
 from swc.aeon.qc.schemas import is_epoch_dir, normalise_timestamp
+from swc.aeon.qc.sequence import timestamp_order
 from swc.aeon.qc.sync import MIN_DEVICES, sync_delta
 from swc.aeon.qc.video import dropped_frames, frame_rate_stability
 
@@ -48,9 +49,12 @@ def run_qc(
 ) -> dict[str, pd.DataFrame]:
     """Run all applicable QC checks against every stream in a schema DotMap.
 
-    Every Harp and CSV stream is loaded once and the loaded frame feeds every metric for
-    the stream, so no stream is read twice. SLEAP pose streams are not loaded: they need
-    the model configuration and carry several rows per frame by design.
+    Every Harp and CSV stream is loaded once, in the order its rows were written
+    (``load(sort=False)``). The timestamp order check runs on that frame. The frame is
+    then sorted and the sorted frame feeds every other metric for the stream. No stream
+    is read twice and ordering faults are seen before anything sorts them away.
+    SLEAP pose streams are not loaded: they need the model configuration and carry
+    several rows per frame by design.
 
     Args:
         root: Dataset root path, or a list of roots searched together. Epoch gaps are
@@ -78,7 +82,12 @@ def run_qc(
         device_streams.setdefault(device, {})[stream_name or device] = reader
         if not isinstance(reader, Harp | Csv) or isinstance(reader, Pose):
             continue
-        data = load(root, reader, start=start_ts, end=end_ts)
+        data = load(root, reader, start=start_ts, end=end_ts, sort=False)
+        results[f"{qualified_name}.order"] = timestamp_order(
+            root, reader, start=start_ts, end=end_ts, data=data
+        )
+        if not data.index.is_monotonic_increasing:
+            data = data.sort_index(kind="stable")
         frames[qualified_name] = data
         device_frames.setdefault(device, {})[stream_name or device] = data
         if isinstance(reader, Heartbeat):
@@ -169,7 +178,10 @@ def generate_report(
     }
 
     for device_name, df in results.items():
-        if "gap_duration" in df.columns:
+        metric = df.attrs.get("metric")
+        if metric == "timestamp_order":
+            report["devices"][device_name] = timestamp_order_section(df)
+        elif "gap_duration" in df.columns:
             report["devices"][device_name] = epoch_gaps_section(df)
         elif "count" in df.columns and "second" in df.columns:
             report["devices"][device_name] = heartbeat_duplicates_section(df)
@@ -344,38 +356,42 @@ def epoch_gaps_section(df: pd.DataFrame) -> dict[str, Any]:
 
 
 def harp_gaps_section(df: pd.DataFrame) -> dict[str, Any]:
-    """Build the YAML section for a harp_gaps result on a continuous-rate Harp stream."""
-    data_found = df.attrs.get("data_found", True)
-    n_samples = df.attrs.get("n_samples", 0)
-    expected_hz = df.attrs.get("expected_hz")
-    if df.empty:
-        summary: dict[str, Any] = {
-            "data_found": data_found,
-            "expected_hz": expected_hz,
-            "n_samples": n_samples,
-            "n_gap_events": 0,
-            "total_missed_samples": 0,
-            "mean_duration_ms": None,
+    """Build the YAML section for a harp_gaps result on a continuous-rate Harp stream.
+
+    The interval ratios and longest intervals are reported even when there are no gaps,
+    so a zero count comes with the evidence behind it.
+    """
+    summary: dict[str, Any] = {
+        "data_found": df.attrs.get("data_found", True),
+        "expected_hz": df.attrs.get("expected_hz"),
+        "n_samples": int(df.attrs.get("n_samples", 0)),
+        "n_gap_events": int(df.attrs.get("n_gap_events", 0)),
+        "total_missed_samples": int(df.attrs.get("n_missed_total", 0)),
+        "n_irregular_runs": int(df.attrs.get("n_irregular_runs", 0)),
+        "n_extra_runs": int(df.attrs.get("n_extra_runs", 0)),
+        "interval_ratio_min": optional_float(df.attrs.get("interval_ratio_min"), 4),
+        "interval_ratio_median": optional_float(df.attrs.get("interval_ratio_median"), 4),
+        "interval_ratio_p99_99": optional_float(df.attrs.get("interval_ratio_p99_99"), 4),
+        "interval_ratio_max": optional_float(df.attrs.get("interval_ratio_max"), 4),
+    }
+    detail = [
+        {
+            "time": row.Index.isoformat(),
+            "kind": row.kind,
+            "duration_ms": float(row.duration.total_seconds() * 1000),
+            "n_intervals": int(row.n_intervals),
+            "n_missed": int(row.n_missed),
         }
-        detail: list[dict[str, Any]] = []
-    else:
-        summary = {
-            "data_found": data_found,
-            "expected_hz": expected_hz,
-            "n_samples": n_samples,
-            "n_gap_events": len(df),
-            "total_missed_samples": int(df["n_missed"].sum()),
-            "mean_duration_ms": float(df["duration"].dt.total_seconds().mean() * 1000),
-        }
-        detail = [
-            {
-                "time": row.Index.isoformat(),
-                "duration_ms": float(row.duration.total_seconds() * 1000),
-                "n_missed": int(row.n_missed),
-            }
-            for row in df.itertuples()
-        ]
-    return {"metric": "harp_gaps", "summary": summary, "detail": detail}
+        for row in df.head(DETAIL_ROW_CAP).itertuples()
+    ]
+    if len(df) > DETAIL_ROW_CAP:
+        summary["detail_truncated_to"] = DETAIL_ROW_CAP
+    return {
+        "metric": "harp_gaps",
+        "summary": summary,
+        "detail": detail,
+        "longest_intervals": list(df.attrs.get("longest", [])),
+    }
 
 
 def pellet_section(df: pd.DataFrame) -> dict[str, Any]:
@@ -514,6 +530,36 @@ def frame_rate_section(df: pd.DataFrame) -> dict[str, Any]:
         "interval_max_ms": round(float(row["interval_max_ms"]), 4),
     }
     return {"metric": "frame_rate_stability", "summary": summary}
+
+
+def timestamp_order_section(df: pd.DataFrame) -> dict[str, Any]:
+    """Build the YAML section for a timestamp_order result (detail capped at DETAIL_ROW_CAP)."""
+    summary: dict[str, Any] = {
+        "data_found": df.attrs.get("data_found", True),
+        "n_samples": int(df.attrs.get("n_samples", 0)),
+        "n_backwards": int(df.attrs.get("n_backwards", 0)),
+        "n_duplicates": int(df.attrs.get("n_duplicates", 0)),
+        "max_backwards_seconds": float(df.attrs.get("max_backwards_seconds", 0.0)),
+    }
+    detail = [
+        {
+            "time": row.Index.isoformat(),
+            "kind": row.kind,
+            "step_seconds": float(row.step_seconds),
+            "index_in_stream": int(row.index_in_stream),
+        }
+        for row in df.head(DETAIL_ROW_CAP).itertuples()
+    ]
+    if len(df) > DETAIL_ROW_CAP:
+        summary["detail_truncated_to"] = DETAIL_ROW_CAP
+    return {"metric": "timestamp_order", "summary": summary, "detail": detail}
+
+
+def optional_float(value: Any, digits: int | None = None) -> float | None:
+    """Return ``value`` as a float rounded to ``digits``, or None when it is missing."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    return round(float(value), digits) if digits is not None else float(value)
 
 
 def environment_state_section(df: pd.DataFrame) -> dict[str, Any]:

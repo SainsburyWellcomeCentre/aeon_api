@@ -56,14 +56,17 @@ def next_epoch_on_disk(root: str, start: pd.Timestamp) -> pd.Timestamp | None:
 
 def verdict(results: dict) -> str:
     """One-line summary of an epoch's results for the console."""
-    counts = {"hb gaps": 0, "frames dropped": 0, "no data": 0}
+    counts = {"hb gaps": 0, "frames dropped": 0, "order": 0, "no data": 0}
     for df in results.values():
+        metric = df.attrs.get("metric")
         if not df.attrs.get("data_found", True):
             counts["no data"] += 1
         if "second_before" in df.columns:
             counts["hb gaps"] += len(df)
         elif "n_dropped" in df.columns:
             counts["frames dropped"] += int(df["n_dropped"].sum()) if len(df) else 0
+        elif metric == "timestamp_order":
+            counts["order"] += len(df)
     return ", ".join(f"{k} {v}" for k, v in counts.items())
 
 

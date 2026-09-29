@@ -13,6 +13,7 @@ from swc.aeon.qc.schemas import (
     schema_from_metadata,
     schema_from_registry,
 )
+from swc.aeon.qc.sequence import timestamp_order
 from swc.aeon.qc.sync import sync_delta
 from swc.aeon.qc.video import dropped_frames, frame_rate_stability
 
@@ -28,6 +29,7 @@ __all__ = [
     "harp_sync_alerts",
     "message_log_errors",
     "environment_state_durations",
+    "timestamp_order",
     "run_qc",
     "generate_report",
     "save_results",

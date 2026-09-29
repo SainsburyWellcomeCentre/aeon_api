@@ -19,7 +19,7 @@ This tutorial covers interactive use: running QC from a Python script or noteboo
 | Sync delta | Timestamp drift between Harp devices relative to the clock synchroniser |
 | Harp sync alerts | HarpSync alert entries parsed from the Bonsai message log |
 | Dropped video frames | Jumps in the camera hardware frame counter |
-| Continuous-stream gaps | Missing samples in fixed-rate Harp streams (encoder, photodiode, camera trigger) |
+| Continuous-stream gaps | Missing samples in fixed-rate Harp streams (encoder, photodiode, camera trigger), with the interval distribution |
 | Pellet failures | Hardware-reported missed and retried pellet deliveries |
 | Message log errors | Warning and Error entries from the Bonsai message log |
 | Environment state durations | Time spent in Running vs Maintenance states |
@@ -127,9 +127,10 @@ results["Patch1.pellet_stats"]                     # pellet delivery failures fo
 results["Environment.harp_sync_alerts"]            # HarpSync alert log entries
 results["Environment.message_log"]                 # non-Info Bonsai log entries
 results["Environment.environment_state"]           # time in Running / Maintenance states
+results["Patch1.Heartbeat.order"]                  # timestamps that go backwards or repeat (every Harp and CSV stream gets one)
 ```
 
-`run_qc` accepts a list of roots as well as a single path. Every stream is loaded once and the loaded frame feeds every metric for that stream.
+`run_qc` accepts a list of roots as well as a single path. Every stream is loaded once, in file order. The timestamp order check runs on the frame as read. The sorted frame then feeds the other metrics.
 
 Each DataFrame carries metadata in `.attrs`:
 
@@ -210,6 +211,17 @@ print(f"{n_deliveries} deliveries: {n_retried} retried, {n_missed} missed")
 df = results["Environment.message_log"]
 # columns: priority, type, message
 ```
+
+### Timestamp order
+
+```python
+df = results["Patch1.Heartbeat.order"]
+# columns: kind ('backwards' or 'duplicate'), step_seconds, index_in_stream, device
+# index:   UTC timestamp of the violating sample
+# attrs:   n_samples, n_backwards, n_duplicates, max_backwards_seconds
+```
+
+The stream is read in file order without sorting. A sample stamped earlier than its predecessor shows up as a `backwards` row with a negative `step_seconds`.
 
 ---
 

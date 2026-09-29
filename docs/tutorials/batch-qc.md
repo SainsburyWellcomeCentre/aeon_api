@@ -131,7 +131,7 @@ benchmarks_output/
     ...
 ```
 
-The filename stem is `{label}_{start}` where `label` is the `phase` or `ssid` field from the epoch entry. The YAML report format is described in [Interactive QC, generating a YAML report](run-qc.md#generating-a-yaml-report). The console prints one verdict line per epoch (heartbeat gaps, frames dropped, streams with no data) so a run can be followed without opening the reports.
+The filename stem is `{label}_{start}` where `label` is the `phase` or `ssid` field from the epoch entry. The YAML report format is described in [Interactive QC, generating a YAML report](run-qc.md#generating-a-yaml-report). The console prints one verdict line per epoch (heartbeat gaps, frames dropped, order violations, streams with no data) so a run can be followed without opening the reports.
 
 ---
 

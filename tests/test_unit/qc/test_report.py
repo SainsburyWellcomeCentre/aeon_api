@@ -9,9 +9,9 @@ import yaml
 from dotmap import DotMap
 
 import swc.aeon.schema.core as stream
-from qc.helpers import make_heartbeat
+from qc.helpers import make_heartbeat, make_video
 from swc.aeon.io.reader import Heartbeat
-from swc.aeon.qc.report import generate_report, iter_readers, run_qc
+from swc.aeon.qc.report import DETAIL_ROW_CAP, generate_report, iter_readers, run_qc
 from swc.aeon.schema.streams import Device
 
 _ROOT = "/fake/root"
@@ -19,6 +19,15 @@ _START = pd.Timestamp("2024-01-15T09:00:00", tz="UTC")
 _END = pd.Timestamp("2024-01-15T10:00:00", tz="UTC")
 _LOAD = "swc.aeon.qc.report.load"
 _EMPTY_VIDEO = pd.DataFrame(columns=["hw_counter", "hw_timestamp", "_frame", "_path", "_epoch"])
+
+
+def _empty_order() -> pd.DataFrame:
+    df = pd.DataFrame(
+        columns=["kind", "step_seconds", "index_in_stream", "device"],
+        index=pd.DatetimeIndex([], name="time", tz=datetime.UTC),
+    )
+    df.attrs["metric"] = "timestamp_order"
+    return df
 
 
 # --- iter_readers ---
@@ -49,8 +58,8 @@ def test_iter_readers_skips_non_readers():
 # --- run_qc ---
 
 
-def test_run_qc_loads_each_stream_once():
-    """Every Harp and CSV stream is loaded once with the requested window."""
+def test_run_qc_loads_each_stream_once_and_checks_order():
+    """Every Harp and CSV stream is loaded once, unsorted, and gets an .order result."""
     schema = DotMap([Device("Patch1", stream.Heartbeat), Device("CameraTop", stream.Video)])
     with patch(_LOAD, side_effect=[make_heartbeat([]), _EMPTY_VIDEO]) as load:
         results = run_qc(_ROOT, schema, _START, end=_END)
@@ -58,7 +67,7 @@ def test_run_qc_loads_each_stream_once():
     _, kwargs = load.call_args
     assert kwargs["start"] == _START
     assert kwargs["end"] == _END
-    assert {"Patch1.Heartbeat", "CameraTop.Video"} <= set(results)
+    assert {"Patch1.Heartbeat.order", "CameraTop.Video.order"} <= set(results)
 
 
 def test_run_qc_discovers_heartbeat():
@@ -85,6 +94,22 @@ def test_run_qc_discovers_encoder():
     with patch(_LOAD, return_value=pd.DataFrame(columns=["angle", "intensity"])):
         results = run_qc(_ROOT, schema, _START)
     assert results["Patch1.Encoder"].attrs["expected_hz"] == 500.0
+
+
+def test_run_qc_sorts_after_order_check():
+    """An out-of-order stream is reported by the order check and sorted for the other metrics."""
+    schema = DotMap([Device("CameraTop", stream.Video)])
+    data = make_video(
+        [0, 2, 1],
+        ["2024-01-15T09:00:00.000", "2024-01-15T09:00:00.040", "2024-01-15T09:00:00.020"],
+    )
+    with patch(_LOAD, return_value=data):
+        results = run_qc(_ROOT, schema, _START)
+    order = results["CameraTop.Video.order"]
+    assert list(order["kind"]) == ["backwards"]
+    # After sorting the counters run 0, 1, 2 so dropped_frames sees no gap.
+    assert results["CameraTop.Video"].empty
+    assert results["CameraTop.Video"].attrs["n_frames"] == 3
 
 
 def test_run_qc_produces_sync_delta_key():
@@ -136,6 +161,30 @@ def _make_vid_drops() -> pd.DataFrame:
         },
         index=idx,
     )
+
+
+def _make_order(n: int) -> pd.DataFrame:
+    idx = pd.date_range("2024-01-15T09:00:00", periods=n, freq="1s", tz="UTC", name="time")
+    df = pd.DataFrame(
+        {
+            "kind": ["backwards"] * n,
+            "step_seconds": [-0.001] * n,
+            "index_in_stream": range(n),
+            "device": ["Patch1_8_*"] * n,
+        },
+        index=idx,
+    )
+    df.attrs.update(
+        {
+            "metric": "timestamp_order",
+            "data_found": True,
+            "n_samples": 1000,
+            "n_backwards": n,
+            "n_duplicates": 0,
+            "max_backwards_seconds": 0.001,
+        }
+    )
+    return df
 
 
 def _load_yaml(path):
@@ -191,6 +240,29 @@ def test_generate_report_empty_heartbeat_zero_counts(tmp_path):
     )
     generate_report(_ROOT, {"Patch1.Heartbeat": empty_hb}, output, _START)
     assert _load_yaml(output)["devices"]["Patch1.Heartbeat"]["summary"]["n_gaps"] == 0
+
+
+def test_generate_report_timestamp_order_section(tmp_path):
+    """A timestamp_order result is keyed by its metric attr and its detail is capped."""
+    output = tmp_path / "report.yaml"
+    generate_report(_ROOT, {"Patch1.order": _make_order(DETAIL_ROW_CAP + 5)}, output, _START)
+    section = _load_yaml(output)["devices"]["Patch1.order"]
+    assert section["metric"] == "timestamp_order"
+    assert section["summary"]["n_backwards"] == DETAIL_ROW_CAP + 5
+    assert section["summary"]["n_samples"] == 1000
+    assert section["summary"]["detail_truncated_to"] == DETAIL_ROW_CAP
+    assert len(section["detail"]) == DETAIL_ROW_CAP
+    assert section["detail"][0]["kind"] == "backwards"
+
+
+def test_generate_report_timestamp_order_empty(tmp_path):
+    """An empty timestamp_order result still gets a section with zero counts."""
+    output = tmp_path / "report.yaml"
+    generate_report(_ROOT, {"Patch1.order": _empty_order()}, output, _START)
+    section = _load_yaml(output)["devices"]["Patch1.order"]
+    assert section["summary"]["n_backwards"] == 0
+    assert section["detail"] == []
+    assert "detail_truncated_to" not in section["summary"]
 
 
 # --- sync_delta ---

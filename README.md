@@ -45,6 +45,9 @@ uv run pre-commit install
     - `src/swc/aeon/analysis`: Source code for processing and plotting the raw data
     - `src/swc/aeon/io`: Source code for loading raw data
     - `src/swc/aeon/schema`: Core modules for defining data schemas used to load raw data from experiments
+    - `src/swc/aeon/qc`: Data quality checks for raw datasets. See [`docs/tutorials/run-qc.md`](docs/tutorials/run-qc.md) to run them on one dataset and [`docs/tutorials/batch-qc.md`](docs/tutorials/batch-qc.md) to run them over many
+- `scripts/` : Batch QC over a manifest of datasets, with a dry run and a summary table
+- `docs/tutorials/` : Tutorials for the QC checks
 - `tests/` : Tests for the Aeon Python package
     - `tests/data` : Data used by tests
     - `tests/schema` : Schemas used to load sample data in tests

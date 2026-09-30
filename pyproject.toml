@@ -36,6 +36,7 @@ dependencies = [
   "pandas>=2.2",
   "pydantic>=2.12.4",
   "pydantic-yaml>=1.6.0",
+  "pyyaml",
 ]
 
 [dependency-groups]
@@ -75,6 +76,9 @@ extend-exclude = [
   "D205",    # skip checking for blank line between summary and description
   "S101",    # skip using assert
 ]
+"src/swc/aeon/qc/octagon.py"  = ["D101", "D106", "D107"]
+"src/swc/aeon/qc/social.py"   = ["D107", "D401"]
+"src/swc/aeon/qc/foraging.py" = ["D101", "D107"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

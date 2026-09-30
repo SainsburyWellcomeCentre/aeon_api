@@ -1167,6 +1167,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pydantic" },
     { name = "pydantic-yaml" },
+    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -1190,6 +1191,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2" },
     { name = "pydantic", specifier = ">=2.12.4" },
     { name = "pydantic-yaml", specifier = ">=1.6.0" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata.requires-dev]

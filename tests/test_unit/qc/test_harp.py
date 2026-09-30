@@ -17,7 +17,7 @@ _START = pd.Timestamp("2024-01-01T10:00:00", tz="UTC")
 def encoder_reader():
     """Return an Encoder reader tagged with the 500 Hz expected rate, as run_qc does."""
     reader = Encoder("Patch1_90_*")
-    reader.expected_hz = 500.0
+    reader.expected_hz = 500.0  # pyright: ignore[reportAttributeAccessIssue]
     return reader
 
 
@@ -54,6 +54,7 @@ def test_harp_gaps_counts_every_missing_sample(monkeypatch, encoder_reader):
 
     assert len(result) == 1
     assert result.index.name == "time"
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
     assert list(result.columns) == ["kind", "duration", "n_intervals", "n_missed", "device"]
     assert result["kind"].iloc[0] == "gap"
@@ -119,6 +120,7 @@ def test_harp_gaps_empty_data(monkeypatch, encoder_reader):
     assert result.empty
     assert list(result.columns) == ["kind", "duration", "n_intervals", "n_missed", "device"]
     assert result.index.name == "time"
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
     assert result.attrs["data_found"] is False
     assert result.attrs["interval_ratio_max"] is None
@@ -155,7 +157,7 @@ def test_harp_gaps_start_end_forwarded(monkeypatch, encoder_reader):
 def test_harp_gaps_counts_missing_samples_per_run(monkeypatch, intervals_ms, kind, missed):
     """Missing samples are counted over a run of irregular intervals, not per interval."""
     reader = Encoder("Photodiode_44_*")
-    reader.expected_hz = 1000.0
+    reader.expected_hz = 1000.0  # pyright: ignore[reportAttributeAccessIssue]
     t0 = 3_786_861_600.0
     seconds = [t0 + i * 0.001 for i in range(5)]
     for step in intervals_ms:

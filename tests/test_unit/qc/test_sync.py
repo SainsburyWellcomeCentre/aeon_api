@@ -34,6 +34,7 @@ def test_sync_delta_empty_data():
     assert result.empty
     assert list(result.columns) == ["second", "device", "delta_seconds"]
     assert result.index.name == "time"
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
 
 
@@ -128,6 +129,7 @@ def test_sync_delta_output_schema():
         result = sync_delta(_ROOT, _READERS2, _START)
     assert list(result.columns) == ["second", "device", "delta_seconds"]
     assert result.index.name == "time"
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
 
 

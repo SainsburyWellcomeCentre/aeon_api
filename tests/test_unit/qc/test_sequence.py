@@ -25,6 +25,7 @@ def test_timestamp_order_empty_data(heartbeat_reader):
     assert result.empty
     assert list(result.columns) == ["kind", "step_seconds", "index_in_stream", "device"]
     assert result.index.name == "time"
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
     assert result.attrs["data_found"] is False
     assert result.attrs["n_samples"] == 0

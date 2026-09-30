@@ -29,6 +29,7 @@ def test_no_failures_without_failure_readers(monkeypatch):
 
     assert result.empty
     assert list(result.columns) == ["outcome", "device"]
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
     assert result.attrs["n_deliveries"] == 2
     assert result.attrs["data_found"] is True

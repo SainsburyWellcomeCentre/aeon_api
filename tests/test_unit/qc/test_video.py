@@ -35,6 +35,7 @@ def test_dropped_frames_empty_data(video_reader):
         "device",
     ]
     assert result.index.name == "time"
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
 
 

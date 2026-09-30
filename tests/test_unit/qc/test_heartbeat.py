@@ -26,6 +26,7 @@ def test_heartbeat_gaps_empty_data(heartbeat_reader):
     assert result.empty
     assert list(result.columns) == ["duration", "n_missed", "second_before", "second_after", "device"]
     assert result.index.name == "time"
+    assert isinstance(result.index, pd.DatetimeIndex)
     assert result.index.tz == datetime.UTC
     assert result.attrs["data_found"] is False
 

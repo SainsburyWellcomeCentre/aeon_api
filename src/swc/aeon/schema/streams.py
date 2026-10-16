@@ -2,7 +2,6 @@
 
 import inspect
 from itertools import chain
-from warnings import warn
 
 
 class Stream:
@@ -70,17 +69,7 @@ class Device:
     def _createStreams(path, args):
         streams = {}
         for factory in args:
-            if inspect.isclass(factory) and not hasattr(factory.__init__, "__code__"):
-                warn(
-                    f"Stream group classes with default constructors are deprecated. {factory}",
-                    category=DeprecationWarning,
-                    stacklevel=2,
-                )
-                for method in vars(factory).values():
-                    if isinstance(method, staticmethod):
-                        streams.update(method.__func__(path))
-            else:
-                streams.update(factory(path))
+            streams.update(factory(path))
         return streams
 
     def __iter__(self):

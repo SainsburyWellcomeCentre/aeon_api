@@ -47,7 +47,6 @@ uv run pre-commit install
     - `src/swc/aeon/schema`: Core modules for defining data schemas used to load raw data from experiments
 - `tests/` : Tests for the Aeon Python package
     - `tests/data` : Data used by tests
-    - `tests/schema` : Schemas used to load sample data in tests
     - `tests/test_integration` : Integration tests
     - `tests/test_unit` : Unit tests, mirroring `src/swc/aeon/` package structure
 

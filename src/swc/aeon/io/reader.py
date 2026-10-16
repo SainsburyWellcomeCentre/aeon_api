@@ -9,7 +9,6 @@ from typing import Any, overload
 import harp
 import numpy as np
 import pandas as pd
-from dotmap import DotMap
 from numpy.typing import DTypeLike, NDArray
 from pandas._typing import DtypeArg, SequenceNotStr
 
@@ -86,7 +85,7 @@ class Metadata(Reader):
             metadata = json.load(fp)
         workflow = metadata.pop("Workflow")
         commit = metadata.pop("Commit", pd.NA)
-        data = {"workflow": workflow, "commit": commit, "metadata": [DotMap(metadata)]}
+        data = {"workflow": workflow, "commit": commit, "metadata": [metadata]}
         return pd.DataFrame(data, index=pd.Series(time), columns=self.columns)
 
 

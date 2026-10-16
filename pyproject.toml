@@ -28,7 +28,6 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-  "dotmap",
   "harp-python>=0.3.0",
   "matplotlib",
   "numpy>=1.26.4",

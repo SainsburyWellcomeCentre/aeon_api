@@ -1,8 +1,12 @@
 """Tests for classes defining data streams and devices."""
 
+import warnings
+
 import pytest
 
-from swc.aeon.schema.streams import Device, Stream, StreamGroup
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from swc.aeon.schema.streams import Device, Stream, StreamGroup
 
 
 class DummyReader:

@@ -1,10 +1,16 @@
 """Classes for defining video capture device configuration models."""
 
+import warnings
+
 from pydantic import Field
+from typing_extensions import deprecated
 
-from swc.aeon.schema.base import BaseSchema
+from swc.aeon.schema.base import DOMAIN_MODEL_DEPRECATION, BaseSchema
+
+warnings.warn(DOMAIN_MODEL_DEPRECATION, DeprecationWarning, stacklevel=2)
 
 
+@deprecated(DOMAIN_MODEL_DEPRECATION, category=None)
 class SpinnakerCamera(BaseSchema):
     """Represents a FLIR Spinnaker camera acquisition module."""
 

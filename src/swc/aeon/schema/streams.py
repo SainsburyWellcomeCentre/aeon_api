@@ -1,9 +1,21 @@
 """Classes for defining data streams and devices."""
 
 import inspect
+import warnings
 from itertools import chain
 
+from typing_extensions import deprecated
 
+STREAM_API_DEPRECATION = (
+    "Streams, stream groups and devices are replaced by Pydantic models declaring data "
+    "readers through `data_reader`, and will be removed from swc.aeon.schema in the next release."
+)
+"""The deprecation message shared by every class of the stream API."""
+
+warnings.warn(STREAM_API_DEPRECATION, DeprecationWarning, stacklevel=2)
+
+
+@deprecated(STREAM_API_DEPRECATION, category=None)
 class Stream:
     """Represents a single data stream.
 
@@ -20,6 +32,7 @@ class Stream:
         yield (self.__class__.__name__, self.reader)
 
 
+@deprecated(STREAM_API_DEPRECATION, category=None)
 class StreamGroup:
     """Represents a logical group of multiple data streams.
 
@@ -44,6 +57,7 @@ class StreamGroup:
             yield from iter(factory(self.path))
 
 
+@deprecated(STREAM_API_DEPRECATION, category=None)
 class Device:
     """Groups multiple data streams into a logical device.
 

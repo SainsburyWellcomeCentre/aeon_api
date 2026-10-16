@@ -10,8 +10,15 @@ from typing import Self, TypeVar
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 from pydantic.alias_generators import to_camel, to_pascal
+from typing_extensions import deprecated
 
 from swc.aeon.io.reader import Reader
+
+DOMAIN_MODEL_DEPRECATION = (
+    "Aeon configuration models are moving to the aeon_acquisition package, which generates "
+    "them for Bonsai, and will be removed from swc.aeon.schema in the next release."
+)
+"""The deprecation message shared by every domain model kept here during the move."""
 
 
 class BaseSchema(BaseModel):
@@ -53,6 +60,7 @@ class BaseSchema(BaseModel):
         return self
 
 
+@deprecated(DOMAIN_MODEL_DEPRECATION)
 class Experiment(BaseSchema):
     """The base class for creating experiment models."""
 

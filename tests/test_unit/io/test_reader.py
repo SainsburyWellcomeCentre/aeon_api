@@ -115,8 +115,11 @@ def test_chunk_read(reader_arg, monotonic_file):
 
 
 def test_metadata_read(metadata_file):
-    """Test that Metadata `read` returns an empty DataFrame with the correct structure."""
-    reader = Metadata()
+    """Test that Metadata `read` returns an empty DataFrame with the correct structure, and that
+    the legacy reader warns that it is deprecated.
+    """
+    with pytest.deprecated_call(match="legacy Metadata.yml format"):
+        reader = Metadata()
     df = reader.read(metadata_file)
     expected = pd.DataFrame(
         data={

@@ -43,6 +43,7 @@ uv run pre-commit install
 - `.github/workflows/` : GitHub actions workflows for building the environment and running tests
 - `src/swc/aeon/` : Source code for the Aeon Python package
     - `src/swc/aeon/analysis`: Source code for processing and plotting the raw data
+    - `src/swc/aeon/data`: Base classes for models describing the files of each experiment data stream and how to read them
     - `src/swc/aeon/io`: Source code for loading raw data
     - `src/swc/aeon/schema`: Core modules for defining data schemas used to load raw data from experiments
 - `tests/` : Tests for the Aeon Python package

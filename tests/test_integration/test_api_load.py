@@ -1,6 +1,7 @@
 """Integration tests for end-to-end data loading via swc.aeon.io.load()."""
 
 import datetime
+import warnings
 from contextlib import nullcontext
 
 import pandas as pd
@@ -12,8 +13,10 @@ from swc.aeon.io.reader import Encoder, Metadata, Pose
 PATCH_ENCODER = Encoder("Patch2_90_*")
 """The wheel encoder of a foraging patch."""
 
-EPOCH_METADATA = Metadata("Metadata")
-"""The metadata written for each acquisition epoch, which is not chunked."""
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    EPOCH_METADATA = Metadata("Metadata")
+    """The metadata written for each acquisition epoch, which is not chunked."""
 
 POSE = Pose("CameraTop_202_*")
 """The pose data of a camera, with the register prefix of the tracking stream."""

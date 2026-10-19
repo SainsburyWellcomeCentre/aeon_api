@@ -1,6 +1,7 @@
 """Tests for dataset schema definitions and pattern prefix resolution."""
 
 import os
+import warnings
 from enum import StrEnum
 from typing import ClassVar
 
@@ -8,7 +9,10 @@ from pydantic import Field
 
 from swc.aeon.io.api import load
 from swc.aeon.io.reader import BitmaskEvent, Csv, Harp
-from swc.aeon.schema.base import BaseSchema, Dataset, Metadata, data_reader
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from swc.aeon.schema.base import BaseSchema, Dataset, Metadata, data_reader
 
 
 class DummyHarpDevice(BaseSchema):

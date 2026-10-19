@@ -1,4 +1,4 @@
-"""Tests for the deprecation of domain models and of the stream API."""
+"""Tests for the deprecation of the schema package, its domain models and the stream API."""
 
 import importlib
 import sys
@@ -6,11 +6,35 @@ import warnings
 
 import pytest
 
-from swc.aeon.schema.base import DOMAIN_MODEL_DEPRECATION, Experiment
-
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", DeprecationWarning)
+    from swc.aeon.schema.base import (
+        DOMAIN_MODEL_DEPRECATION,
+        SCHEMA_PACKAGE_DEPRECATION,
+        BaseSchema,
+        Dataset,
+        Experiment,
+        Metadata,
+        data_reader,
+    )
     from swc.aeon.schema.streams import STREAM_API_DEPRECATION
+
+
+def test_schema_package_import_warns():
+    """Test that importing the schema package warns with its deprecation message."""
+    sys.modules.pop("swc.aeon.schema", None)
+    with pytest.warns(DeprecationWarning) as records:
+        importlib.import_module("swc.aeon.schema")
+    assert any(str(record.message) == SCHEMA_PACKAGE_DEPRECATION for record in records)
+
+
+@pytest.mark.parametrize("member", [BaseSchema, Dataset, Metadata, data_reader])
+def test_schema_package_base_members_marked(member):
+    """Test that the base classes and the data reader decorator of the schema package carry the
+    package deprecation, so type checkers report each use.
+    """
+    assert getattr(member, "__deprecated__", None) == SCHEMA_PACKAGE_DEPRECATION
+
 
 DEPRECATED_MODULES = [
     ("swc.aeon.schema.environment", DOMAIN_MODEL_DEPRECATION),

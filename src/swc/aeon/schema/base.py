@@ -15,12 +15,21 @@ from typing_extensions import deprecated
 from swc.aeon.io.reader import Reader
 
 DOMAIN_MODEL_DEPRECATION = (
-    "Aeon configuration models are moving to the aeon_acquisition package, which generates "
-    "them for Bonsai, and will be removed from swc.aeon.schema in the next release."
+    "Aeon configuration models are moving to the aeon_acquisition package, which provides the "
+    "domain models of each acquisition package, and will be removed from swc.aeon.schema in the "
+    "next release."
 )
 """The deprecation message shared by every domain model kept here during the move."""
 
+SCHEMA_PACKAGE_DEPRECATION = (
+    "The swc.aeon.schema package is deprecated and will be removed in the next release. Models "
+    "with data readers are now in swc.aeon.data, and configuration models in the aeon_acquisition "
+    "package."
+)
+"""The deprecation message of the package, carried by the base classes kept here unchanged."""
 
+
+@deprecated(SCHEMA_PACKAGE_DEPRECATION, category=None)
 class BaseSchema(BaseModel):
     """The base class for experiment data models exposing data readers."""
 
@@ -71,6 +80,7 @@ class Experiment(BaseSchema):
     )
 
 
+@deprecated(SCHEMA_PACKAGE_DEPRECATION, category=None)
 class Dataset(BaseSchema):
     """The base class for creating dataset models."""
 
@@ -81,6 +91,7 @@ class Dataset(BaseSchema):
 _ModelT = TypeVar("_ModelT", bound=BaseSchema)
 
 
+@deprecated(SCHEMA_PACKAGE_DEPRECATION, category=None)
 class Metadata(Reader):
     """Extracts metadata information from all epochs in the dataset."""
 
@@ -103,6 +114,7 @@ _SelfBaseSchema = TypeVar("_SelfBaseSchema", bound=BaseSchema)
 _ReaderT = TypeVar("_ReaderT", bound=Reader)
 
 
+@deprecated(SCHEMA_PACKAGE_DEPRECATION, category=None)
 def data_reader(func: Callable[[_SelfBaseSchema, str], _ReaderT]) -> cached_property[_ReaderT]:
     """Decorator to include a data reader as `cached_property` in experiment dataset models."""
 

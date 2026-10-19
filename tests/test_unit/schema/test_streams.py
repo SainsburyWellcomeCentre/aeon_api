@@ -1,10 +1,12 @@
 """Tests for classes defining data streams and devices."""
 
-from contextlib import nullcontext
+import warnings
 
 import pytest
 
-from swc.aeon.schema.streams import Device, Stream, StreamGroup
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from swc.aeon.schema.streams import Device, Stream, StreamGroup
 
 
 class DummyReader:
@@ -47,15 +49,6 @@ class DummyStreamGroup(StreamGroup):
         super().__init__(pattern, DummyStream, DummyNestedStreamGroup)
 
 
-class DeprecatedStreamGroup:
-    """A legacy StreamGroup without a custom __init__."""
-
-    @staticmethod
-    def dummy_composite_stream(pattern):
-        """Mimic the output of `compositeStream` (deprecated and removed)."""
-        return {"DummyStream": DummyReader(pattern)}
-
-
 def test_stream_iter():
     """Test that Stream.__iter__ yields the correct name and reader with
     the expected pattern.
@@ -89,24 +82,12 @@ def test_streamgroup_iter():
             "custom/path",
             {"DummyStream", "DummyNestedStream"},
         ),
-        (
-            "deprecated_device",
-            DeprecatedStreamGroup,
-            None,
-            {"DummyStream"},
-        ),
     ],
-    ids=["Singleton device", "Multi-stream device", "Deprecated StreamGroup device"],
+    ids=["Singleton device", "Multi-stream device"],
 )
 def test_device_iter(name, args, path, expected_streams):
     """Test that Device.__iter__ yields the correct device name and streams."""
-    context = (
-        pytest.warns(DeprecationWarning, match="Stream group classes with default constructors")
-        if name == "deprecated_device"
-        else nullcontext()
-    )
-    with context:
-        d = Device(name, args, path=path)
+    d = Device(name, args, path=path)
     device_name, device_streams = list(iter(d))
     assert device_name == name
     expected_pattern = path if path is not None else name

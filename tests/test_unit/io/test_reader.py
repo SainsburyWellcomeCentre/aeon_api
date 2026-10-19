@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from dotmap import DotMap
 from pandas import testing as tm
 
 from swc.aeon.io.reader import (
@@ -116,25 +115,26 @@ def test_chunk_read(reader_arg, monotonic_file):
 
 
 def test_metadata_read(metadata_file):
-    """Test that Metadata `read` returns an empty DataFrame with the correct structure."""
-    reader = Metadata()
+    """Test that Metadata `read` returns an empty DataFrame with the correct structure, and that
+    the legacy reader warns that it is deprecated.
+    """
+    with pytest.deprecated_call(match="legacy Metadata.yml format"):
+        reader = Metadata()
     df = reader.read(metadata_file)
     expected = pd.DataFrame(
         data={
             "workflow": ["Experiment0.2.bonsai"],
             "commit": ["249cdc654af63e6959e64f7ff2c21f219cc912ea"],
             "metadata": [
-                DotMap(
-                    {
-                        "Devices": {
-                            "VideoController": {
-                                "PortName": "COM3",
-                                "GlobalTriggerFrequency": "50",
-                                "LocalTriggerFrequency": "125",
-                            }
-                        },
-                    }
-                )
+                {
+                    "Devices": {
+                        "VideoController": {
+                            "PortName": "COM3",
+                            "GlobalTriggerFrequency": "50",
+                            "LocalTriggerFrequency": "125",
+                        }
+                    },
+                }
             ],
         },
         index=pd.DatetimeIndex([pd.Timestamp("2022-06-06 09:24:28")]),

@@ -1,10 +1,16 @@
 """Classes for defining environment configuration models."""
 
+import warnings
+
 from pydantic import Field
+from typing_extensions import deprecated
 
-from swc.aeon.schema.base import BaseSchema
+from swc.aeon.schema.base import DOMAIN_MODEL_DEPRECATION, BaseSchema
+
+warnings.warn(DOMAIN_MODEL_DEPRECATION, DeprecationWarning, stacklevel=2)
 
 
+@deprecated(DOMAIN_MODEL_DEPRECATION, category=None)
 class LightCycle(BaseSchema):
     """Represents a network client for automated room light control."""
 
@@ -25,6 +31,7 @@ class LightCycle(BaseSchema):
     )
 
 
+@deprecated(DOMAIN_MODEL_DEPRECATION, category=None)
 class WeightScale(BaseSchema):
     """Represents acquisition functionality for automated habitat weighing scales."""
 

@@ -9,24 +9,12 @@ from typing import Literal, overload
 
 import pandas as pd
 from pandas._typing import SequenceNotStr
-from typing_extensions import deprecated
 
 CHUNK_DURATION = 1
 """The duration of each acquisition chunk, in whole hours."""
 
 REFERENCE_EPOCH = datetime.datetime(1904, 1, 1, tzinfo=datetime.UTC)
 """The reference epoch for UTC harp time."""
-
-
-@deprecated("Please use the to_datetime function instead.")
-def aeon(seconds: float | pd.Index | pd.Series) -> datetime.datetime | pd.DatetimeIndex | pd.Series:
-    """Converts a Harp timestamp, in seconds, to a datetime object.
-
-    .. deprecated:: 0.2.0
-       This function is deprecated and will be removed in a future release.
-       Use :func:`to_datetime` instead.
-    """
-    return to_datetime(seconds)  # pragma: no cover
 
 
 @overload

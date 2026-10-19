@@ -1,6 +1,7 @@
 """Tests for dataset schema definitions and pattern prefix resolution."""
 
 import os
+import warnings
 from enum import StrEnum
 from typing import ClassVar
 
@@ -8,17 +9,17 @@ from pydantic import Field
 
 from swc.aeon.io.api import load
 from swc.aeon.io.reader import BitmaskEvent, Csv, Harp
-from swc.aeon.schema.base import BaseSchema, Dataset, Metadata, data_reader
-from swc.aeon.schema.environment import LightCycle
-from swc.aeon.schema.foraging import UndergroundFeeder
-from swc.aeon.schema.harp import HarpDevice
-from swc.aeon.schema.video import SpinnakerCamera
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from swc.aeon.schema.base import BaseSchema, Dataset, Metadata, data_reader
 
 
-class DummyHarpDevice(HarpDevice):
+class DummyHarpDevice(BaseSchema):
     """A dummy Harp device."""
 
     who_am_i: ClassVar[int] = 0000
+    port_name: str = Field(description="The name of the device serial port.")
 
     @data_reader
     def mock_register(self, prefix: str):
@@ -41,14 +42,17 @@ class DummyTracking(BaseSchema):
         return Harp(f"{prefix}_202", columns=["mock"])
 
 
-class DummyCamera(SpinnakerCamera):
+class DummyCamera(BaseSchema):
     """A dummy camera with an optional tracking module."""
 
+    serial_number: str = Field(description="The serial number of the camera.")
     tracking: DummyTracking | None = Field(default=None)
 
 
-class DummyFeeder(UndergroundFeeder):
+class DummyFeeder(BaseSchema):
     """A dummy feeder module with a simple data reader."""
+
+    port_name: str = Field(description="The name of the device serial port.")
 
     @data_reader
     def beam_break(self, prefix: str):
@@ -56,8 +60,10 @@ class DummyFeeder(UndergroundFeeder):
         return BitmaskEvent(f"{prefix}_32", 0x22, "PelletDetected")
 
 
-class DummyLightCycle(LightCycle):
+class DummyLightCycle(BaseSchema):
     """A dummy light cycle module with a simple data reader."""
+
+    room_name: str = Field(description="The name of the room to monitor and control.")
 
     @data_reader
     def light_events(self, prefix: str) -> Csv:

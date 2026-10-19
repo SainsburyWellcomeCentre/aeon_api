@@ -4,7 +4,7 @@ import pytest
 
 from swc.aeon.analysis import utils
 from swc.aeon.io.api import load
-from tests.schema import exp02
+from swc.aeon.io.reader import Encoder
 
 
 @pytest.mark.parametrize(
@@ -16,6 +16,6 @@ def test_distancetravelled(monotonic_dir, radius, expected_sum):
     """Test `distancetravelled` correctly computes the expected sum (down to the closest integer)
     for the specified test file.
     """
-    data = load(monotonic_dir, exp02.Patch2.Encoder)
+    data = load(monotonic_dir, Encoder("Patch2_90_*"))
     result = utils.distancetravelled(data.angle, radius)
     assert int(result.sum()) == expected_sum

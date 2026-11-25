@@ -154,6 +154,8 @@ def activepatch(wheel, in_patch):
     :return: A pandas Series specifying for each timepoint whether the patch is active.
     """
     exit_patch = in_patch.astype(np.int8).diff() < 0
-    in_wheel = (wheel.diff().rolling("1s").sum() > 1).reindex(in_patch.index, method="pad")
+    in_wheel = (wheel.diff().rolling("1s").sum() > 1).reindex(
+        in_patch.index, method="pad", fill_value=False
+    )
     epochs = exit_patch.cumsum()
-    return in_wheel.groupby(epochs).apply(lambda x: x.cumsum()) > 0
+    return in_wheel.groupby(epochs).cummax()

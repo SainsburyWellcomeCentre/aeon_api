@@ -117,7 +117,7 @@ def get_events_rates(
     # events is an array with the time (in seconds) of event occurence
     # window_len_sec is the size of the window over which the event rate is estimated
     # unit_len_sec is the length of one sample point
-    window_len_sec_str = f"{window_len_sec:d}S"
+    window_len_sec_str = f"{window_len_sec:d}s"
     counts = pd.Series(1.0, events.index)
     if start is not None and start < events.index[0]:
         counts.loc[start] = 0

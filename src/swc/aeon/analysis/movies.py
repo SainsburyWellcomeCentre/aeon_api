@@ -89,8 +89,8 @@ def groupframes(
 def triggerclip(
     data: pd.DataFrame,
     events: pd.Index | pd.Series,
-    before: pd.Timedelta | None = None,
-    after: pd.Timedelta | None = None,
+    before: pd.Timedelta | str | None = None,
+    after: pd.Timedelta | str | None = None,
 ) -> pd.DataFrame:
     """Split video data around the specified sequence of event timestamps.
 
@@ -105,9 +105,13 @@ def triggerclip(
     """
     if before is None:
         before = pd.Timedelta(0)
+    elif not isinstance(before, pd.Timedelta):
+        before = pd.Timedelta(before)
 
     if after is None:
         after = pd.Timedelta(0)
+    elif not isinstance(after, pd.Timedelta):
+        after = pd.Timedelta(after)
 
     if not isinstance(events, pd.Index):
         events = events.index

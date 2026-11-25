@@ -214,26 +214,35 @@ def bitmaskevent_file(monotonic_dir, monotonic_epoch):
 
 
 # ========================= Ephys Fixtures =========================
-@pytest.fixture
-def harpsync_file(tmp_path):
+@pytest.fixture(params=[1.0, 0.0], ids=["seconds-one-late", "seconds-equal"])
+def harpsync_file(tmp_path, request):
     """Writes a synthetic HarpSync correspondence file with a known linear source-to-Harp mapping.
 
-    Three trailing rows carry a missing clock measurement to exercise the reader `dropna`. Returns
-    the file path and the single-row summary DataFrame the reader is expected to produce.
+    Runs twice: with the Seconds index one second later than Value.HarpTime, as recorded before
+    the acquisition workflows stopped adding the protocol second twice, and with the two equal, as
+    recorded since. Three trailing rows carry a missing clock measurement to exercise the reader
+    `dropna`. Returns the file path and the single-row summary DataFrame the reader is expected to
+    produce.
     """
+    seconds_offset = request.param
     rng = np.random.default_rng(0)
     slope, intercept = 4e-9, 3.85e9
     clock = (np.sort(rng.integers(0, 900_000_000_000, size=500)) + 5_000_000_000).astype(float)
     harp = slope * clock + intercept
     frame = pd.DataFrame(
-        {"Seconds": harp, "Value.Clock": clock, "Value.HubClock": 0, "Value.HarpTime": harp - 1.0}
+        {
+            "Seconds": harp + seconds_offset,
+            "Value.Clock": clock,
+            "Value.HubClock": 0,
+            "Value.HarpTime": harp,
+        }
     )
     missing = pd.DataFrame(
         {
-            "Seconds": [intercept] * 3,
+            "Seconds": [intercept + seconds_offset] * 3,
             "Value.Clock": [np.nan] * 3,
             "Value.HubClock": 0,
-            "Value.HarpTime": 0.0,
+            "Value.HarpTime": intercept,
         }
     )
     file = tmp_path / "NeuropixelsV2Beta_HarpSync_2026-04-20T10-00-00.csv"

@@ -44,7 +44,7 @@ def gridframes(frames, width, height, shape: None | int | tuple[int, int] = None
 
 def averageframes(frames):
     """Returns the average of the specified collection of frames."""
-    return cv2.convertScaleAbs(np.sum(np.multiply(1 / len(frames), frames)))
+    return cv2.convertScaleAbs(np.sum(np.multiply(1 / len(frames), frames), axis=0))
 
 
 def groupframes(frames, n, fun):
@@ -55,14 +55,12 @@ def groupframes(frames, n, fun):
     :param callable fun: The function used to process each group of frames.
     :return: An iterable returning the results of applying the function to each group.
     """
-    i = 0
     group = []
     for frame in frames:
         group.append(frame)
         if len(group) >= n:
             yield fun(group)
             group.clear()
-            i = i + 1
 
 
 def triggerclip(data, events, before=None, after=None):

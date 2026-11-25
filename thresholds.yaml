@@ -1,0 +1,17 @@
+# Thresholds applied by scripts/summarise_benchmarks.py when judging a benchmark run.
+#
+# Each key is a column of summary.csv and each value is the largest acceptable value:
+# an epoch whose value is above it is flagged.  To try a different threshold, edit 
+# this file and rerun the summary script. QC itself does not need to run again.
+#
+# Remove or comment out a key to stop judging that column. 
+# Pass --no-thresholds to skip judging.
+#
+# The values below are educated guesses, not empirically tested or measured.
+
+thresholds:
+  harpsync_worst_step_us: 100     # largest deviation of a one-second ONIX clock step (normal: < 1 us)
+  fit_worst_chunk_ms: 0.1         # worst residual of an hourly HarpSync fit (0.1 ms = 3 probe samples)
+  hub_offset_max_dev_ticks: 250   # largest change in acquisition minus hub clock (250 ticks = 1 us)
+
+# Any summary column can be added above.

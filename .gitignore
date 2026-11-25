@@ -18,6 +18,11 @@ scratch*.py
 
 # Test
 .coverage
+.pytest_cache/
+.ruff_cache/
 
 # Environment
 .venv/
+
+# QC outputs
+devdata/

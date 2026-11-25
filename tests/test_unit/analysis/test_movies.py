@@ -208,9 +208,8 @@ def test_collatemovie():
     # sorted order: (frame_seq=0,clip0)=50, (frame_seq=0,clip1)=100,
     #               (frame_seq=1,clip0)=100, (frame_seq=1,clip1)=150
     frames = [_frame(4, 4, 50), _frame(4, 4, 100), _frame(4, 4, 100), _frame(4, 4, 150)]
-    fun = lambda g: np.mean(g, axis=0)
     with patch("swc.aeon.analysis.movies.video.frames", return_value=iter(frames)):
-        result = list(movies.collatemovie(clipdata, fun))
+        result = list(movies.collatemovie(clipdata, partial(np.mean, axis=0)))
     assert len(result) == 2
     np.testing.assert_array_equal(result[0], _frame(4, 4, 75))
     np.testing.assert_array_equal(result[1], _frame(4, 4, 125))

@@ -9,9 +9,9 @@ from typing import Any, overload
 import harp
 import numpy as np
 import pandas as pd
-from dotmap import DotMap
 from numpy.typing import DTypeLike, NDArray
 from pandas._typing import DtypeArg, SequenceNotStr
+from typing_extensions import deprecated
 
 from swc.aeon.io.api import Reader, chunk_key
 
@@ -63,6 +63,10 @@ class Chunk(Reader):
         return pd.DataFrame(data, index=pd.Series(chunk), columns=self.columns)
 
 
+@deprecated(
+    "The Metadata reader for the legacy Metadata.yml format will be removed in the next release. "
+    "Use swc.aeon.data.Metadata, which reads Metadata.json into an experiment model."
+)
 class Metadata(Reader):
     """Extracts metadata information from all epochs in the dataset."""
 
@@ -86,7 +90,7 @@ class Metadata(Reader):
             metadata = json.load(fp)
         workflow = metadata.pop("Workflow")
         commit = metadata.pop("Commit", pd.NA)
-        data = {"workflow": workflow, "commit": commit, "metadata": [DotMap(metadata)]}
+        data = {"workflow": workflow, "commit": commit, "metadata": [metadata]}
         return pd.DataFrame(data, index=pd.Series(time), columns=self.columns)
 
 

@@ -1,35 +1,34 @@
 {
-  "dummy_device": {
-    "device_type": "DummyHarpDevice",
-    "port_name": "COM3"
+  "workflow": "Experiment.bonsai",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "repositoryUrl": "https://github.com/example/experiment.git",
+  "dummyDevice": {
+    "portName": "COM3"
   },
-  "nested_data": {
-    "nested_device": {
-      "device_type": "DummyHarpDevice",
-      "port_name": "COM1"
+  "nestedData": {
+    "nestedDevice": {
+      "portName": "COM1"
     }
   },
   "camera": {
-    "device_type": "SpinnakerCamera",
-    "serial_number": "00000",
-    "exposure_time": 1000.0,
+    "serialNumber": "00000",
+    "exposureTime": 1000.0,
     "gain": 0.0,
     "binning": 1,
     "tracking": {}
   },
   "feeder": {
     "Feeder1": {
-      "device_type": "HarpOutputExpander",
-      "port_name": "COM6",
-      "pellet_delivery_retry_count": 2,
-      "pellet_delivery_timeout": 1.0,
-      "wheel_radius": -4.0
+      "portName": "COM6",
+      "pelletDeliveryRetryCount": 2,
+      "pelletDeliveryTimeout": 1.0,
+      "wheelRadius": -4.0
     }
   },
-  "light_cycle": {
-    "event_socket": ">tcp://localhost:4303",
-    "command_socket": ">tcp://localhost:4304",
-    "room_name": "DummyRoom",
-    "config_file_name": "lightcycle.config"
+  "lightCycle": {
+    "eventSocket": ">tcp://localhost:4303",
+    "commandSocket": ">tcp://localhost:4304",
+    "roomName": "DummyRoom",
+    "configFileName": "lightcycle.config"
   }
 }

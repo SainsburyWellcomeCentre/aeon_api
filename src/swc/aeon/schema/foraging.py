@@ -1,13 +1,18 @@
 """Classes for defining foraging rig configuration models."""
 
+import warnings
 from enum import StrEnum
 
 from pydantic import Field
+from typing_extensions import deprecated
 
-from swc.aeon.schema.base import BaseSchema
+from swc.aeon.schema.base import DOMAIN_MODEL_DEPRECATION, BaseSchema
 from swc.aeon.schema.harp import HarpOutputExpander
 
+warnings.warn(DOMAIN_MODEL_DEPRECATION, DeprecationWarning, stacklevel=2)
 
+
+@deprecated(DOMAIN_MODEL_DEPRECATION, category=None)
 class UndergroundFeeder(HarpOutputExpander):
     """Represents control and acquisition functionality for an underground feeder module."""
 
@@ -25,6 +30,7 @@ class UndergroundFeeder(HarpOutputExpander):
     wheel_radius: float = Field(default=-4.0, description="The radius of the wheel, in centimeters.")
 
 
+@deprecated(DOMAIN_MODEL_DEPRECATION, category=None)
 class FeederCommand(StrEnum):
     """Specifies the type of command to send to an underground feeder controller."""
 
@@ -32,6 +38,7 @@ class FeederCommand(StrEnum):
     RESET_FEEDER = "ResetFeeder"
 
 
+@deprecated(DOMAIN_MODEL_DEPRECATION, category=None)
 class CreateFeederCommand(BaseSchema):
     """Creates a command to send to an underground feeder controller."""
 

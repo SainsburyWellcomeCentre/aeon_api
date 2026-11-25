@@ -1,9 +1,14 @@
 """Tests for schema definitions for core Harp data streams."""
 
+import warnings
+
 import pytest
 
 import swc.aeon.io.reader as _reader
-from swc.aeon.schema import core as core_mod
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from swc.aeon.schema import core as core_mod
 
 
 class MockReader:

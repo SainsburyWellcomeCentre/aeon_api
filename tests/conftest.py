@@ -183,6 +183,12 @@ def metadata_file(nonmonotonic_dir, nonmonotonic_epoch):
 
 
 @pytest.fixture
+def metadata_json_file(test_data_dir):
+    """Returns path to an experiment metadata file in the Metadata.json format."""
+    return test_data_dir / "metadata" / "2025-12-02T13-45-23" / "Metadata.json"
+
+
+@pytest.fixture
 def video_csv_file(monotonic_dir, monotonic_epoch):
     """Returns path to a CSV file containing video metadata."""
     return monotonic_dir / monotonic_epoch / "CameraTop" / "CameraTop_2022-06-13T12-00-00.csv"

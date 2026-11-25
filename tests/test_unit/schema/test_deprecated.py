@@ -73,7 +73,7 @@ def test_deprecated_module_classes_marked(module_name, message):
 
 def test_experiment_subclass_warns():
     """Test that deriving an experiment model from the deprecated base warns."""
-    with pytest.warns(DeprecationWarning, match="aeon_acquisition"):
+    with pytest.warns(DeprecationWarning, match="swc.aeon.data"):
 
         class _Experiment(Experiment):  # pyright: ignore[reportUnusedClass]
             """An experiment model."""

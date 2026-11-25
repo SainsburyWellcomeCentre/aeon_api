@@ -28,6 +28,12 @@ SCHEMA_PACKAGE_DEPRECATION = (
 )
 """The deprecation message of the package, carried by the base classes kept here unchanged."""
 
+EXPERIMENT_DEPRECATION = (
+    "The Experiment base class has moved to swc.aeon.data, and will be removed from "
+    "swc.aeon.schema in the next release."
+)
+"""The deprecation message of the experiment base class kept here unchanged."""
+
 
 @deprecated(SCHEMA_PACKAGE_DEPRECATION, category=None)
 class BaseSchema(BaseModel):
@@ -69,7 +75,7 @@ class BaseSchema(BaseModel):
         return self
 
 
-@deprecated(DOMAIN_MODEL_DEPRECATION)
+@deprecated(EXPERIMENT_DEPRECATION)
 class Experiment(BaseSchema):
     """The base class for creating experiment models."""
 

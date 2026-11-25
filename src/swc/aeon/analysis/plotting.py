@@ -15,12 +15,12 @@ from swc.aeon.analysis.utils import rate, sessiontime
 
 
 def heatmap(
-    position: pd.Series, frequency: float, ax: Axes | None = None, **kwargs
+    position: pd.DataFrame, frequency: float, ax: Axes | None = None, **kwargs
 ) -> tuple[QuadMesh, Colorbar]:
     """Plot a log-scale 2D heatmap of dwell time in seconds from position data.
 
     Args:
-        position: A series of position data containing x and y coordinates.
+        position: A DataFrame of position data with `x` and `y` columns.
         frequency: The sampling frequency for the position data.
         ax: The Axes on which to draw the heatmap.
         **kwargs: Additional keyword arguments passed to `hist2d`.

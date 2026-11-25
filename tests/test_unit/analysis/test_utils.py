@@ -295,7 +295,7 @@ def test_activepatch(wheel, in_patch, expected):
     wheel = pd.Series(wheel, index=times)
     in_patch = pd.Series(in_patch, index=times)
     result = utils.activepatch(wheel, in_patch)
-    assert list(result.values) == expected
+    pd.testing.assert_series_equal(result, pd.Series(expected, index=times), check_names=False)
 
 
 def test_activepatch_inactive_before_first_wheel_sample():
@@ -304,4 +304,5 @@ def test_activepatch_inactive_before_first_wheel_sample():
     wheel = pd.Series([0.0, 2.0, 2.0], index=times[2:])
     in_patch = pd.Series(True, index=times)
     result = utils.activepatch(wheel, in_patch)
-    assert list(result.values) == [False, False, False, True, True]
+    expected = pd.Series([False, False, False, True, True], index=times)
+    pd.testing.assert_series_equal(result, expected, check_names=False)

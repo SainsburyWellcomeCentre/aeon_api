@@ -1,5 +1,6 @@
 """Tests for the `swc.aeon.analysis.movies` module."""
 
+from functools import partial
 from unittest.mock import ANY, patch
 
 import numpy as np

@@ -175,8 +175,23 @@ def test_groupframes(frames, n, fun, expected):
             [0, 0],
             [0, 1],
         ),
+        (
+            pd.DatetimeIndex(["2022-01-01 10:00:05"]),
+            "2s",
+            "2s",
+            [3, 4, 5, 6, 7],
+            [0, 1, 2, 3, 4],
+            [0, 0, 0, 0, 0],
+        ),
     ],
-    ids=["default", "before only", "after only", "before and after", "multiple events as Series"],
+    ids=[
+        "default",
+        "before only",
+        "after only",
+        "before and after",
+        "multiple events as Series",
+        "offsets as strings",
+    ],
 )
 def test_triggerclip(events, before, after, expected_values, expected_frame_seq, expected_clip_seq):
     """Test triggerclip selects correct rows for each before/after and event combination."""

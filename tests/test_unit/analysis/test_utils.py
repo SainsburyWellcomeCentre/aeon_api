@@ -296,3 +296,12 @@ def test_activepatch(wheel, in_patch, expected):
     in_patch = pd.Series(in_patch, index=times)
     result = utils.activepatch(wheel, in_patch)
     assert list(result.values) == expected
+
+
+def test_activepatch_inactive_before_first_wheel_sample():
+    """Test activepatch reports the patch inactive at timestamps preceding the first wheel sample."""
+    times = pd.date_range("2022-01-01", periods=5, freq="200ms")
+    wheel = pd.Series([0.0, 2.0, 2.0], index=times[2:])
+    in_patch = pd.Series(True, index=times)
+    result = utils.activepatch(wheel, in_patch)
+    assert list(result.values) == [False, False, False, True, True]
